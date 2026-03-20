@@ -1,0 +1,139 @@
+﻿#include "Samples/ModelApp.h"
+
+#include "Assets/ModelLoader.h"
+#include "Logger/Logger.h"
+#include "ImGUI/imgui.h"
+#include "Assets/StaticModel.h"
+#include "Engine/Input.h"
+
+#include <DirectXMath.h>
+#include <string>
+
+bool ModelApp::OnInit()
+{
+    mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(mWidth) / static_cast<float>(mHeight), 0.1f, 1000.0f);
+
+    if (!mRenderer.Initialize(mpGraphicsDevice, mWidth, mHeight))
+    {
+        return false;
+    }
+
+    mTextureManager.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetUploadHeap(), &mpGraphicsDevice->GetCbvSrvUavHeap());
+
+    mScene.CharacterModel = new StaticModel();
+    mScene.SkyboxModel = new StaticModel();
+    mScene.CharacterModel->LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf", *mpGraphicsDevice);
+    mScene.SkyboxModel->LoadFromFile("Assets/Models/Cube/Cube.gltf", *mpGraphicsDevice);
+
+    const char* TexturePaths[5] = {
+        "Assets/Textures/DamagedHelmet/Default_albedo.jpg",
+        "Assets/Textures/DamagedHelmet/Default_normal.jpg",
+        "Assets/Textures/DamagedHelmet/Default_metalRoughness.jpg",
+        "Assets/Textures/DamagedHelmet/Default_emissive.jpg",
+        "Assets/Textures/DamagedHelmet/Default_AO.jpg"
+    };
+    for (int i = 0; i < 5; i++)
+    {
+        mScene.PBRTextures[i] = mTextureManager.GetOrCreateTextureFromFile(TexturePaths[i]);
+        if (!mScene.PBRTextures[i])
+        {
+            Log::Error("Failed to load texture: %s", TexturePaths[i]);
+            return false;
+        }
+    }
+
+    // Copy Descriptor
+    mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(5, &mHelmetPBRTable);
+    UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevicePtr()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = mHelmetPBRTable.GetCpuDescriptorHandle();
+
+    for (int i = 0; i < 5; i++)
+    {
+        D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+        SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        SRVDesc.Format = mScene.PBRTextures[i]->Format;
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        SRVDesc.Texture2D.MipLevels = 1;
+
+        mpGraphicsDevice->GetDevice().GetDevicePtr()->CreateShaderResourceView(mScene.PBRTextures[i]->Resource, &SRVDesc, DestHandle);
+        DestHandle.ptr += DescriptorSize;
+    }
+
+    mScene.SkyboxTexture = mTextureManager.GetOrCreateTextureFromFile("Assets/Textures/Environments/Skybox.hdr");
+    mScene.HelmetPBRSrvTable = mHelmetPBRTable.GetGpuDescriptorHandle();
+    mScene.SkyboxSrvTable = mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle();
+
+    mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
+
+    return true;
+}
+
+void ModelApp::OnUpdate(double DeltaTime)
+{
+    mScene.MainLight.Direction = mLightDirection;
+    mScene.MainLight.Color = mLightColor;
+    mScene.Metallic = mMetallic;
+    mScene.Roughness = mRoughness;
+    mScene.AO = mAO;
+
+    if (Input::IsMouseButtonDown(EMouseButton::Right))
+    {
+        float DeltaX = Input::GetMouseDeltaX();
+        float DeltaY = Input::GetMouseDeltaY();
+        mCamera.AddRotationInput(DeltaX, DeltaY);
+    }
+
+    if (Input::IsKeyDown(EKeyCode::W)) mCamera.AddMovementInput(0.0f, 0.0f, 1.0f);
+    if (Input::IsKeyDown(EKeyCode::S)) mCamera.AddMovementInput(0.0f, 0.0f, -1.0f);
+    if (Input::IsKeyDown(EKeyCode::D)) mCamera.AddMovementInput(1.0f, 0.0f, 0.0f);
+    if (Input::IsKeyDown(EKeyCode::A)) mCamera.AddMovementInput(-1.0f, 0.0f, 0.0f);
+    if (Input::IsKeyDown(EKeyCode::E)) mCamera.AddMovementInput(0.0f, 1.0f, 0.0f);
+    if (Input::IsKeyDown(EKeyCode::Q)) mCamera.AddMovementInput(0.0f, -1.0f, 0.0f);
+
+    mCamera.Update(DeltaTime);
+
+    mView = mCamera.GetSceneView(mWidth, mHeight);
+}
+
+void ModelApp::OnRender(ID3D12GraphicsCommandList* pCommandList)
+{
+    mRenderer.Render(pCommandList, mView, mScene);
+}
+
+void ModelApp::OnRenderUI()
+{
+    ImGui::Begin("PBR Engine Control");
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Separator();
+
+    ImGui::Text("Light Settings");
+    ImGui::SliderFloat3("Light Dir", &mLightDirection.x, -1.0f, 1.0f);
+    ImGui::ColorEdit3("Light Color", &mLightColor.x);
+
+    ImGui::Separator();
+    ImGui::Text("PBR Material");
+
+    ImGui::SliderFloat("Metallic", &mMetallic, 0.0f, 1.0f);
+    ImGui::SliderFloat("Roughness", &mRoughness, 0.01f, 1.0f);
+    ImGui::SliderFloat("AO", &mAO, 0.01f, 1.0f);
+
+    ImGui::End();
+}
+
+void ModelApp::OnDestroy()
+{
+    if (mScene.CharacterModel)
+    {
+        delete mScene.CharacterModel;
+        mScene.CharacterModel = nullptr;
+    }
+
+    if (mScene.SkyboxModel)
+    {
+        delete mScene.SkyboxModel;
+        mScene.SkyboxModel = nullptr;
+    }
+
+    mTextureManager.DestroyAll();
+    mRenderer.Destroy();
+}

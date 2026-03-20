@@ -1,0 +1,26 @@
+﻿# =========================
+# C++ & CMake Build
+# =========================
+build/
+out/
+bin/
+cmake-build-*/
+
+# =========================
+# IDE Config
+# =========================
+.idea/
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.*
+imgui.ini
+
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+*.lib
+*.exp
+*.idb

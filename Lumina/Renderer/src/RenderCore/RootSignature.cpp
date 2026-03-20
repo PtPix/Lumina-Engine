@@ -1,0 +1,160 @@
+﻿#include "../../include/Renderer/RenderCore/RootSignature.h"
+
+#include "Logger/Logger.h"
+
+RootSignature::~RootSignature()
+{
+    Destroy();
+}
+
+void RootSignature::Destroy()
+{
+    if (mRootSignature)
+    {
+        mRootSignature->Release();
+        mRootSignature = nullptr;
+    }
+}
+
+RootSignatureBuilder::RootSignatureBuilder()
+{
+    mRootParameters.reserve(32);
+    mDescriptorRanges.reserve(32);
+    mStaticSamplers.reserve(32);
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AddRootConstants(UINT ShaderRegister, UINT RegisterSpace, UINT NumValues)
+{
+    D3D12_ROOT_PARAMETER RootParameter = {};
+    RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    RootParameter.Constants.ShaderRegister = ShaderRegister;
+    RootParameter.Constants.RegisterSpace = RegisterSpace;
+    RootParameter.Constants.Num32BitValues = NumValues;
+    RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    mRootParameters.push_back(RootParameter);
+    return *this;
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace)
+{
+    D3D12_ROOT_PARAMETER RootParameter = {};
+    RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    RootParameter.Descriptor.ShaderRegister = ShaderRegister;
+    RootParameter.Descriptor.RegisterSpace = RegisterSpace;
+    RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    mRootParameters.push_back(RootParameter);
+    return *this;
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace)
+{
+    D3D12_ROOT_PARAMETER RootParameter = {};
+    RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    RootParameter.Descriptor.ShaderRegister = ShaderRegister;
+    RootParameter.Descriptor.RegisterSpace = RegisterSpace;
+    RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    mRootParameters.push_back(RootParameter);
+    return *this;
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE RangeType,
+    UINT NumDescriptors, UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY Visibility)
+{
+    D3D12_DESCRIPTOR_RANGE DescriptorRange = {};
+    DescriptorRange.RangeType = RangeType;
+    DescriptorRange.NumDescriptors = NumDescriptors;
+    DescriptorRange.BaseShaderRegister = ShaderRegister;
+    DescriptorRange.RegisterSpace = RegisterSpace;
+    DescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    mDescriptorRanges.push_back(DescriptorRange);
+
+    D3D12_ROOT_PARAMETER RootParameter = {};
+    RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    RootParameter.DescriptorTable.NumDescriptorRanges = 1;
+    RootParameter.DescriptorTable.pDescriptorRanges = &mDescriptorRanges[mDescriptorRanges.size() - 1];
+    RootParameter.ShaderVisibility = Visibility;
+    mRootParameters.push_back(RootParameter);
+
+    return *this;
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AddStaticSampler(UINT ShaderRegister, UINT RegisterSpace,
+    D3D12_FILTER Filter)
+{
+    D3D12_STATIC_SAMPLER_DESC SamplerDesc = {};
+    SamplerDesc.Filter = Filter;
+    SamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    SamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    SamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    SamplerDesc.MipLODBias = 0;
+    SamplerDesc.MaxAnisotropy = 0;
+    SamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    SamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+    SamplerDesc.MinLOD = 0.0f;
+    SamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+    SamplerDesc.ShaderRegister = ShaderRegister;
+    SamplerDesc.RegisterSpace = RegisterSpace;
+    SamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    mStaticSamplers.push_back(SamplerDesc);
+    return *this;
+}
+
+RootSignatureBuilder& RootSignatureBuilder::AllowInputLayout()
+{
+    mFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    return *this;
+}
+
+bool RootSignatureBuilder::Build(ID3D12Device* Device, RootSignature& OutRootSignature)
+{
+    size_t RangeIndex = 0;
+    for (auto& RootParam : mRootParameters)
+    {
+        if (RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+        {
+            RootParam.DescriptorTable.pDescriptorRanges = &mDescriptorRanges[RangeIndex++];
+        }
+    }
+
+    D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
+    RootSignatureDesc.NumParameters = static_cast<UINT>(mRootParameters.size());
+    RootSignatureDesc.pParameters = mRootParameters.empty() ? nullptr : mRootParameters.data();
+    RootSignatureDesc.NumStaticSamplers = static_cast<UINT>(mStaticSamplers.size());
+    RootSignatureDesc.pStaticSamplers = mStaticSamplers.empty() ? nullptr : mStaticSamplers.data();
+    RootSignatureDesc.Flags = mFlags;
+
+    ID3DBlob* SignatureBlob = nullptr;
+    ID3DBlob* ErrorBlob = nullptr;
+
+    HRESULT HResult = D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &SignatureBlob, &ErrorBlob);
+    if (FAILED(HResult))
+    {
+        if (ErrorBlob)
+        {
+            Log::Error("Failed to serialize root signature: %s", (char*)ErrorBlob->GetBufferPointer());
+            ErrorBlob->Release();
+        }
+        return false;
+    }
+
+    OutRootSignature.Destroy();
+    HResult = Device->CreateRootSignature(0, SignatureBlob->GetBufferPointer(), SignatureBlob->GetBufferSize(), IID_PPV_ARGS(&OutRootSignature.mRootSignature));
+
+    if (SignatureBlob)
+    {
+        SignatureBlob->Release();
+    }
+    if (ErrorBlob)
+    {
+        ErrorBlob->Release();
+    }
+
+    if (FAILED(HResult))
+    {
+        Log::Error("Failed to create root signature");
+        return false;
+    }
+
+    return true;
+}
