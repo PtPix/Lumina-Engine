@@ -27,6 +27,8 @@ bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint3
         return false;
     }
 
+
+
     return true;
 }
 
@@ -186,7 +188,8 @@ void FDeferredShadingRenderer::RenderBasePass(ID3D12GraphicsCommandList* pComman
     memcpy(MaterialAllocation.CpuAddress, &MaterialData, sizeof(FMaterialUniformData));
     pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
 
-    Scene.CharacterModel->Draw(pCommandList);
+    Scene.GetRenderNodes()[0].pMesh->Draw(pCommandList);
+    // Scene.CharacterModel->Draw(pCommandList);
 }
 
 void FDeferredShadingRenderer::RenderSkybox(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
@@ -209,7 +212,8 @@ void FDeferredShadingRenderer::RenderSkybox(ID3D12GraphicsCommandList* pCommandL
     memcpy(SkyAllocation.CpuAddress, &SkyPrimitiveUniformData, sizeof(FPrimitiveUniformData));
     pCommandList->SetGraphicsRootConstantBufferView(2, SkyAllocation.GpuAddress);
 
-    Scene.SkyboxModel->Draw(pCommandList);
+    Scene.GetRenderNodes()[1].pMesh->Draw(pCommandList);
+    // Scene.SkyboxModel->Draw(pCommandList);
 }
 
 void FDeferredShadingRenderer::RenderDeferredLighting(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,

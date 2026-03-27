@@ -11,7 +11,6 @@ set(ENGINE_SOURCES
 )
 
 set(ASSETS_SOURCES
-        src/ModelLoader.cpp
         src/StaticModel.cpp
 )
 

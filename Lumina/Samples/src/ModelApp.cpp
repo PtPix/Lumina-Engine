@@ -1,6 +1,5 @@
 ﻿#include "Samples/ModelApp.h"
 
-#include "Assets/ModelLoader.h"
 #include "Logger/Logger.h"
 #include "ImGUI/imgui.h"
 #include "Assets/StaticModel.h"
@@ -24,6 +23,8 @@ bool ModelApp::OnInit()
     mScene.SkyboxModel = new StaticModel();
     mScene.CharacterModel->LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf", *mpGraphicsDevice);
     mScene.SkyboxModel->LoadFromFile("Assets/Models/Cube/Cube.gltf", *mpGraphicsDevice);
+    mScene.CharacterModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
+    mScene.SkyboxModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
 
     const char* TexturePaths[5] = {
         "Assets/Textures/DamagedHelmet/Default_albedo.jpg",
@@ -62,7 +63,13 @@ bool ModelApp::OnInit()
     mScene.SkyboxTexture = mTextureManager.GetOrCreateTextureFromFile("Assets/Textures/Environments/Skybox.hdr");
     mScene.HelmetPBRSrvTable = mHelmetPBRTable.GetGpuDescriptorHandle();
     mScene.SkyboxSrvTable = mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle();
-
+    // std::vector<FRenderNode>& mRenderNodes = mScene.GetRenderNodes();
+    // for (auto FRenderNode : mRenderNodes)
+    // {
+    //     FRenderNode.pMesh->Draw(mpGraphicsDevice->GetUploadHeap().GetCommandList());
+    // }
+    mpGraphicsDevice->GetVertexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
+    mpGraphicsDevice->GetIndexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
     mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
 
     return true;

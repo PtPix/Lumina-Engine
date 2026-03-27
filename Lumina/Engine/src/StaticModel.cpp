@@ -1,6 +1,5 @@
 ﻿#include "Assets/StaticModel.h"
 
-#include "Assets/ModelLoader.h"
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
@@ -65,27 +64,39 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
             }
         }
 
+        FMesh Mesh = {};
+        Mesh.Initialize(&Device, Vertices.data(), sizeof(FStandardVertex), Vertices.size(), Indices.data(), Indices.size());
+        mMeshes.push_back(Mesh);
+
         // Generate SubMesh
-        FSubMesh SubMesh = {};
-        SubMesh.IndexCount = static_cast<uint32_t>(Indices.size());
-        SubMesh.MaterialIndex = pAiMesh->mMaterialIndex;
-
-        // Allocate buffer and record upload command
-        Device.GetVertexBufferHeap().AllocVertexBuffer(
-            static_cast<uint32_t>(Vertices.size()), sizeof(FStandardVertex), Vertices.data(), &SubMesh.VertexBufferView
-            );
-        Device.GetIndexBufferHeap().AllocIndexBuffer(
-            SubMesh.IndexCount, sizeof(uint32_t), Indices.data(), &SubMesh.IndexBufferView
-            );
-        mSubMeshes.push_back(SubMesh);
+        // FSubMesh SubMesh = {};
+        // SubMesh.IndexCount = static_cast<uint32_t>(Indices.size());
+        // SubMesh.MaterialIndex = pAiMesh->mMaterialIndex;
+        //
+        // // Allocate buffer and record upload command
+        // Device.GetVertexBufferHeap().AllocVertexBuffer(
+        //     static_cast<uint32_t>(Vertices.size()), sizeof(FStandardVertex), Vertices.data(), &SubMesh.VertexBufferView
+        //     );
+        // Device.GetIndexBufferHeap().AllocIndexBuffer(
+        //     SubMesh.IndexCount, sizeof(uint32_t), Indices.data(), &SubMesh.IndexBufferView
+        //     );
+        // mSubMeshes.push_back(SubMesh);
     }
-
-    Device.GetVertexBufferHeap().UploadData(pUploadCommandList);
-    Device.GetIndexBufferHeap().UploadData(pUploadCommandList);
+    //
+    // Device.GetVertexBufferHeap().UploadData(pUploadCommandList);
+    // Device.GetIndexBufferHeap().UploadData(pUploadCommandList);
 
     mbIsLoaded = true;
     Log::Info("Loaded %s [SubMeshes: %zu, Materials: %zu]", FilePath.c_str(), mSubMeshes.size(), mMaterialNames.size());
     return true;
+}
+
+void StaticModel::SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform)
+{
+    for (auto& Mesh : mMeshes)
+    {
+        pScene->AddRenderNode(&Mesh, nullptr, Transform);
+    }
 }
 
 void StaticModel::Draw(ID3D12GraphicsCommandList* CommandList) const

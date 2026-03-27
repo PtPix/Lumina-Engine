@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <DirectXColors.h>
 
+#include "Renderer/Rendering/Mesh.h"
+
 class StaticModel;
 struct FTexture;
 
@@ -10,8 +12,23 @@ struct FDirectionalLight
     DirectX::XMFLOAT3 Color;
 };
 
-struct FScene
+struct FRenderNode
 {
+    FMesh* pMesh = nullptr;
+    Material* pMaterial = nullptr;
+    DirectX::XMMATRIX ModelMatrix;
+};
+
+class FScene
+{
+public:
+    void AddRenderNode(FMesh* pMesh, Material* pMaterial, const DirectX::XMMATRIX& Transform)
+    {
+        mRenderNodes.push_back({ pMesh, pMaterial, Transform });
+    }
+
+    const std::vector<FRenderNode>& GetRenderNodes() const { return mRenderNodes; }
+
     FDirectionalLight MainLight;
 
     StaticModel* SkyboxModel = nullptr;
@@ -28,4 +45,6 @@ struct FScene
     float AO = 0.0f;
 
     ResourceView PBRViews[5];
+private:
+    std::vector<FRenderNode> mRenderNodes;
 };
