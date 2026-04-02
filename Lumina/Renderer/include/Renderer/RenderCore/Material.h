@@ -3,12 +3,33 @@
 #include <string>
 #include <d3d12.h>
 #include <vector>
+#include <cstdint>
 
 #include "PipelineState.h"
 #include "Renderer/RenderCore/RootSignature.h"
 
 struct ID3D12Device;
 struct ID3D12GraphicsCommandList;
+
+enum class ERenderPass : uint32_t
+{
+    None = 0,
+    BasePass = 1 << 0,
+    Skybox = 1 << 1,
+    DeferredLighting = 1 << 2,
+    Shadow = 1 << 3,
+    Transparent = 1 << 4,
+};
+
+inline ERenderPass operator|(ERenderPass a, ERenderPass b)
+{
+    return static_cast<ERenderPass>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline uint32_t operator&(ERenderPass a, ERenderPass b)
+{
+    return static_cast<uint32_t>(a) & static_cast<uint32_t>(b);
+}
 
 struct FMaterialInitDesc
 {
@@ -23,22 +44,26 @@ struct FMaterialInitDesc
     bool bEnableDepthTest = true;
 };
 
-class Material
+class MaterialBase
 {
 public:
-    Material() = default;
-    ~Material() = default;
+    MaterialBase() = default;
+    virtual ~MaterialBase() = default;
 
-    bool Initialize(ID3D12Device* Device, const FMaterialInitDesc& MaterialDesc);
+    virtual bool Initialize(ID3D12Device* Device, RootSignature* RootSig) = 0;
+    virtual void Bind(ID3D12GraphicsCommandList* CommandList) const = 0;
+    virtual void Destroy() = 0;
 
-    void Bind(ID3D12GraphicsCommandList* CommandList) const;
+    [[nodiscard]] ERenderPass GetRenderPassFlags() const { return mRenderPassFlags; }
+    [[nodiscard]] bool SupportsPass(ERenderPass Pass) const { return (mRenderPassFlags & Pass) != 0; }
 
-    [[nodiscard]] ID3D12RootSignature* GetRootSignature() const { return mRootSignature->Get(); }
-    void SetRootSignature(RootSignature* InRootSignature) { mRootSignature = InRootSignature; }
-    [[nodiscard]] ID3D12PipelineState* GetPipelineState() const { return mPipelineState.Get(); }
+    void SetSrvTable(D3D12_GPU_DESCRIPTOR_HANDLE Table) { mSrvTable = Table; }
 
-    void Destroy();
-private:
-    RootSignature* mRootSignature;
+protected:
+    bool InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& Desc);
+
+    ERenderPass mRenderPassFlags = ERenderPass::None;
+    RootSignature* mRootSignature = nullptr;
     PipelineState mPipelineState;
+    D3D12_GPU_DESCRIPTOR_HANDLE mSrvTable = {};
 };

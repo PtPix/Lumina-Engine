@@ -23,11 +23,15 @@ set(RENDER_CORE_SOURCES
         "src/RenderCore/RootSignature.cpp"
         "src/RenderCore/PipelineState.cpp"
         "src/RenderCore/Material.cpp"
+        "src/RenderCore/BasePassMaterial.cpp"
+        "src/RenderCore/SkyboxMaterial.cpp"
+        "src/RenderCore/DeferredLightingMaterial.cpp"
 )
 
 set(RENDERING_SOURCES
         "src/Rendering/SceneRenderTargets.cpp"
         "src/Rendering/DeferredShadingRenderer.cpp"
+        "src/Rendering/Mesh.cpp"
 )
 
 # Build Library

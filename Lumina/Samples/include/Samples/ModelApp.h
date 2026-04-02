@@ -1,11 +1,13 @@
 ﻿#pragma once
 
+#include <d3d12.h>
+#include <DirectXMath.h>
+
 #include "Engine/LuminaApp.h"
 #include "Renderer/RenderCore/TextureManager.h"
 #include "Renderer/Rendering/DeferredShadingRenderer.h"
-
-#include <d3d12.h>
-#include <DirectXMath.h>
+#include "Renderer/RenderCore/BasePassMaterial.h"
+#include "Renderer/RenderCore/SkyboxMaterial.h"
 
 class ModelApp : public LuminaApp
 {
@@ -20,6 +22,9 @@ private:
     FDeferredShadingRenderer mRenderer = {};
     FScene mScene = {};
     FSceneView mView = {};
+
+    BasePassMaterial mBasePassMaterial;
+    SkyboxMaterial mSkyboxMaterial;
 
     ResourceView mHelmetPBRTable;
     TextureManager mTextureManager;

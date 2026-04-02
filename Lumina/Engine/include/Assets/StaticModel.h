@@ -1,25 +1,12 @@
 ﻿#pragma once
 
-#include "../../../Renderer/include/Renderer/RenderCore/ResourceView.h"
-
+#include <DirectXMath.h>
 #include <string>
 #include <vector>
 
-#include "Renderer/Rendering/DeferredShadingRenderer.h"
-
-class LuminaRenderer;
-struct ID3D12GraphicsCommandList;
-
-struct FSubMesh
-{
-    void* Vertices;
-    void* Indices;
-
-    D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
-    D3D12_INDEX_BUFFER_VIEW IndexBufferView;
-    uint32_t IndexCount;
-    uint32_t MaterialIndex;
-};
+class FMesh;
+class FScene;
+class GraphicsDevice;
 
 struct FStandardVertex
 {
@@ -43,16 +30,11 @@ public:
 
     bool LoadFromFile(const std::string& FilePath, GraphicsDevice& Device);
 
-    void SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform);
+    size_t SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform);
 
-    void Draw(ID3D12GraphicsCommandList* CommandList) const;
-
-    const std::vector<std::string>& GetMaterialName() const { return mMaterialNames; }
-    const std::vector<FSubMesh>& GetSubMeshes() const { return mSubMeshes; }
+    [[nodiscard]] const std::vector<std::string>& GetMaterialName() const { return mMaterialNames; }
 
 private:
     std::vector<FMesh> mMeshes;
-    std::vector<FSubMesh> mSubMeshes;
     std::vector<std::string> mMaterialNames;
-    bool mbIsLoaded = false;
 };

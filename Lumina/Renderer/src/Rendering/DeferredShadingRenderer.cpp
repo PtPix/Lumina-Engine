@@ -35,18 +35,15 @@ bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint3
 void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
     const FScene& Scene)
 {
-    // Bind Descriptor Heaps and set Rootsignature
     ID3D12DescriptorHeap* ppHeaps[] = { mGraphicsDevice->GetCbvSrvUavHeap().GetHeap() };
     pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     pCommandList->SetGraphicsRootSignature(mGlobalRootSignature.Get());
 
-    // Set viewport and scissorRect
     D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(mWidth), static_cast<float>(mHeight), 0.0f, 1.0f };
     D3D12_RECT scissorRect = {0, 0, static_cast<LONG>(mWidth), static_cast<LONG>(mHeight)};
     pCommandList->RSSetViewports(1, &viewport);
     pCommandList->RSSetScissorRects(1, &scissorRect);
 
-    // Upload Per Frame Data
     FViewUniformData ViewUniformData = {};
     ViewUniformData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(View.ViewProjectionMatrix);
     ViewUniformData.InverseViewProjectionMatrix = DirectX::XMMatrixTranspose(View.InverseViewProjectionMatrix);
@@ -56,24 +53,20 @@ void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, c
     memcpy(ViewUniformDataAllocation.CpuAddress, &ViewUniformData, sizeof(FViewUniformData));
     pCommandList->SetGraphicsRootConstantBufferView(0, ViewUniformDataAllocation.GpuAddress);
 
-    // Base Pass
     mSceneRenderTargets.Clear(pCommandList);
     mSceneRenderTargets.BindBasePass(pCommandList);
 
-    RenderSkybox(pCommandList, View, Scene);
-    RenderBasePass(pCommandList, View, Scene);
+    RenderPass(pCommandList, View, Scene, ERenderPass::Skybox);
+    RenderPass(pCommandList, View, Scene, ERenderPass::BasePass);
 
-    // Transition to lighting pass
     mSceneRenderTargets.TransitionToLightingPass(pCommandList);
 
-    // Lighting pass
     D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = mGraphicsDevice->GetSwapChain().GetCurrentBackBufferRTVHandle();
     pCommandList->OMSetRenderTargets(1, &BackBufferRTV, false, nullptr);
-    const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f }; // 纯黑底色
+    const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     pCommandList->ClearRenderTargetView(BackBufferRTV, ClearColor, 0, nullptr);
     RenderDeferredLighting(pCommandList, View, Scene);
 
-    // Transition back
     mSceneRenderTargets.TransitionToBasePass(pCommandList);
 }
 
@@ -81,8 +74,6 @@ void FDeferredShadingRenderer::Destroy()
 {
     mSceneRenderTargets.DestroyRenderTargets();
     mGraphicsDevice = nullptr;
-    mBasePassMaterial.Destroy();
-    mSkyboxMaterial.Destroy();
     mDeferredLightingMaterial.Destroy();
 }
 
@@ -111,50 +102,7 @@ bool FDeferredShadingRenderer::CreateGlobalRootSignature()
 
 bool FDeferredShadingRenderer::InitMaterials()
 {
-    // Init BasePass Material
-    mBasePassMaterial.SetRootSignature(&mGlobalRootSignature);
-    FMaterialInitDesc MaterialInitDesc = {};
-    MaterialInitDesc.VertexShaderFilePath = L"Shaders/BasePass.hlsl";
-    MaterialInitDesc.PixelShaderFilePath = L"Shaders/BasePass.hlsl";
-    MaterialInitDesc.InputElements = {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-    };
-    MaterialInitDesc.RenderTargetViewFormats = {
-        DXGI_FORMAT_R16G16B16A16_FLOAT,
-        DXGI_FORMAT_R16G16B16A16_FLOAT,
-        DXGI_FORMAT_R8G8B8A8_UNORM,
-        DXGI_FORMAT_R8G8B8A8_UNORM
-    };
-    MaterialInitDesc.DepthStencilViewFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    if (!mBasePassMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevicePtr(), MaterialInitDesc))
-    {
-        return false;
-    }
-
-    // Init Skybox Material
-    mSkyboxMaterial.SetRootSignature(&mGlobalRootSignature);
-    FMaterialInitDesc SkyboxDesc = {};
-    SkyboxDesc.VertexShaderFilePath = L"Shaders/SkyBox.hlsl";
-    SkyboxDesc.PixelShaderFilePath = L"Shaders/SkyBox.hlsl";
-    SkyboxDesc.InputElements = MaterialInitDesc.InputElements;
-    SkyboxDesc.bEnableDepthTest = false;
-    SkyboxDesc.RenderTargetViewFormats = MaterialInitDesc.RenderTargetViewFormats;
-    SkyboxDesc.DepthStencilViewFormat = MaterialInitDesc.DepthStencilViewFormat;
-    if (!mSkyboxMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevicePtr(), SkyboxDesc))
-    {
-        return false;
-    }
-
-    // Init DeferredShading Material
-    mDeferredLightingMaterial.SetRootSignature(&mGlobalRootSignature);
-    FMaterialInitDesc LightingDesc = {};
-    LightingDesc.VertexShaderFilePath = L"Shaders/DeferredLighting.hlsl";
-    LightingDesc.PixelShaderFilePath = L"Shaders/DeferredLighting.hlsl";
-    LightingDesc.InputElements.clear();
-    LightingDesc.bEnableDepthTest = false;
-    if (!mDeferredLightingMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevicePtr(), LightingDesc))
+    if (!mDeferredLightingMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevicePtr(), &mGlobalRootSignature))
     {
         return false;
     }
@@ -162,58 +110,49 @@ bool FDeferredShadingRenderer::InitMaterials()
     return true;
 }
 
-void FDeferredShadingRenderer::RenderBasePass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
-    const FScene& Scene)
+void FDeferredShadingRenderer::RenderPass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
+    const FScene& Scene, ERenderPass Pass)
 {
-    if (!Scene.CharacterModel)
-    {
-        return;
-    }
-
-    mBasePassMaterial.Bind(pCommandList);
     pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCommandList->SetGraphicsRootDescriptorTable(5, Scene.HelmetPBRSrvTable);
 
-    FPrimitiveUniformData ModelData = {};
-    ModelData.ModelMatrix = DirectX::XMMatrixTranspose(DirectX::XMMatrixIdentity());
-    FDynamicAllocation ModelAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FPrimitiveUniformData));
-    memcpy(ModelAllocation.CpuAddress, &ModelData, sizeof(FPrimitiveUniformData));
-    pCommandList->SetGraphicsRootConstantBufferView(2, ModelAllocation.GpuAddress);
-
-    FMaterialUniformData MaterialData = {};
-    MaterialData.Metallic = Scene.Metallic;
-    MaterialData.Roughness = Scene.Roughness;
-    MaterialData.AO = Scene.AO;
-    FDynamicAllocation MaterialAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FMaterialUniformData));
-    memcpy(MaterialAllocation.CpuAddress, &MaterialData, sizeof(FMaterialUniformData));
-    pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
-
-    Scene.GetRenderNodes()[0].pMesh->Draw(pCommandList);
-    // Scene.CharacterModel->Draw(pCommandList);
-}
-
-void FDeferredShadingRenderer::RenderSkybox(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
-    const FScene& Scene)
-{
-    if (!Scene.SkyboxModel)
+    for (auto& Node : Scene.GetRenderNodes())
     {
-        return;
+        if (!Node.pMesh || !Node.pMaterial || !Node.pMaterial->SupportsPass(Pass))
+        {
+            continue;
+        }
+
+        Node.pMaterial->Bind(pCommandList);
+
+        FPrimitiveUniformData ModelData = {};
+
+        if (Pass == ERenderPass::Skybox)
+        {
+            DirectX::XMMATRIX SkyTranslation = DirectX::XMMatrixTranslation(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z);
+            ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix * SkyTranslation);
+        }
+        else
+        {
+            ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix);
+        }
+
+        FDynamicAllocation ModelAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FPrimitiveUniformData));
+        memcpy(ModelAllocation.CpuAddress, &ModelData, sizeof(FPrimitiveUniformData));
+        pCommandList->SetGraphicsRootConstantBufferView(2, ModelAllocation.GpuAddress);
+
+        if (Pass == ERenderPass::BasePass)
+        {
+            FMaterialUniformData MaterialData = {};
+            MaterialData.Metallic = Scene.Metallic;
+            MaterialData.Roughness = Scene.Roughness;
+            MaterialData.AO = Scene.AO;
+            FDynamicAllocation MaterialAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FMaterialUniformData));
+            memcpy(MaterialAllocation.CpuAddress, &MaterialData, sizeof(FMaterialUniformData));
+            pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
+        }
+
+        Node.pMesh->Draw(pCommandList);
     }
-
-    mSkyboxMaterial.Bind(pCommandList);
-    pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCommandList->SetGraphicsRootDescriptorTable(4, Scene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
-
-    DirectX::XMMATRIX SkyModelMatrix = DirectX::XMMatrixScaling(500.0f, 500.0f, 500.0f);
-    DirectX::XMMATRIX SkyTranslation = DirectX::XMMatrixTranslation(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z);
-    FPrimitiveUniformData SkyPrimitiveUniformData = {};
-    SkyPrimitiveUniformData.ModelMatrix = DirectX::XMMatrixTranspose(SkyModelMatrix * SkyTranslation);
-    FDynamicAllocation SkyAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FPrimitiveUniformData));
-    memcpy(SkyAllocation.CpuAddress, &SkyPrimitiveUniformData, sizeof(FPrimitiveUniformData));
-    pCommandList->SetGraphicsRootConstantBufferView(2, SkyAllocation.GpuAddress);
-
-    Scene.GetRenderNodes()[1].pMesh->Draw(pCommandList);
-    // Scene.SkyboxModel->Draw(pCommandList);
 }
 
 void FDeferredShadingRenderer::RenderDeferredLighting(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,

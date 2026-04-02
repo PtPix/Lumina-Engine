@@ -1,14 +1,10 @@
-﻿#include "../../include/Renderer/RenderCore/Material.h"
-
+﻿#include "Renderer/RenderCore/Material.h"
+#include "Renderer/RenderCore/RootSignature.h"
+#include "Renderer/RenderCore/ShaderCompiler.h"
 #include "Logger/Logger.h"
-#include "../../include/Renderer/RenderCore/RootSignature.h"
-#include "../../include/Renderer/RenderCore/ShaderCompiler.h"
-
 #include <dxcapi.h>
-
-bool Material::Initialize(ID3D12Device* Device, const FMaterialInitDesc& MaterialDesc)
+bool MaterialBase::InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& MaterialDesc)
 {
-    // Compile Shaders
     std::string ErrorString;
     ShaderUtils::FBlob VertexShaderBlob;
     ShaderUtils::FBlob PixelShaderBlob;
@@ -41,46 +37,32 @@ bool Material::Initialize(ID3D12Device* Device, const FMaterialInitDesc& Materia
         }
     }
 
-    GraphicsPipelineStateBuilder GraphicsPipelineStateBuilder;
-    GraphicsPipelineStateBuilder.SetRootSignature(mRootSignature->Get())
+    GraphicsPipelineStateBuilder Builder;
+    Builder.SetRootSignature(mRootSignature->Get())
         .SetInputLayout(MaterialDesc.InputElements)
         .SetRenderTargetFormats(MaterialDesc.RenderTargetViewFormats)
         .SetDepthStencilFormat(MaterialDesc.DepthStencilViewFormat);
 
     if (MaterialDesc.bEnableDepthTest)
     {
-        GraphicsPipelineStateBuilder.EnableDepthTest();
+        Builder.EnableDepthTest();
     }
     if (!VertexShaderBlob.IsNull())
     {
-        GraphicsPipelineStateBuilder.SetVertexShader(VertexShaderBlob.GetByteCode(), VertexShaderBlob.GetByteCodeSize());
+        Builder.SetVertexShader(VertexShaderBlob.GetByteCode(), VertexShaderBlob.GetByteCodeSize());
     }
     if (!PixelShaderBlob.IsNull())
     {
-        GraphicsPipelineStateBuilder.SetPixelShader(PixelShaderBlob.GetByteCode(), PixelShaderBlob.GetByteCodeSize());
+        Builder.SetPixelShader(PixelShaderBlob.GetByteCode(), PixelShaderBlob.GetByteCodeSize());
     }
 
-    GraphicsPipelineStateBuilder.Build(Device, mPipelineState);
+    Builder.Build(Device, mPipelineState);
+
+    if (!mPipelineState.Get())
+    {
+        Log::Error("Failed to build Pipeline State!");
+        return false;
+    }
 
     return true;
-}
-
-void Material::Bind(ID3D12GraphicsCommandList* CommandList) const
-{
-    if (mRootSignature->Get() && mPipelineState.Get())
-    {
-        CommandList->SetPipelineState(mPipelineState.Get());
-    }
-}
-
-void Material::Destroy()
-{
-    if (mPipelineState.Get())
-    {
-        mPipelineState.Destroy();
-    }
-    if (mRootSignature->Get())
-    {
-        mRootSignature->Destroy();
-    }
 }

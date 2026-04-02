@@ -19,12 +19,22 @@ bool ModelApp::OnInit()
 
     mTextureManager.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetUploadHeap(), &mpGraphicsDevice->GetCbvSrvUavHeap());
 
+    // Initialize Materials
+    if (!mBasePassMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mRenderer.GetRootSignature()))
+    {
+        return false;
+    }
+
+    if (!mSkyboxMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mRenderer.GetRootSignature()))
+    {
+        return false;
+    }
+
+    // Load Models
     mScene.CharacterModel = new StaticModel();
     mScene.SkyboxModel = new StaticModel();
     mScene.CharacterModel->LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf", *mpGraphicsDevice);
     mScene.SkyboxModel->LoadFromFile("Assets/Models/Cube/Cube.gltf", *mpGraphicsDevice);
-    mScene.CharacterModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
-    mScene.SkyboxModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
 
     const char* TexturePaths[5] = {
         "Assets/Textures/DamagedHelmet/Default_albedo.jpg",
@@ -43,7 +53,6 @@ bool ModelApp::OnInit()
         }
     }
 
-    // Copy Descriptor
     mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(5, &mHelmetPBRTable);
     UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevicePtr()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = mHelmetPBRTable.GetCpuDescriptorHandle();
@@ -61,13 +70,23 @@ bool ModelApp::OnInit()
     }
 
     mScene.SkyboxTexture = mTextureManager.GetOrCreateTextureFromFile("Assets/Textures/Environments/Skybox.hdr");
-    mScene.HelmetPBRSrvTable = mHelmetPBRTable.GetGpuDescriptorHandle();
-    mScene.SkyboxSrvTable = mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle();
-    // std::vector<FRenderNode>& mRenderNodes = mScene.GetRenderNodes();
-    // for (auto FRenderNode : mRenderNodes)
-    // {
-    //     FRenderNode.pMesh->Draw(mpGraphicsDevice->GetUploadHeap().GetCommandList());
-    // }
+
+    mBasePassMaterial.SetSrvTable(mHelmetPBRTable.GetGpuDescriptorHandle());
+    mSkyboxMaterial.SetSrvTable(mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
+
+    size_t HelmetIndex = mScene.CharacterModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
+    size_t HelmetEndIndex = mScene.GetRenderNodes().size();
+    for (size_t i = HelmetIndex; i < HelmetEndIndex; ++i)
+    {
+        mScene.GetRenderNodes()[i].pMaterial = &mBasePassMaterial;
+    }
+
+    DirectX::XMMATRIX SkyTransform = DirectX::XMMatrixScaling(500.0f, 500.0f, 500.0f);
+    size_t SkyboxIndex = mScene.SkyboxModel->SumbitToScene(&mScene, SkyTransform);
+    for (size_t i = SkyboxIndex; i < mScene.GetRenderNodes().size(); ++i)
+    {
+        mScene.GetRenderNodes()[i].pMaterial = &mSkyboxMaterial;
+    }
     mpGraphicsDevice->GetVertexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
     mpGraphicsDevice->GetIndexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
     mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
@@ -141,6 +160,8 @@ void ModelApp::OnDestroy()
         mScene.SkyboxModel = nullptr;
     }
 
+    mBasePassMaterial.Destroy();
+    mSkyboxMaterial.Destroy();
     mTextureManager.DestroyAll();
     mRenderer.Destroy();
 }

@@ -5,6 +5,7 @@
 
 class StaticModel;
 struct FTexture;
+class MaterialBase;
 
 struct FDirectionalLight
 {
@@ -15,18 +16,19 @@ struct FDirectionalLight
 struct FRenderNode
 {
     FMesh* pMesh = nullptr;
-    Material* pMaterial = nullptr;
+    MaterialBase* pMaterial = nullptr;
     DirectX::XMMATRIX ModelMatrix;
 };
 
 class FScene
 {
 public:
-    void AddRenderNode(FMesh* pMesh, Material* pMaterial, const DirectX::XMMATRIX& Transform)
+    void AddRenderNode(FMesh* pMesh, MaterialBase* pMaterial, const DirectX::XMMATRIX& Transform)
     {
         mRenderNodes.push_back({ pMesh, pMaterial, Transform });
     }
 
+    std::vector<FRenderNode>& GetRenderNodes() { return mRenderNodes; }
     const std::vector<FRenderNode>& GetRenderNodes() const { return mRenderNodes; }
 
     FDirectionalLight MainLight;
@@ -37,14 +39,10 @@ public:
     FTexture* SkyboxTexture = nullptr;
     FTexture* PBRTextures[5] = { nullptr };
 
-    D3D12_GPU_DESCRIPTOR_HANDLE SkyboxSrvTable;
-    D3D12_GPU_DESCRIPTOR_HANDLE HelmetPBRSrvTable;
-
     float Metallic = 0.0f;
     float Roughness = 0.0f;
     float AO = 0.0f;
 
-    ResourceView PBRViews[5];
 private:
     std::vector<FRenderNode> mRenderNodes;
 };

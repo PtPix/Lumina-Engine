@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "SceneRenderTargets.h"
-#include "Renderer/RenderCore/Material.h"
+#include "Renderer/RenderCore/DeferredLightingMaterial.h"
 #include "Renderer/D3D12Core/GraphicsDevice.h"
 #include "Renderer/RenderCore/RootSignature.h"
 #include "Renderer/Scene/Scene.h"
@@ -49,12 +49,13 @@ public:
 
     void Destroy();
 
+    RootSignature* GetRootSignature() { return &mGlobalRootSignature; }
+
 private:
     bool CreateGlobalRootSignature();
     bool InitMaterials();
 
-    void RenderBasePass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene);
-    void RenderSkybox(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene);
+    void RenderPass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene, ERenderPass Pass);
     void RenderDeferredLighting(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene);
 
 private:
@@ -65,9 +66,7 @@ private:
     RootSignature mGlobalRootSignature;
     SceneRenderTargets mSceneRenderTargets;
 
-    Material mBasePassMaterial;
-    Material mSkyboxMaterial;
-    Material mDeferredLightingMaterial;
+    DeferredLightingMaterial mDeferredLightingMaterial;
 
     ResourceView mHelmetPBRTable;
 };

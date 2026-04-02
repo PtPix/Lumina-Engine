@@ -3,6 +3,10 @@
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
+
+#include "Renderer/D3D12Core/GraphicsDevice.h"
+#include "Renderer/Scene/Scene.h"
+
 #include "Logger/Logger.h"
 
 bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Device)
@@ -65,48 +69,20 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
         }
 
         FMesh Mesh = {};
-        Mesh.Initialize(&Device, Vertices.data(), sizeof(FStandardVertex), Vertices.size(), Indices.data(), Indices.size());
+        Mesh.Initialize(&Device, Vertices.data(), sizeof(FStandardVertex), static_cast<UINT>(Vertices.size()), Indices.data(), static_cast<UINT>(Indices.size()));
         mMeshes.push_back(Mesh);
-
-        // Generate SubMesh
-        // FSubMesh SubMesh = {};
-        // SubMesh.IndexCount = static_cast<uint32_t>(Indices.size());
-        // SubMesh.MaterialIndex = pAiMesh->mMaterialIndex;
-        //
-        // // Allocate buffer and record upload command
-        // Device.GetVertexBufferHeap().AllocVertexBuffer(
-        //     static_cast<uint32_t>(Vertices.size()), sizeof(FStandardVertex), Vertices.data(), &SubMesh.VertexBufferView
-        //     );
-        // Device.GetIndexBufferHeap().AllocIndexBuffer(
-        //     SubMesh.IndexCount, sizeof(uint32_t), Indices.data(), &SubMesh.IndexBufferView
-        //     );
-        // mSubMeshes.push_back(SubMesh);
     }
-    //
-    // Device.GetVertexBufferHeap().UploadData(pUploadCommandList);
-    // Device.GetIndexBufferHeap().UploadData(pUploadCommandList);
 
-    mbIsLoaded = true;
-    Log::Info("Loaded %s [SubMeshes: %zu, Materials: %zu]", FilePath.c_str(), mSubMeshes.size(), mMaterialNames.size());
+    Log::Info("Loaded %s [Meshes: %zu, Materials: %zu]", FilePath.c_str(), mMeshes.size(), mMaterialNames.size());
     return true;
 }
 
-void StaticModel::SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform)
+size_t StaticModel::SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform)
 {
+    size_t StartIndex = pScene->GetRenderNodes().size();
     for (auto& Mesh : mMeshes)
     {
         pScene->AddRenderNode(&Mesh, nullptr, Transform);
     }
-}
-
-void StaticModel::Draw(ID3D12GraphicsCommandList* CommandList) const
-{
-    if (!mbIsLoaded) return;
-
-    for (const FSubMesh& SubMesh : mSubMeshes)
-    {
-        CommandList->IASetVertexBuffers(0, 1, &SubMesh.VertexBufferView);
-        CommandList->IASetIndexBuffer(&SubMesh.IndexBufferView);
-        CommandList->DrawIndexedInstanced(SubMesh.IndexCount, 1, 0, 0, 0);
-    }
+    return StartIndex;
 }
