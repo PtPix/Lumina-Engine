@@ -1,5 +1,4 @@
-﻿#include "../../include/Renderer/RenderCore/TextureManager.h"
-#include "Logger/Logger.h"
+﻿#include "Renderer/RenderCore/TextureManager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Renderer/RenderCore/stb_image.h"

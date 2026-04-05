@@ -1,8 +1,6 @@
-﻿#include "Renderer/D3D12Core/GraphicsDevice.h"
+﻿#include <cassert>
 
-#include <cassert>
-
-#include "Logger/Logger.h"
+#include "Renderer/D3D12Core/GraphicsDevice.h"
 
 bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {

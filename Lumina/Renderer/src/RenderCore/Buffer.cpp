@@ -1,9 +1,7 @@
-﻿#include "../../include/Renderer/RenderCore/Buffer.h"
+﻿#include <cassert>
 
-#include <assert.h>
-
-#include "Logger/Logger.h"
-#include "../../include/Renderer/D3D12Core/Common.h"
+#include "Renderer/D3D12Core/Common.h"
+#include "Renderer/RenderCore/Buffer.h"
 
 size_t StaticBufferHeap::MEMORY_ALIGNMENT = 256;
 

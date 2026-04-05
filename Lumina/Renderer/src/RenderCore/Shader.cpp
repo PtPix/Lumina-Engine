@@ -1,4 +1,4 @@
-﻿#include "../../include/Renderer/RenderCore/Shader.h"
+﻿#include "Renderer/RenderCore/Shader.h"
 
 #include <cstdio>
 #include <cstdarg>

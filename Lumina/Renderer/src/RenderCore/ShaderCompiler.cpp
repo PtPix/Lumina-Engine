@@ -1,6 +1,5 @@
 ﻿#include "../../include/Renderer/RenderCore/ShaderCompiler.h"
 #include "dxcapi.h"
-#include "Logger/Logger.h"
 #include <algorithm>
 #include <cassert>
 #include <d3dcompiler.h>

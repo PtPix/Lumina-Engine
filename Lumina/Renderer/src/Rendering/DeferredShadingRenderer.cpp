@@ -1,7 +1,7 @@
 ﻿#include "Renderer/Rendering/DeferredShadingRenderer.h"
 
 #include "../../../Engine/include/Assets/StaticModel.h"
-#include "Logger/Logger.h"
+
 #include "Renderer/RenderCore/Texture.h"
 
 bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint32_t Width, uint32_t Height)

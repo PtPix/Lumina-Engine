@@ -1,7 +1,7 @@
-﻿#include "../../include/Renderer/D3D12Core/Fence.h"
-#include "../../include/Renderer/D3D12Core/Common.h"
+﻿#include <d3d12.h>
 
-#include <d3d12.h>
+#include "Renderer/D3D12Core/Fence.h"
+#include "Renderer/D3D12Core/Common.h"
 
 void Fence::Create(ID3D12Device* pDevice, const char* pDebugName)
 {

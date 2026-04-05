@@ -1,7 +1,5 @@
 #include "Renderer/RenderCore/BasePassMaterial.h"
 
-#include "Logger/Logger.h"
-
 bool BasePassMaterial::Initialize(ID3D12Device* Device, RootSignature* RootSig)
 {
     mRootSignature = RootSig;

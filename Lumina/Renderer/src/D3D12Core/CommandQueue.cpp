@@ -1,8 +1,6 @@
-﻿#include "../../include/Renderer/D3D12Core/CommandQueue.h"
-#include "../../include/Renderer/D3D12Core/Device.h"
-#include "../../include/Renderer/D3D12Core/Common.h"
-
-#include "Logger/Logger.h"
+﻿#include "Renderer/D3D12Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Device.h"
+#include "Renderer/D3D12Core/Common.h"
 
 #include <d3d12.h>
 

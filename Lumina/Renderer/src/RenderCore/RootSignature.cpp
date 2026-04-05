@@ -1,6 +1,4 @@
-﻿#include "../../include/Renderer/RenderCore/RootSignature.h"
-
-#include "Logger/Logger.h"
+﻿#include "Renderer/RenderCore/RootSignature.h"
 
 RootSignature::~RootSignature()
 {

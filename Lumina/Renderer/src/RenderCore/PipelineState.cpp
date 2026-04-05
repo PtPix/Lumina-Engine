@@ -1,6 +1,4 @@
-﻿#include "../../include/Renderer/RenderCore/PipelineState.h"
-
-#include "Logger/Logger.h"
+﻿#include "Renderer/RenderCore/PipelineState.h"
 
 PipelineState::~PipelineState()
 {

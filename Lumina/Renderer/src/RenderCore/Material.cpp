@@ -1,7 +1,7 @@
 ﻿#include "Renderer/RenderCore/Material.h"
 #include "Renderer/RenderCore/RootSignature.h"
 #include "Renderer/RenderCore/ShaderCompiler.h"
-#include "Logger/Logger.h"
+
 #include <dxcapi.h>
 bool MaterialBase::InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& MaterialDesc)
 {

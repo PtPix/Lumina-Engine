@@ -59,3 +59,8 @@ target_link_libraries(Renderer PRIVATE
     kernel32.lib
     winmm.lib
 )
+
+# PCH. Make include shorter
+target_precompile_headers(Renderer PRIVATE
+        <Logger/Logger.h>
+)

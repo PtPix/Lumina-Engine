@@ -1,8 +1,7 @@
-﻿#include "../../include/Renderer/D3D12Core/SwapChain.h"
-#include "Logger/Logger.h"
-#include "../../include/Renderer/D3D12Core/Common.h"
+﻿#include <cassert>
 
-#include <assert.h>
+#include "Renderer/D3D12Core/SwapChain.h"
+#include "Renderer/D3D12Core/Common.h"
 
 bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
 {

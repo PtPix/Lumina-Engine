@@ -1,10 +1,7 @@
-﻿#include "../../include/Renderer/RenderCore/ResourceHeaps.h"
-
-#include <assert.h>
-
-#include "Logger/Logger.h"
-#include "../../include/Renderer/D3D12Core/Common.h"
+﻿#include <cassert>
+#include "Renderer/D3D12Core/Common.h"
 #include "Renderer/RenderCore/ResourceView.h"
+#include "Renderer/RenderCore/ResourceHeaps.h"
 
 void StaticResourceViewHeap::Create(ID3D12Device* pDevice, const wchar_t* ResourceName, EResourceHeapType HeapType,
                                     uint32_t Capacity, bool bCPUVisible)

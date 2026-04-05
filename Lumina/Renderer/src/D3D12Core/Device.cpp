@@ -1,5 +1,4 @@
-﻿#include "../../include/Renderer/D3D12Core/Device.h"
-#include "Logger/Logger.h"
+﻿#include "Renderer/D3D12Core/Device.h"
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
