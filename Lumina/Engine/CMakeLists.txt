@@ -23,15 +23,9 @@ target_include_directories(Engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Dependency
 target_link_libraries(Engine PRIVATE ImGUI)
 target_link_libraries(Engine PUBLIC Renderer)
-target_link_libraries(Engine PUBLIC FrameTimer)
-target_link_libraries(Engine PRIVATE Logger)
 target_link_libraries(Engine PRIVATE Assimp)
-
+target_link_libraries(Engine PUBLIC LuminaCore)
 target_link_libraries(Engine PUBLIC Platform)
-
-#target_include_directories(Engine PUBLIC
-#        $<TARGET_PROPERTY:Platform,INTERFACE_INCLUDE_DIRECTORIES>
-#)
 
 target_link_libraries(Engine PRIVATE
         d3d12.lib

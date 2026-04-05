@@ -20,7 +20,7 @@ add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
         $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
 
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/../Utils/Assimp/bin/assimp-vc143-mtd.pdb"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty/Assimp/bin/assimp-vc143-mtd.pdb"
         $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
 
         COMMENT "Auto-copying Assimp DLL and PDB to output directory..."
@@ -32,13 +32,13 @@ add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
         $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
 
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/../Utils/DXCompiler/bin/dxil.dll"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty/DXCompiler/bin/dxil.dll"
         $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
 
         COMMENT "Auto-copying DXC DLLs (dxcompiler & dxil) to output directory..."
 )
 
-target_link_libraries(${EXECUTABLE_NAME} PRIVATE Logger)
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE LuminaCore)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ImGUI)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Renderer)
 

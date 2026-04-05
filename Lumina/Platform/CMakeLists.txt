@@ -12,4 +12,4 @@ target_include_directories(Platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Dependency
 target_link_libraries(Platform PRIVATE Renderer)
-target_link_libraries(Platform PRIVATE Logger)
+target_link_libraries(Platform PRIVATE LuminaCore)

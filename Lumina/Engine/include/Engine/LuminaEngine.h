@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 #include "LuminaApp.h"
-#include "FrameTimer/FrameTimer.h"
+#include "Profiler/Profiler.h"
+
 #include "Settings.h"
 #include "Platform/IWindow.h"
 #include "Platform/Window.h"

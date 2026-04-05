@@ -1,4 +1,4 @@
-﻿#include "FrameTimer/FrameTimer.h"
+﻿#include "Profiler/Profiler.h"
 
 FrameTimer::FrameTimer()
 {

@@ -1,13 +1,19 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(Lumina VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
+
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/D3D12MA")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/DXCompiler")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/Logger")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/FrameTimer")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/ImGUI")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Utils/Assimp")
+
+# Compile ThirdParty
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/ThirdParty/Assimp")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/ThirdParty/ImGUI")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/ThirdParty/DXCompiler")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/ThirdParty/D3D12MA")
+
+# Compile Core Files
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Core")
+
+
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Platform")
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Renderer")

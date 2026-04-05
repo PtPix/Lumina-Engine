@@ -43,7 +43,7 @@ target_include_directories(Renderer PUBLIC
 )
 
 # Dependencies
-target_link_libraries(Renderer PRIVATE Logger)
+target_link_libraries(Renderer PRIVATE LuminaCore)
 target_link_libraries(Renderer PUBLIC D3D12MAd)
 target_link_libraries(Renderer PUBLIC DXC)
 

@@ -1,6 +1,6 @@
 ﻿#include "Engine/LuminaEngine.h"
 #include "Logger/Logger.h"
-#include "../../Utils/ImGUI/include/ImGUI/imgui.h"
+#include "ImGUI/imgui.h"
 #include <windowsx.h>
 
 #include "Engine/Input.h"
