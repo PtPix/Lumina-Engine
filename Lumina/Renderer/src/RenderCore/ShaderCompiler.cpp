@@ -1,4 +1,4 @@
-﻿#include "../../include/Renderer/RenderCore/ShaderCompiler.h"
+﻿#include "Renderer/RenderCore/ShaderCompiler.h"
 #include "dxcapi.h"
 #include <algorithm>
 #include <cassert>
@@ -99,6 +99,7 @@ std::string GetFolderPath(const std::string & pathToFile)
     return path;
 }
 
+
 bool ShaderUtils::FBlob::IsNull() const
 {
     return !pD3DBlob && !pDxcBlob;
@@ -123,6 +124,11 @@ size_t ShaderUtils::FBlob::GetByteCodeSize() const
         return this->pDxcBlob->GetBufferSize();
     return 0;
 }
+
+ShaderUtils::FBlob::FBlob() = default;
+ShaderUtils::FBlob::~FBlob() = default;
+ShaderUtils::FBlob::FBlob(FBlob&& Other) noexcept = default;
+ShaderUtils::FBlob& ShaderUtils::FBlob::operator=(FBlob&& Other) noexcept = default;
 
 ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc& ShaderStageCompileDesc,
                                                   std::string& OutErrorString)

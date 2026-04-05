@@ -3,7 +3,6 @@
 #include <vector>
 #include <wrl/client.h>
 
-#include "D3D12MemAlloc.h"
 #include "Shader.h"
 
 struct FShaderStageCompileDesc;
@@ -16,6 +15,15 @@ namespace ShaderUtils
 {
     struct FBlob
     {
+    	FBlob();
+    	~FBlob();
+
+    	FBlob(FBlob&& Other) noexcept;
+    	FBlob& operator=(FBlob&& Other) noexcept;
+
+    	FBlob(const FBlob&) = delete;
+    	FBlob& operator=(const FBlob&) = delete;
+
         bool IsNull() const;
         const void* GetByteCode() const;
         size_t GetByteCodeSize() const;
