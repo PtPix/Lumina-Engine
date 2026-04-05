@@ -1,6 +1,6 @@
 ﻿#include "Renderer/Rendering/DeferredShadingRenderer.h"
 
-#include "../../../Engine/include/Assets/StaticModel.h"
+#include "../../../Source/Engine/include/Assets/StaticModel.h"
 
 #include "Renderer/RenderCore/Texture.h"
 

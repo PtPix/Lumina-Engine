@@ -18,7 +18,7 @@ set(ASSETS_SOURCES
 add_library(Engine STATIC ${ENGINE_SOURCES} ${ASSETS_SOURCES})
 
 # Interface
-target_include_directories(Engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(Engine PUBLIC include)
 
 # Dependency
 target_link_libraries(Engine PRIVATE ImGUI)

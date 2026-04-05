@@ -39,7 +39,7 @@ add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_CORE_SOURCES} ${RENDER
 
 # Interfaces
 target_include_directories(Renderer PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        include
 )
 
 # Dependencies

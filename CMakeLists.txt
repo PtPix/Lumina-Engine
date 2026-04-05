@@ -13,13 +13,16 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/ThirdParty/D3D12MA")
 # Compile Core Files
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Core")
 
+# Compile Platform Files
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Platform")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Platform")
+# Compile Renderer
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Renderer")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Renderer")
+# Compile Engine Files
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Engine")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Engine")
-
+# Compile Samples
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Samples")
 
 

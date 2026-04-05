@@ -8,7 +8,7 @@ set(PLATFORM_SOURCES src/Window.cpp)
 add_library(Platform STATIC ${PLATFORM_SOURCES})
 
 # Interface
-target_include_directories(Platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(Platform PUBLIC include)
 
 # Dependency
 target_link_libraries(Platform PRIVATE Renderer)
