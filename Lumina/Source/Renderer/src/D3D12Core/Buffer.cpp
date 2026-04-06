@@ -1,7 +1,7 @@
 ﻿#include <cassert>
 
 #include "Renderer/D3D12Core/Common.h"
-#include "Renderer/RenderCore/Buffer.h"
+#include "../../include/Renderer/D3D12Core/Buffer.h"
 
 size_t StaticBufferHeap::MEMORY_ALIGNMENT = 256;
 

@@ -122,7 +122,7 @@ HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
     }
 
     assert(this->mNumBackBuffers <= 3);
-    IUnknown* const Buffers[3] = { mpPresentQueue, mpPresentQueue, mpPresentQueue };
+    IUnknown* const Buffers[3] = { mpPresentQueue.Get(), mpPresentQueue.Get(), mpPresentQueue.Get() };
     UINT NodeMasks[3] = { 1, 1, 1 };
 
     HRESULT HResult = mpSwapChain->ResizeBuffers1(

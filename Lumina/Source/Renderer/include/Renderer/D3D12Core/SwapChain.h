@@ -67,6 +67,6 @@ private:
     IDXGIAdapter* mpAdapter = nullptr;
 
     IDXGISwapChain4* mpSwapChain = nullptr;
-    ID3D12CommandQueue* mpPresentQueue = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> mpPresentQueue = nullptr;
     DXGI_FORMAT mFormat = DXGI_FORMAT_UNKNOWN;
 };

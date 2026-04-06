@@ -2,7 +2,7 @@
 
 #include "../../../Source/Engine/include/Assets/StaticModel.h"
 
-#include "Renderer/RenderCore/Texture.h"
+#include "../../include/Renderer/D3D12Core/Texture.h"
 
 bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint32_t Width, uint32_t Height)
 {

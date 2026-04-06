@@ -5,8 +5,8 @@
 #include <vector>
 #include <cstdint>
 
-#include "PipelineState.h"
-#include "Renderer/RenderCore/RootSignature.h"
+#include "../D3D12Core/PipelineState.h"
+#include "Renderer/D3D12Core/RootSignature.h"
 
 struct ID3D12Device;
 struct ID3D12GraphicsCommandList;

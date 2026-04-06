@@ -198,12 +198,7 @@ void GraphicsDevice::Destroy()
         mpAllocator = nullptr;
     }
 
-    for (int i = 0; i < NUM_COMMAND_QUEUE_TYPES; i++)
-    {
-        mCommandQueues[i].Destroy();
-    }
 
-    mDevice.Destroy();
 }
 
 ID3D12GraphicsCommandList* GraphicsDevice::BeginFrame()

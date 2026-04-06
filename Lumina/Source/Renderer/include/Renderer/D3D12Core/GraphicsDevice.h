@@ -5,8 +5,8 @@
 #include "D3D12MemAlloc.h"
 #include "SwapChain.h"
 #include "Common.h"
-#include "Renderer/RenderCore/Buffer.h"
-#include "Renderer/RenderCore/ResourceHeaps.h"
+#include "Buffer.h"
+#include "ResourceHeaps.h"
 
 #include <cstdint>
 #include <windows.h>

@@ -1,7 +1,7 @@
 ﻿#include "Renderer/RenderCore/TextureManager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "Renderer/RenderCore/stb_image.h"
+#include "../../include/Renderer/D3D12Core/stb_image.h"
 
 void TextureManager::Initialize(ID3D12Device* pDevice, D3D12MA::Allocator* pAllocator, UploadHeap* pUploadHeap,
                                 StaticResourceViewHeap* pSrvHeap)

@@ -5,6 +5,7 @@
 
 #include <dxgiformat.h>
 #include <unordered_map>
+#include <wrl/client.h>
 
 struct IDXGIFactory6;
 struct ID3D12Device4;
@@ -36,10 +37,10 @@ class Device
 {
 public:
     bool Create(const FDeviceCreateDesc& CreateDesc);
-    void Destroy();
-    [[nodiscard]] ID3D12Device* GetDevicePtr() const { return mpDevice; }
-    [[nodiscard]] ID3D12Device4* GetDevice4Ptr() const { return mpDevice4; }
-    [[nodiscard]] IDXGIAdapter* GetAdapterPtr() const { return mpAdapter; }
+
+    [[nodiscard]] ID3D12Device* GetDevicePtr() const { return mpDevice.Get(); }
+    [[nodiscard]] ID3D12Device4* GetDevice4Ptr() const { return mpDevice4.Get(); }
+    [[nodiscard]] IDXGIAdapter* GetAdapterPtr() const { return mpAdapter.Get(); }
 
     [[nodiscard]] unsigned GetDeviceMemoryMax() const;
     [[nodiscard]] unsigned GetDeviceMemoryAvailable() const;
@@ -47,11 +48,9 @@ public:
     [[nodiscard]] const FDeviceCapabilities& GetDeviceCapabilities() const { return mCapabilities; }
 
 private:
-    ID3D12Device* mpDevice   = nullptr;
-    ID3D12Device4* mpDevice4 = nullptr;
-    IDXGIAdapter* mpAdapter  = nullptr;
-
-    // TODO: Multiple devices Support
+    Microsoft::WRL::ComPtr<ID3D12Device> mpDevice;
+    Microsoft::WRL::ComPtr<ID3D12Device4> mpDevice4;
+    Microsoft::WRL::ComPtr<IDXGIAdapter> mpAdapter;
 
     FDeviceCapabilities mCapabilities;
 };

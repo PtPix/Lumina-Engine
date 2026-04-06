@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 class ResourceView;
 
@@ -40,7 +41,7 @@ private:
 class UploadHeap
 {
 public:
-    void Create(ID3D12Device* pDevice, size_t uSize, ID3D12CommandQueue* pQueue);
+    void Create(ID3D12Device* pDevice, size_t uSize, Microsoft::WRL::ComPtr<ID3D12CommandQueue> pQueue);
     void Destroy();
 
     uint8_t* SubAllocate(size_t uSize, uint64_t uAlign);
@@ -49,12 +50,12 @@ public:
     [[nodiscard]] ID3D12Resource* GetResource() const { return mpUploadHeap; }
     [[nodiscard]] ID3D12GraphicsCommandList* GetCommandList() const { return mpCommandList; }
     [[nodiscard]] uint8_t* DataBegin() const { return mpDataBegin; }
-    void UploadToGPUAndWait(ID3D12CommandQueue* pQueue = nullptr);
+    void UploadToGPUAndWait(Microsoft::WRL::ComPtr<ID3D12CommandQueue> pQueue = nullptr);
 
 private:
     ID3D12Device* mpDevice = nullptr;
     ID3D12Resource* mpUploadHeap = nullptr;
-    ID3D12CommandQueue* mpCommandQueue = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> mpCommandQueue;
 
     ID3D12GraphicsCommandList* mpCommandList = nullptr;
     ID3D12CommandAllocator* mpCommandAllocator = nullptr;

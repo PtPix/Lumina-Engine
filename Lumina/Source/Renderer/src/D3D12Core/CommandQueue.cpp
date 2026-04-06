@@ -9,6 +9,7 @@ void CommandQueue::Create(Device* pDevice, ECommandQueueType Type, ECommandQueue
     if (!pDevice)
     {
         LUMINA_LOG_ERROR(RHI, "CommandQueue::Initialize failed: Null device");
+        return;
     }
 
     HRESULT HResult = {};
@@ -18,20 +19,12 @@ void CommandQueue::Create(Device* pDevice, ECommandQueueType Type, ECommandQueue
     HResult = pD3D12Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));
     if (FAILED(HResult))
     {
-        Log::Error("Couldn't create Command List: %s", "TODO:reason");
+        LUMINA_LOG_ERROR(RHI, "Couldn't create Command Queue");
     }
 
     if (pName)
     {
-        SetName(this->mpCommandQueue, pName);
-    }
-}
-
-void CommandQueue::Destroy()
-{
-    if (mpCommandQueue)
-    {
-        mpCommandQueue->Release();
+        SetName(this->mpCommandQueue.Get(), pName);
     }
 }
 

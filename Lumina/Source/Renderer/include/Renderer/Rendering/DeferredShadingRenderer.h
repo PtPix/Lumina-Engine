@@ -3,7 +3,7 @@
 #include "SceneRenderTargets.h"
 #include "Renderer/RenderCore/DeferredLightingMaterial.h"
 #include "Renderer/D3D12Core/GraphicsDevice.h"
-#include "Renderer/RenderCore/RootSignature.h"
+#include "../D3D12Core/RootSignature.h"
 #include "Renderer/Scene/Scene.h"
 #include "Renderer/Scene/SceneView.h"
 

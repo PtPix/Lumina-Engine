@@ -12,16 +12,16 @@ set(D3D12CORE_SOURCES
 )
 
 set(RENDER_CORE_SOURCES
-        "src/RenderCore/ResourceHeaps.cpp"
-        "src/RenderCore/ResourceView.cpp"
-        "src/RenderCore/Buffer.cpp"
-        "src/RenderCore/Texture.cpp"
+        "src/D3D12Core/ResourceHeaps.cpp"
+        "src/D3D12Core/ResourceView.cpp"
+        "src/D3D12Core/Buffer.cpp"
+        "src/D3D12Core/Texture.cpp"
         "src/RenderCore/TextureManager.cpp"
         "src/Rendering/SceneRenderTargets.cpp"
-        "src/RenderCore/Shader.cpp"
-        "src/RenderCore/ShaderCompiler.cpp"
-        "src/RenderCore/RootSignature.cpp"
-        "src/RenderCore/PipelineState.cpp"
+        "src/D3D12Core/Shader.cpp"
+        "src/D3D12Core/ShaderCompiler.cpp"
+        "src/D3D12Core/RootSignature.cpp"
+        "src/D3D12Core/PipelineState.cpp"
         "src/RenderCore/Material.cpp"
         "src/RenderCore/BasePassMaterial.cpp"
         "src/RenderCore/SkyboxMaterial.cpp"
@@ -64,4 +64,5 @@ target_link_libraries(Renderer PRIVATE
 target_precompile_headers(Renderer PRIVATE
         <Logger/Logger.h>
         <Profiler/Profiler.h>
+        <StringUtils/StringConv.h>
 )

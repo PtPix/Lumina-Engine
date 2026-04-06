@@ -4,8 +4,8 @@
 #include <unordered_map>
 
 #include "D3D12MemAlloc.h"
-#include "ResourceHeaps.h"
-#include "Texture.h"
+#include "Renderer/D3D12Core/ResourceHeaps.h"
+#include "../D3D12Core/Texture.h"
 
 class TextureManager
 {

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <d3d12.h>
+#include <wrl/client.h>
 
 struct ID3D12CommandQueue;
 class Device;
@@ -24,12 +25,11 @@ class CommandQueue
 {
 public:
     void Create(Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority = ECommandQueuePriority::NORMAL, const char* pName = nullptr);
-    void Destroy();
 
-    ID3D12CommandQueue* GetCommandQueue() const { return mpCommandQueue; }
+    [[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const { return mpCommandQueue.Get(); }
 
 private:
     static D3D12_COMMAND_QUEUE_DESC CreateCommandQueueDesc(ECommandQueueType Type, ECommandQueuePriority Priority);
 
-    ID3D12CommandQueue* mpCommandQueue = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12CommandQueue> mpCommandQueue;
 };

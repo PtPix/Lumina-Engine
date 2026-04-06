@@ -5,6 +5,7 @@ project(LuminaCore)
 set(CORE_SOURCES
         src/Profiler.cpp
         src/Logger.cpp
+        src/StringConv.cpp
 )
 
 # Build Library

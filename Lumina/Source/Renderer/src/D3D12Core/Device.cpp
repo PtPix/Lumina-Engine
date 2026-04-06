@@ -1,6 +1,4 @@
-﻿#include "Renderer/D3D12Core/Device.h"
-
-#include <d3d12.h>
+﻿#include <d3d12.h>
 #include <dxgi1_6.h>
 #include <windows.h>
 
@@ -9,13 +7,15 @@
 #include <string>
 #include <vector>
 
+#include "Renderer/D3D12Core/Device.h"
+
 struct FGPUInfo
 {
     std::string DeviceName;
     unsigned DeviceID;
     unsigned VendorID;
     size_t DedicatedGPUMemory;
-    IDXGIAdapter1* pAdapter;
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
     D3D_FEATURE_LEVEL MaxSupportedFeatureLevel;
 
     [[nodiscard]] bool IsAMD() const { return (VendorID == 0x1002); }
@@ -23,14 +23,7 @@ struct FGPUInfo
     [[nodiscard]] bool IsIntel() const { return (VendorID == 0x163C) || (VendorID == 0x8086) || (VendorID == 0x8087); }
 };
 
-/**
- * Check the device feature support for the given device.
- * @param pDevice The device to check the feature support for.
- * @param DeviceCapabilities The device capabilities to fill in.
- * @return None.
- * @note This function checks the support for the following features: Hardware ray tracing, Wave optimization, Half Precision Float, Mesh Shaders, Sampler Feedback, TypedUAVLoads and Enhanced Barrier.
- */
-static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabilities& DeviceCapabilities)
+static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities& DeviceCapabilities)
 {
     HRESULT HResult;
 
@@ -189,26 +182,6 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
     }
 }
 
-std::string WideToASCII(const wchar_t* wideStr) {
-    if (wideStr == nullptr) return "";
-
-    const int bufferSize = WideCharToMultiByte(CP_ACP, 0, wideStr, -1, nullptr, 0, nullptr, nullptr);
-    if (bufferSize == 0) return "";
-    
-    std::string asciiStr(bufferSize, 0);
-    WideCharToMultiByte(CP_ACP, 0, wideStr, -1, &asciiStr[0], bufferSize, nullptr, nullptr);
-    
-    asciiStr.resize(bufferSize - 1);
-    return asciiStr;
-}
-
-/**
- * Enumerate all DX12 adapters on the system, and create a GPU info struct for each adapter.
- * @param bEnableDebugLayer If true, create the DXGIFactory with the debug flag set.
- * @param bEnumerateSoftwareAdapters If true, enumerate software adapters as well as hardware adapters.
- * @param pFactory If not nullptr, use this DXGIFactory instead of creating a new one.
- * @return A vector of GPU info structs, each containing information about a DX12 adapter.
- */
 static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool bEnumerateSoftwareAdapters, IDXGIFactory6* pFactory)
 {
     std::vector<FGPUInfo> GPUs;
@@ -235,17 +208,18 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
     }
 
     // Lambda function for adding adapters to GPUs
-    auto FunctionAddAdapter = [&bAdapterFound, &GPUs](IDXGIAdapter1*& pAdapter, const DXGI_ADAPTER_DESC1& Desc, D3D_FEATURE_LEVEL FeatureLevel)
+    auto FunctionAddAdapter = [&bAdapterFound, &GPUs](IDXGIAdapter1* pAdapter, const DXGI_ADAPTER_DESC1& Desc, D3D_FEATURE_LEVEL FeatureLevel)
     {
         bAdapterFound = true;
 
         FGPUInfo GPUInfo = {};
         GPUInfo.DedicatedGPUMemory = Desc.DedicatedVideoMemory;
         GPUInfo.DeviceID = Desc.DeviceId;
-        GPUInfo.DeviceName = WideToASCII(Desc.Description);
+        GPUInfo.DeviceName = StringUtils::WideToUTF8(Desc.Description);
         GPUInfo.MaxSupportedFeatureLevel = FeatureLevel;
         GPUInfo.VendorID = Desc.VendorId;
-        pAdapter->QueryInterface(IID_PPV_ARGS(&GPUInfo.pAdapter));
+        GPUInfo.pAdapter = pAdapter;
+
         GPUs.push_back(GPUInfo);
     };
     
@@ -273,7 +247,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
         }
         else
         {
-            const std::string AdapterDesc = WideToASCII(Desc.Description);
+            const std::string AdapterDesc = StringUtils::WideToUTF8(Desc.Description);
             Log::Warning("Device::Create() : Could not create D3D12Device with Feature_Level 12_1 for adapter %s, Trying with 12_0.", AdapterDesc.c_str());
             HResult = D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), nullptr);
             if (SUCCEEDED(HResult))
@@ -298,11 +272,6 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
     return GPUs;
 }
 
-/**
- * Create a D3D12 device and enable the debug layer if requested.
- * @param CreateDesc A structure containing information about how to create the device.
- * @return True if the device was created successfully, false otherwise.
- */
 bool Device::Create(const FDeviceCreateDesc& CreateDesc)
 {
     HRESULT HResult = {};
@@ -310,7 +279,7 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
     // Debug and Validation Layer check and create
     if (CreateDesc.bEnableDebugLayer)
     {
-        ID3D12Debug1* pDebugController = nullptr;
+        Microsoft::WRL::ComPtr<ID3D12Debug1> pDebugController;
         HResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
         if (HResult == S_OK)
         {
@@ -320,7 +289,6 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
                 pDebugController->SetEnableGPUBasedValidation(true);
                 pDebugController->SetEnableSynchronizedCommandQueueValidation(true);
             }
-            pDebugController->Release();
             LUMINA_LOG_INFO(RHI, "Device::Create() : Enable Debug %s", (CreateDesc.bEnableValidationLayer ? "and GPU Validation layers" : "layer"));
         }
         else
@@ -337,19 +305,11 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
     this->mpAdapter = Adapter.pAdapter;
     // Create Device
     {
-        HResult = D3D12CreateDevice(this->mpAdapter, Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
+        HResult = D3D12CreateDevice(this->mpAdapter.Get(), Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
         if (!SUCCEEDED(HResult))
         {
             LUMINA_LOG_ERROR(RHI, "Device::Create() : D3D12CreateDevice() failed");
             return false;
-        }
-    }
-    // Create Device4
-    {
-        HResult = D3D12CreateDevice(this->mpAdapter, Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice4));
-        if (!SUCCEEDED(HResult))
-        {
-            LUMINA_LOG_ERROR(RHI, "Device::Create() : D3D12CreateDevice() failed");
         }
     }
     const bool bDeviceCreated = true;
@@ -372,18 +332,8 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
         }
     }
 
-    CheckDeviceFeautureSupport(this->mpDevice4, this->mCapabilities);
+    CheckDeviceFeatureSupport(this->mpDevice.Get(), this->mCapabilities);
     return bDeviceCreated;
-}
-
-void Device::Destroy()
-{
-    mpAdapter->Release();
-    mpDevice->Release();
-    if (mpDevice4)
-    {
-        mpDevice4->Release();
-    }
 }
 
 UINT Device::GetDeviceMemoryMax() const
@@ -399,7 +349,7 @@ UINT Device::GetDeviceMemoryMax() const
 
 UINT Device::GetDeviceMemoryAvailable() const
 {
-    IDXGIAdapter3* pAdapter3;
+    Microsoft::WRL::ComPtr<IDXGIAdapter3> pAdapter3;
     if (SUCCEEDED(mpAdapter->QueryInterface(IID_PPV_ARGS(&pAdapter3))))
     {
         DXGI_QUERY_VIDEO_MEMORY_INFO memInfo = {};

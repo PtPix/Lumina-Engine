@@ -1,7 +1,7 @@
 ﻿#include <cassert>
 #include "Renderer/D3D12Core/Common.h"
-#include "Renderer/RenderCore/ResourceView.h"
-#include "Renderer/RenderCore/ResourceHeaps.h"
+#include "Renderer/D3D12Core/ResourceView.h"
+#include "../../include/Renderer/D3D12Core/ResourceHeaps.h"
 
 void StaticResourceViewHeap::Create(ID3D12Device* pDevice, const wchar_t* ResourceName, EResourceHeapType HeapType,
                                     uint32_t Capacity, bool bCPUVisible)
@@ -118,7 +118,7 @@ void StaticResourceViewHeap::FreeDescriptor(ResourceView* pResourceView)
     }
 }
 
-void UploadHeap::Create(ID3D12Device* pDevice, size_t uSize, ID3D12CommandQueue* pQueue)
+void UploadHeap::Create(ID3D12Device* pDevice, size_t uSize, Microsoft::WRL::ComPtr<ID3D12CommandQueue> pQueue)
 {
     mpDevice = pDevice;
     mpCommandQueue = pQueue;
@@ -207,7 +207,7 @@ uint8_t* UploadHeap::SubAllocate(size_t uSize, uint64_t uAlign)
     return pRet;
 }
 
-void UploadHeap::UploadToGPUAndWait(ID3D12CommandQueue* pQueue)
+void UploadHeap::UploadToGPUAndWait(Microsoft::WRL::ComPtr<ID3D12CommandQueue> pQueue)
 {
     if (!pQueue)
     {

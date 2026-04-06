@@ -4,8 +4,8 @@
 #include <wrl/client.h>
 
 #include "D3D12MemAlloc.h"
-#include "../RenderCore/ResourceHeaps.h"
-#include "Renderer/RenderCore/ResourceView.h"
+#include "../D3D12Core/ResourceHeaps.h"
+#include "Renderer/D3D12Core/ResourceView.h"
 
 struct FRenderTarget
 {

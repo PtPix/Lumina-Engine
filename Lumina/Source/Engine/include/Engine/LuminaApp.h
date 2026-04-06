@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Camera.h"
-#include "Renderer/RenderCore/ResourceView.h"
+#include "../../../Renderer/include/Renderer/D3D12Core/ResourceView.h"
 #include "Renderer/D3D12Core/GraphicsDevice.h"
 
 class LuminaRenderer;
