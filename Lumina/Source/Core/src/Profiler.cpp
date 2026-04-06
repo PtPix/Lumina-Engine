@@ -1,5 +1,7 @@
 ﻿#include "Profiler/Profiler.h"
 
+#include "Logger/Logger.h"
+
 FrameTimer::FrameTimer()
 {
     Reset();
@@ -49,4 +51,11 @@ bool FrameTimer::UpdateAndCheckReportInterval()
     }
 
     return false;
+}
+
+FTimeLogScope::~FTimeLogScope()
+{
+    auto EndTime = std::chrono::high_resolution_clock::now();
+    double DurationMs = std::chrono::duration<double, std::milli>(EndTime - StartTime).count();
+    LUMINA_LOG_INFO(Profiler, "%s [%.2f ms]", Label, DurationMs);
 }

@@ -20,7 +20,7 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
 
     if (!pScene || pScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !pScene->mRootNode)
     {
-        Log::Error("[StaticModel] Assimp Failed to load %s: %s", FilePath.c_str(), Importer.GetErrorString());
+        LUMINA_LOG_ERROR(StaticModel, "Assimp Failed to load %s: %s", FilePath.c_str(), Importer.GetErrorString());
         return false;
     }
 
@@ -73,7 +73,7 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
         mMeshes.push_back(Mesh);
     }
 
-    Log::Info("Loaded %s [Meshes: %zu, Materials: %zu]", FilePath.c_str(), mMeshes.size(), mMaterialNames.size());
+    LUMINA_LOG_INFO(StaticModel, "Loaded %s [Meshes: %zu, Materials: %zu]", FilePath.c_str(), mMeshes.size(), mMaterialNames.size());
     return true;
 }
 

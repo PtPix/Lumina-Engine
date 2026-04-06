@@ -14,7 +14,7 @@ static D3D12_RESOURCE_STATES GetResourceTransitionState(EBufferType eType)
     case VERTEX_BUFFER   : s = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER; break;
     case INDEX_BUFFER    : s = D3D12_RESOURCE_STATE_INDEX_BUFFER; break;
     default:
-        Log::Warning("StaticBufferPool::Create(): unkown resource type, couldn't determine resource transition state for upload.");
+        LUMINA_LOG_WARNING(RHI, "StaticBufferPool::Create(): unkown resource type, couldn't determine resource transition state for upload.");
         break;
     }
     return s;
@@ -195,7 +195,7 @@ bool StaticBufferHeap::AllocBuffer(uint32_t NumElements, uint32_t StrideInBytes,
     const bool bHeapOutOfMemory = ((mMemoryOffset + Size) > mTotalMemorySize);
     if (bHeapOutOfMemory)
     {
-        Log::Error("Static Heap out of Memory.");
+        LUMINA_LOG_ERROR(RHI, "Static Heap out of Memory.");
         return false;
     }
 
@@ -257,7 +257,7 @@ bool DynamicUploadHeap::Initialize(D3D12MA::Allocator* pAllocator, uint32_t Tota
 
     if (FAILED(HResult))
     {
-        Log::Error("Failed to create DynamicUploadHeap via D3D12MA!");
+        LUMINA_LOG_ERROR(RHI, "Failed to create DynamicUploadHeap via D3D12MA!");
         return false;
     }
 
@@ -293,7 +293,7 @@ FDynamicAllocation DynamicUploadHeap::Allocate(uint32_t SizeInBytes)
 
     if (mCurrentOffset + AlignedSize > mTotalSize)
     {
-        Log::Error("DynamicUploadHeap Out of Memory");
+        LUMINA_LOG_ERROR(RHI, "DynamicUploadHeap Out of Memory");
         return { nullptr, 0 };
     }
 

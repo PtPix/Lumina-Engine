@@ -49,7 +49,7 @@ FTexture* TextureManager::GetOrCreateTexture(const std::string& Name, const void
         );
     if (FAILED(HResult))
     {
-        Log::Error("Failed to create Texture Resource.");
+        LUMINA_LOG_ERROR(RHI, "Failed to create Texture Resource.");
         return nullptr;
     }
 
@@ -65,7 +65,7 @@ FTexture* TextureManager::GetOrCreateTexture(const std::string& Name, const void
     uint8_t* pUploadMemory = mpUploadHeap->SubAllocate(TotalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
     if (!pUploadMemory)
     {
-        Log::Error("UploadHeap out of memory for texture.");
+        LUMINA_LOG_ERROR(RHI, "UploadHeap out of memory for texture.");
 
         if (NewTexture->Resource)
         {
@@ -111,7 +111,7 @@ FTexture* TextureManager::GetOrCreateTexture(const std::string& Name, const void
 
     if (!mpSrvHeap->AllocateDescriptor(1, &NewTexture->SourceView))
     {
-        Log::Error("Failed to allocate SRV descriptor for texture.");
+        LUMINA_LOG_ERROR(RHI, "Failed to allocate SRV descriptor for texture.");
 
         if (NewTexture->Resource)
         {

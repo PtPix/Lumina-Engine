@@ -178,7 +178,7 @@ Window::Window(const wchar_t* Title, FWindowDesc& InitParameters)
 
     if (!bPreferredDisplayFound)
     {
-        Log::Warning("Window(): Couldn't find the preferred display %d", InitParameters.PreferredDisplay);
+        LUMINA_LOG_WARNING(Platform, "Window(): Couldn't find the preferred display %d", InitParameters.PreferredDisplay);
     }
 }
 
@@ -204,7 +204,7 @@ void Window::ToggleWindowedFullScreen(SwapChain* pSwapChain)
 
 void Window::Close()
 {
-    Log::Info("Window:: Closing<%x>", this->mHwnd);
+    LUMINA_LOG_INFO(Platform, "Window:: Closing<%x>", this->mHwnd);
     this->mIsClosed = true;
     ::ShowWindow(mHwnd, FALSE);
     ::DestroyWindow(this->mHwnd);
@@ -260,7 +260,7 @@ WindowClass::WindowClass(const wchar_t* Name, HINSTANCE hInstance, WNDPROC Proce
     if (WC.hIcon == nullptr)
     {
         DWORD DWord = GetLastError();
-        Log::Warning("Couldn't load icon for window: 0x%x", DWord);
+        LUMINA_LOG_WARNING(Platform, "Couldn't load icon for window: 0x%x", DWord);
     }
     WC.hCursor = LoadCursor(nullptr, IDC_ARROW);
     WC.hbrBackground = nullptr;

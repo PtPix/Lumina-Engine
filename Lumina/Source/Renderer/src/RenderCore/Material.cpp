@@ -59,7 +59,7 @@ bool MaterialBase::InitializePipeline(ID3D12Device* Device, const FMaterialInitD
 
     if (!mPipelineState.Get())
     {
-        Log::Error("Failed to build Pipeline State!");
+        LUMINA_LOG_WARNING(Material, "Failed to build Pipeline State!");
         return false;
     }
 

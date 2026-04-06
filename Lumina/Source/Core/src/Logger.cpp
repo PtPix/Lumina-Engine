@@ -15,6 +15,12 @@ namespace Log
     constexpr const char* LuminaDefaultLogFilePath = "LuminaLog.txt";
     static std::ofstream OutFileStream;
 
+    void SetConsoleColor(WORD Color)
+    {
+        HANDLE ConsoleOuput = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleTextAttribute(ConsoleOuput, Color);
+    }
+
     void InitConsole()
     {
         // Create a console for current application
@@ -55,6 +61,7 @@ namespace Log
     void Initialize(OutputMode OutputMode, std::string_view LogFilePath)
     {
         InitConsole();
+        SetConsoleColor(15);
     }
 
     void Destroy()
@@ -70,9 +77,11 @@ namespace Log
         OutputDebugStringA(Message.c_str());
     }
 
-    void Error(std::string_view Message)
+    void Error(std::string_view Category, std::string_view Message)
     {
-        std::string Error = "[Error]\t:";
+        std::string Error = "[Error]\t[";
+        Error += Category;
+        Error += "]\t: ";
         Error += Message;
         Error += "\n";
 
@@ -81,12 +90,16 @@ namespace Log
         {
             OutFileStream << Error;
         }
+        SetConsoleColor(12);
         std::cout << Error;
+        SetConsoleColor(15);
     }
 
-    void Info(std::string_view Message)
+    void Info(std::string_view Category, std::string_view Message)
     {
-        std::string Info = "[Info]\t:";
+        std::string Info = "[Info]\t[";
+        Info += Category;
+        Info += "]\t: ";
         Info += Message;
         Info += "\n";
 
@@ -95,12 +108,15 @@ namespace Log
         {
             OutFileStream << Info;
         }
+        SetConsoleColor(15);
         std::cout << Info;
     }
 
-    void Warning(std::string_view Message)
+    void Warning(std::string_view Category, std::string_view Message)
     {
-        std::string Warning = "[Warning]\t:";
+        std::string Warning = "[Warning]\t[";
+        Warning += Category;
+        Warning += "]\t: ";
         Warning += Message;
         Warning += "\n";
 
@@ -109,6 +125,8 @@ namespace Log
         {
             OutFileStream << Warning;
         }
+        SetConsoleColor(14);
         std::cout << Warning;
+        SetConsoleColor(15);
     }
 }

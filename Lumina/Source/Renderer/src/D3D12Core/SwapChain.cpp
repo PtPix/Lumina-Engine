@@ -23,7 +23,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     HResult = CreateDXGIFactory1(IID_PPV_ARGS(&pDxgiFactory));
     if (FAILED(HResult))
     {
-        Log::Error("SwapChain::Create(): Couldn't create DXGI Factory.");
+        LUMINA_LOG_ERROR(RHI, "SwapChain::Create(): Couldn't create DXGI Factory.");
         return false;
     }
 
@@ -83,7 +83,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     HResult = mpDevice->CreateDescriptorHeap(&RenderTargetViewHeapDesc, IID_PPV_ARGS(&this->mpDescriptorHeapRTV));
     if (FAILED(HResult))
     {
-        Log::Error("Swapchain::Create(): Couldn't create RTV Heap: %0x%x", HResult);
+        LUMINA_LOG_ERROR(RHI,"Swapchain::Create(): Couldn't create RTV Heap: %0x%x", HResult);
         return false;
     }
 
@@ -166,18 +166,18 @@ HRESULT SwapChain::Present()
         switch (HResult)
         {
         case DXGI_ERROR_DEVICE_RESET:
-            Log::Error("SwapChain::Present(): DXGI_ERROR_DEVICE_RESET");
+            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_DEVICE_RESET");
             // TODO: call HandleDeviceReset() from whoever will be responsible
             break;
         case DXGI_ERROR_DEVICE_REMOVED:
-            Log::Error("SwapChain::Present(): DXGI_ERROR_DEVICE_REMOVED");
+            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_DEVICE_REMOVED");
             break;
         case DXGI_ERROR_INVALID_CALL:
-            Log::Error("SwapChain::Present(): DXGI_ERROR_INVALID_CALL");
+            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_INVALID_CALL");
             // TODO:
             break;
         case DXGI_STATUS_OCCLUDED:
-            Log::Warning("SwapChain::Present(): DXGI_STATUS_OCCLUDED");
+            LUMINA_LOG_WARNING(RHI, "SwapChain::Present(): DXGI_STATUS_OCCLUDED");
             break;
         default:
             assert(false);
@@ -209,7 +209,8 @@ void SwapChain::MoveToNextFrame()
     {
     case S_OK: break;
     case WAIT_TIMEOUT:
-        Log::Warning(
+        LUMINA_LOG_WARNING(
+            RHI,
             "SwapChain<hwnd=0x%x> timed out on WaitForGPU(): Signal=%d, ICurrBackBuffer=%d, NumFramesPresented=%d"
             , mHwnd, mFenceValues[mCurrentBackBufferIndex], mCurrentBackBufferIndex, mNumTotalFrames);
         break;
@@ -225,7 +226,7 @@ void SwapChain::WaitForGPU()
     HRESULT HResult = mpDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
     if (HResult != S_OK)
     {
-        Log::Error("WaitForGPU(): Failed to CreateFence()");
+        LUMINA_LOG_ERROR(RHI, "WaitForGPU(): Failed to CreateFence()");
         return;
     }
 
@@ -250,7 +251,7 @@ void SwapChain::CreateRenderTargetViews()
         HResult = mpSwapChain->GetBuffer(i, IID_PPV_ARGS(&mRenderTargets[i]));
         if (FAILED(HResult))
         {
-            Log::Error("SwapChain::GetBuffer(): Failed to get buffer");
+            LUMINA_LOG_ERROR(RHI, "SwapChain::GetBuffer(): Failed to get buffer");
             assert(false);
         }
 

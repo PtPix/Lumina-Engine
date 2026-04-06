@@ -40,7 +40,7 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &FeatureOptions5, sizeof(FeatureOptions5));
         if (!SUCCEEDED(HResult))
         {
-            Log::Warning("Device::CheckFeatureSupport() : Hardware ray tracing failed.");
+            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Hardware ray tracing failed.");
         }
         else
         {
@@ -54,7 +54,7 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &FeatureOptions1, sizeof(FeatureOptions1));
         if (!SUCCEEDED(HResult))
         {
-            Log::Warning("Device::CheckFeatureSupport() : Wave optimization failed.");
+            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Wave optimization failed.");
         }
         else
         {
@@ -68,7 +68,7 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &FeatureOptions4, sizeof(FeatureOptions4));
         if (!SUCCEEDED(HResult))
         {
-            Log::Warning("Device::CheckFeatureSupport() : Half Precision Float failed.");
+            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Half Precision Float failed.");
         }
         else
         {
@@ -82,7 +82,7 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureOptions7, sizeof(FeatureOptions7));
         if (!SUCCEEDED(HResult))
         {
-            Log::Warning("Device::CheckFeatureSupport() : Mesh Shaders and Sampler Feedback failed.");
+            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Mesh Shaders and Sampler Feedback failed.");
         }
         else
         {
@@ -113,7 +113,7 @@ static void CheckDeviceFeautureSupport(ID3D12Device4* pDevice, FDeviceCapabiliti
         // Here we should check if the feature is supported and other formats are supported.
         if (!SUCCEEDED(HResult))
         {
-            Log::Warning("Device::CheckFeatureSupport() : TypedUAVLoads failed.");
+            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : TypedUAVLoads failed.");
         }
         else
         {
@@ -321,11 +321,11 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
                 pDebugController->SetEnableSynchronizedCommandQueueValidation(true);
             }
             pDebugController->Release();
-            Log::Info("Device::Create() : Enable Debug %s", (CreateDesc.bEnableValidationLayer ? "and GPU Validation layers" : "layer"));
+            LUMINA_LOG_INFO(RHI, "Device::Create() : Enable Debug %s", (CreateDesc.bEnableValidationLayer ? "and GPU Validation layers" : "layer"));
         }
         else
         {
-            Log::Warning("Device::Create(): D3D12GetDebugInterface() returned != S_OK: %l", HResult);
+            LUMINA_LOG_WARNING(RHI, "Device::Create(): D3D12GetDebugInterface() returned != S_OK: %l", HResult);
         }
     }
 
@@ -340,7 +340,7 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
         HResult = D3D12CreateDevice(this->mpAdapter, Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
         if (!SUCCEEDED(HResult))
         {
-            Log::Error("Device::Create() : D3D12CreateDevice() failed");
+            LUMINA_LOG_ERROR(RHI, "Device::Create() : D3D12CreateDevice() failed");
             return false;
         }
     }
@@ -349,7 +349,7 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
         HResult = D3D12CreateDevice(this->mpAdapter, Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice4));
         if (!SUCCEEDED(HResult))
         {
-            Log::Error("Device::Create() : D3D12CreateDevice() failed");
+            LUMINA_LOG_ERROR(RHI, "Device::Create() : D3D12CreateDevice() failed");
         }
     }
     const bool bDeviceCreated = true;

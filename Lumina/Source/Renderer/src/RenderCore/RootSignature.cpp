@@ -150,7 +150,7 @@ bool RootSignatureBuilder::Build(ID3D12Device* Device, RootSignature& OutRootSig
 
     if (FAILED(HResult))
     {
-        Log::Error("Failed to create root signature");
+        LUMINA_LOG_ERROR(RHI, "Failed to create root signature");
         return false;
     }
 

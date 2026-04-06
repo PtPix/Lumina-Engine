@@ -35,7 +35,7 @@ void StaticResourceViewHeap::Create(ID3D12Device* pDevice, const wchar_t* Resour
     HRESULT HResult = pDevice->CreateDescriptorHeap(&DescritporHeapDesc, IID_PPV_ARGS(&mpHeap));
     if (FAILED(HResult))
     {
-        Log::Error("CreateDescriptorHeap() failed");
+        LUMINA_LOG_ERROR(RHI, "CreateDescriptorHeap() failed");
         return;
     }
     this->mpHeap->SetName(ResourceName);
@@ -77,7 +77,7 @@ bool StaticResourceViewHeap::AllocateDescriptor(uint32_t Count, ResourceView* pR
 
     if (!bFoundSpace)
     {
-        Log::Error("CreateDescriptorHeap() failed: couldn't find contiguous descriptor block");
+        LUMINA_LOG_ERROR(RHI, "CreateDescriptorHeap() failed: couldn't find contiguous descriptor block");
         return false;
     }
 
@@ -86,7 +86,7 @@ bool StaticResourceViewHeap::AllocateDescriptor(uint32_t Count, ResourceView* pR
         assert(mIsDescriptorFree[iStart + i]);
         if (!mIsDescriptorFree[iStart + i])
         {
-            Log::Warning("OVERWRITING DESCRIPTOR %d (base=%d+offset=%d)", iStart + i, iStart, i);
+            LUMINA_LOG_WARNING(RHI, "OVERWRITING DESCRIPTOR %d (base=%d+offset=%d)", iStart + i, iStart, i);
         }
         mIsDescriptorFree[iStart + i] = false;
     }
@@ -161,14 +161,14 @@ void UploadHeap::Create(ID3D12Device* pDevice, size_t uSize, ID3D12CommandQueue*
         );
     if (FAILED(HResult))
     {
-        Log::Error("Couldn't create upload heap.");
+        LUMINA_LOG_ERROR(RHI, "Couldn't create upload heap.");
         return;
     }
 
     HResult = mpUploadHeap->Map(0, nullptr, (void**)&mpDataBegin);
     if (FAILED(HResult))
     {
-        Log::Error("Couldn't map upload heap.");
+        LUMINA_LOG_ERROR(RHI, "Couldn't map upload heap.");
         return;
     }
 

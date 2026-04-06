@@ -140,7 +140,7 @@ bool GraphicsPipelineStateBuilder::Build(ID3D12Device* Device, PipelineState& Ou
 {
     if (!mPipelineStateDesc.pRootSignature)
     {
-        Log::Error("Pipeline State requires a Root Signature!");
+        LUMINA_LOG_ERROR(RHI, "Pipeline State requires a Root Signature!");
         return false;
     }
 
@@ -149,7 +149,7 @@ bool GraphicsPipelineStateBuilder::Build(ID3D12Device* Device, PipelineState& Ou
 
     if (FAILED(HResult))
     {
-        Log::Error("Failed to create graphics pipeline state");
+        LUMINA_LOG_ERROR(RHI, "Failed to create graphics pipeline state");
         return false;
     }
 

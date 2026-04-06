@@ -7,7 +7,7 @@
 
 void LuminaEngine::OnWindowCreate(HWND hWnd)
 {
-    Log::Info("Window Created");
+    LUMINA_LOG_INFO(Engine, "Window Created");
 }
 
 void LuminaEngine::OnWindowResize(HWND hWnd)
@@ -28,7 +28,7 @@ void LuminaEngine::OnWindowLoseFocus(HWND hwnd)
 
 void LuminaEngine::OnWindowClose(HWND hwnd)
 {
-    Log::Info("Closing Window");
+    LUMINA_LOG_INFO(Engine, "Closing Window");
     Quit();
 }
 

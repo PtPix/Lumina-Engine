@@ -12,13 +12,13 @@ bool LuminaEngine::Initialize(FStartupParameters& StartupParameters, LuminaApp* 
 
     if (!mGraphicsDevice.Initialize(mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight()))
     {
-        Log::Error("Can't Initialize Graphics Device.");
+        LUMINA_LOG_ERROR(Engine, "Can't Initialize Graphics Device.");
         return false;
     }
 
     if (!mCurrentApp)
     {
-        Log::Error("Can't Run Engine without App.");
+        LUMINA_LOG_ERROR(Engine, "Can't Run Engine without App.");
         return false;
     }
 
@@ -61,7 +61,7 @@ void LuminaEngine::Run()
 
         if (mTimer.UpdateAndCheckReportInterval())
         {
-            Log::Info("FPS: %.2f, Avg Frame: %.3fms, Total: %.1fs",
+            LUMINA_LOG_INFO(Engine, "FPS: %.2f, Avg Frame: %.3fms, Total: %.1fs",
                    mTimer.GetFPS(), mTimer.GetAvgFrameTimeMs(), mTimer.GetTotalTime());
         }
     }
@@ -98,5 +98,5 @@ void LuminaEngine::InitializeWindows(FStartupParameters& StartupParameters)
     };
     mpMainWindow = std::make_unique<Window>(WindowSettings.Title, WindowDesc);
     mpMainWindow->pOwner->OnWindowCreate(mpMainWindow->GetHWND());
-    Log::Info("Created main window<0x%x>: %dx%d", mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight());
+    LUMINA_LOG_INFO(Engine, "Created main window<%p>: %dx%d", mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight());
 }

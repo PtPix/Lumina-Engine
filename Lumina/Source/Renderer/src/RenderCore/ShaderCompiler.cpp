@@ -136,7 +136,7 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
     const WCHAR* StringPath = ShaderStageCompileDesc.FilePath.data();
     const bool bIsShaderModel5 = ShaderStageCompileDesc.ShaderModel == EShaderModel::SM5_0;
 
-    Log::Info("Compiling Shader Source: [%s @ %s()]"
+    LUMINA_LOG_INFO(Shader, "Compiling Shader Source: [%s @ %s()]"
     , GetShaderModel_cstr(ShaderStageCompileDesc.ShaderModel, ShaderStageCompileDesc.ShaderStage)
     , ShaderStageCompileDesc.EntryPoint.c_str()
     );
@@ -146,7 +146,7 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
     // SM5
     if (bIsShaderModel5)
     {
-        Log::Error("We don't support SM5.0 for now");
+        LUMINA_LOG_ERROR(Shader, "We don't support SM5.0 for now");
     }
     // SM6
     else
@@ -167,13 +167,13 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
         HResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler3));
         if (FAILED(HResult))
         {
-            Log::Error("Couldn't initialize DirectXCompiler Compiler");
+            LUMINA_LOG_ERROR(Shader, "Couldn't initialize DirectXCompiler Compiler");
             assert(false);
         }
         HResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&DxcUtils));
         if (FAILED(HResult))
         {
-            Log::Error("Couldn't initialize DirectXCompiler Utils");
+            LUMINA_LOG_ERROR(Shader, "Couldn't initialize DirectXCompiler Utils");
             assert(false);
         }
 
@@ -197,7 +197,7 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
         HResult = DxcUtils->CreateBlobFromPinned(shaderSource.data(), (uint32_t)shaderSource.size(), CP_UTF8, &SourceBlob);
         if (FAILED(HResult))
         {
-            Log::Error("Couldn't create SourceBlob");
+            LUMINA_LOG_ERROR(Shader, "Couldn't create SourceBlob");
             assert(false);
         }
         DxcBuffer SourceBuffer{};
@@ -269,11 +269,11 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
             OutErrorString = pErrors->GetStringPointer();
             if (FAILED(HResult))
             {
-                Log::Error(OutErrorString);
+                LUMINA_LOG_ERROR(Shader, OutErrorString.c_str());
             }
             else
             {
-                Log::Warning(OutErrorString);
+                LUMINA_LOG_WARNING(Shader, OutErrorString.c_str());
             }
         }
 

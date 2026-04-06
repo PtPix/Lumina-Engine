@@ -63,4 +63,5 @@ target_link_libraries(Renderer PRIVATE
 # PCH. Make include shorter
 target_precompile_headers(Renderer PRIVATE
         <Logger/Logger.h>
+        <Profiler/Profiler.h>
 )

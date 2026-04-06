@@ -8,7 +8,7 @@ void CommandQueue::Create(Device* pDevice, ECommandQueueType Type, ECommandQueue
 {
     if (!pDevice)
     {
-        Log::Error("CommandQueue::Initialize failed: Null device");
+        LUMINA_LOG_ERROR(RHI, "CommandQueue::Initialize failed: Null device");
     }
 
     HRESULT HResult = {};

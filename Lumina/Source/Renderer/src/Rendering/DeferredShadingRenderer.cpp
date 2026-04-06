@@ -48,7 +48,7 @@ void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, c
     ViewUniformData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(View.ViewProjectionMatrix);
     ViewUniformData.InverseViewProjectionMatrix = DirectX::XMMatrixTranspose(View.InverseViewProjectionMatrix);
     ViewUniformData.CameraPosition = DirectX::XMFLOAT4(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z,1.0f);
-    ViewUniformData.ScreenResolution = DirectX::XMFLOAT2(View.ViewportWidth, View.ViewportHeight);
+    ViewUniformData.ScreenResolution = DirectX::XMFLOAT2(static_cast<float>(View.ViewportWidth), static_cast<float>(View.ViewportHeight));
     FDynamicAllocation ViewUniformDataAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FViewUniformData));
     memcpy(ViewUniformDataAllocation.CpuAddress, &ViewUniformData, sizeof(FViewUniformData));
     pCommandList->SetGraphicsRootConstantBufferView(0, ViewUniformDataAllocation.GpuAddress);
@@ -93,7 +93,7 @@ bool FDeferredShadingRenderer::CreateGlobalRootSignature()
 
     if (!Builder.Build(mGraphicsDevice->GetDevice().GetDevicePtr(), mGlobalRootSignature))
     {
-        Log::Error("Failed to build Global Root Signature!");
+        LUMINA_LOG_ERROR(Renderer, "Failed to build Global Root Signature!");
         return false;
     }
 

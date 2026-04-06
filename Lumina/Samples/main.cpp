@@ -20,7 +20,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdSh
     ModelApp ModelApp = {};
     if (!Engine.Initialize(StartupParameters, &ModelApp))
     {
-        Log::Error("Failed to initialize Engine.");
+        LUMINA_LOG_ERROR(Main, "Failed to initialize Engine.");
         return -1;
     }
 

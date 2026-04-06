@@ -8,6 +8,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     // Create Device
     {
+        LUMINA_TIME_LOG_SCOPE("Create Device");
         FDeviceCreateDesc DeviceCreateDesc = {true, false, nullptr};
         const bool bDeviceCreateSucceeded = mDevice.Create(DeviceCreateDesc);
         assert(bDeviceCreateSucceeded);
@@ -15,6 +16,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     // Create Command Queues
     {
+        LUMINA_TIME_LOG_SCOPE("Create Command Queues");
         mCommandQueues[GRAPHICS].Create(&mDevice, GRAPHICS);
         SetName(mCommandQueues[GRAPHICS].GetCommandQueue(), "Rendering Graphics Command Queue");
         mCommandQueues[COPY].Create(&mDevice, COPY);
@@ -77,7 +79,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
         HRESULT HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
         if (FAILED(HResult))
         {
-            Log::Error("D3D12MA allocator creation failed");
+            LUMINA_LOG_ERROR(RHI, "D3D12MA allocator creation failed");
             assert(false);
         }
     }
