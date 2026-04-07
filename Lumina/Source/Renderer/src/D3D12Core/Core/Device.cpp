@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "Renderer/D3D12Core/Device.h"
+#include "Renderer/D3D12Core/Core/Device.h"
 
 struct FGPUInfo
 {

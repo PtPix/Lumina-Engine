@@ -2,8 +2,8 @@
 #include <d3d12.h>
 #include <wrl/client.h>
 
+struct ID3D12Device;
 struct ID3D12CommandQueue;
-class Device;
 
 enum ECommandQueueType
 {
@@ -24,7 +24,7 @@ enum class ECommandQueuePriority
 class CommandQueue
 {
 public:
-    void Create(Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority = ECommandQueuePriority::NORMAL, const char* pName = nullptr);
+    void Create(ID3D12Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority = ECommandQueuePriority::NORMAL, const char* pName = nullptr);
 
     [[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const { return mpCommandQueue.Get(); }
 

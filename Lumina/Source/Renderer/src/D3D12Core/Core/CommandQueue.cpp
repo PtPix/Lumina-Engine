@@ -1,10 +1,10 @@
-﻿#include "Renderer/D3D12Core/CommandQueue.h"
-#include "Renderer/D3D12Core/Device.h"
+﻿#include <d3d12.h>
+
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Core/Device.h"
 #include "Renderer/D3D12Core/Common.h"
 
-#include <d3d12.h>
-
-void CommandQueue::Create(Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority, const char* pName)
+void CommandQueue::Create(ID3D12Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority, const char* pName)
 {
     if (!pDevice)
     {
@@ -14,9 +14,8 @@ void CommandQueue::Create(Device* pDevice, ECommandQueueType Type, ECommandQueue
 
     HRESULT HResult = {};
     D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = CreateCommandQueueDesc(Type, Priority);
-    ID3D12Device* pD3D12Device = pDevice->GetDevicePtr();
 
-    HResult = pD3D12Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));
+    HResult = pDevice->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));
     if (FAILED(HResult))
     {
         LUMINA_LOG_ERROR(RHI, "Couldn't create Command Queue");

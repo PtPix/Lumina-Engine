@@ -51,7 +51,7 @@ void LuminaApp::UpdateApp(double DeltaTime)
 void LuminaApp::RenderApp()
 {
     // Begin Frame
-    ID3D12GraphicsCommandList* pCommandList = mpGraphicsDevice->BeginFrame();
+    ID3D12GraphicsCommandList* pCommandList = mpGraphicsDevice->BeginFrame()->GetCommandList();
 
     OnRender(pCommandList);
     OnRenderUI();

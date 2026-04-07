@@ -1,6 +1,3 @@
-// Device.h
-// Create and Destroy Device. Basic Queries.
-
 #pragma once
 
 #include <dxgiformat.h>
@@ -39,7 +36,6 @@ public:
     bool Create(const FDeviceCreateDesc& CreateDesc);
 
     [[nodiscard]] ID3D12Device* GetDevicePtr() const { return mpDevice.Get(); }
-    [[nodiscard]] ID3D12Device4* GetDevice4Ptr() const { return mpDevice4.Get(); }
     [[nodiscard]] IDXGIAdapter* GetAdapterPtr() const { return mpAdapter.Get(); }
 
     [[nodiscard]] unsigned GetDeviceMemoryMax() const;
@@ -49,7 +45,6 @@ public:
 
 private:
     Microsoft::WRL::ComPtr<ID3D12Device> mpDevice;
-    Microsoft::WRL::ComPtr<ID3D12Device4> mpDevice4;
     Microsoft::WRL::ComPtr<IDXGIAdapter> mpAdapter;
 
     FDeviceCapabilities mCapabilities;

@@ -115,8 +115,8 @@ namespace ShaderUtils
 
 struct FShaderStageCompileDesc
 {
-    std::wstring FilePath = L"";
-    std::string EntryPoint = "";
+    std::wstring FilePath;
+    std::string EntryPoint;
     EShaderStage ShaderStage = EShaderStage::NUM_SHADER_STAGES;
     EShaderModel ShaderModel = EShaderModel::SM6_0;
     std::vector<FShaderMacro> Macros;

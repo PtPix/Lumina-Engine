@@ -1,6 +1,6 @@
 ﻿#include <cassert>
 
-#include "Renderer/D3D12Core/SwapChain.h"
+#include "Renderer/D3D12Core/Core/SwapChain.h"
 #include "Renderer/D3D12Core/Common.h"
 
 bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
@@ -19,7 +19,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
 
     // Create DXGIFactory.
     HRESULT HResult = {};
-    IDXGIFactory4* pDxgiFactory = nullptr;
+    Microsoft::WRL::ComPtr<IDXGIFactory4> pDxgiFactory;
     HResult = CreateDXGIFactory1(IID_PPV_ARGS(&pDxgiFactory));
     if (FAILED(HResult))
     {
@@ -39,20 +39,17 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     SwapChainDesc.Flags = Desc.bVSync ? 0 : DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
-    IDXGISwapChain1* pSwapChain = nullptr;
+    Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
     HResult = pDxgiFactory->CreateSwapChainForHwnd(
         Desc.pCommandQueue->GetCommandQueue(),
         this->mHwnd,
         &SwapChainDesc,
-        nullptr,
-        nullptr,
+        nullptr, nullptr,
         &pSwapChain
         );
     if (SUCCEEDED(HResult))
     {
-        pSwapChain->QueryInterface(IID_PPV_ARGS(&this->mpSwapChain));
-        pSwapChain->Release();
-        pDxgiFactory->Release();
+        pSwapChain.As(&this->mpSwapChain);
     }
     else
     {
@@ -63,7 +60,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
         case DXGI_ERROR_INVALID_CALL: Reason = "Invalid call"; break;
         default: Reason = "Unknown error"; break;
         }
-        Log::Error("Couldn't create Swapchain: %s", Reason.c_str());
+        Log::Error("Couldn't create Swapchain: %s", Reason);
     }
 
     // Create Fence and Fence Event
@@ -83,15 +80,14 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     HResult = mpDevice->CreateDescriptorHeap(&RenderTargetViewHeapDesc, IID_PPV_ARGS(&this->mpDescriptorHeapRTV));
     if (FAILED(HResult))
     {
-        LUMINA_LOG_ERROR(RHI,"Swapchain::Create(): Couldn't create RTV Heap: %0x%x", HResult);
+        LUMINA_LOG_ERROR(RHI,"Swapchain::Create(): Couldn't create RTV Heap: %d", HResult);
         return false;
     }
 
     // Create RTV for every buffer
-    this->mRenderTargets.resize(this->mNumBackBuffers, nullptr);
+    this->mRenderTargets.resize(this->mNumBackBuffers);
     CreateRenderTargetViews();
 
-    // Log::Info("SwapChain: Created <hwnd=0x%x, bVSync=%d> w/ %d back buffers of format %s @ %dx%d.", mHwnd, mbVSync, mNumBackBuffers, DXGI_FORMAT_R8G8B8A8_UNORM, Desc.WindowWidth, Desc.WindowHeight);
     return true;
 }
 
@@ -99,18 +95,16 @@ void SwapChain::Destroy()
 {
     WaitForGPU();
 
-    this->mpFence->Release();
-    CloseHandle(this->mHEvent);
+    if (mHEvent)
+    {
+        CloseHandle(mHEvent);
+        mHEvent = nullptr;
+    }
 
     DestroyRenderTargetViews();
-    if (this->mpDescriptorHeapRTV)
-    {
-        this->mpDescriptorHeapRTV->Release();
-    }
-    if (this->mpSwapChain)
-    {
-        this->mpSwapChain->Release();
-    }
+    mpDescriptorHeapRTV.Reset();
+    mpSwapChain.Reset();
+    mpFence.Reset();
 }
 
 HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
@@ -122,7 +116,7 @@ HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
     }
 
     assert(this->mNumBackBuffers <= 3);
-    IUnknown* const Buffers[3] = { mpPresentQueue.Get(), mpPresentQueue.Get(), mpPresentQueue.Get() };
+    IUnknown* const Buffers[3] = { mpPresentQueue, mpPresentQueue, mpPresentQueue };
     UINT NodeMasks[3] = { 1, 1, 1 };
 
     HRESULT HResult = mpSwapChain->ResizeBuffers1(
@@ -191,7 +185,7 @@ void SwapChain::MoveToNextFrame()
 {
     // Signal Command to queue
     const UINT64 CurrentFenceValue = mFenceValues[this->mCurrentBackBufferIndex];
-    mpPresentQueue->Signal(mpFence, CurrentFenceValue);
+    mpPresentQueue->Signal(mpFence.Get(), CurrentFenceValue);
 
     // Update FrameIndex
     mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
@@ -203,7 +197,7 @@ void SwapChain::MoveToNextFrame()
     if (FenceCompletedValue < mFenceValues[mCurrentBackBufferIndex])
     {
         mpFence->SetEventOnCompletion(mFenceValues[mCurrentBackBufferIndex], mHEvent);
-        HResult = WaitForSingleObjectEx(mHEvent, 1000, FALSE);
+        HResult = WaitForSingleObjectEx(mHEvent, INFINITE, FALSE);
     }
     switch (HResult)
     {
@@ -211,7 +205,7 @@ void SwapChain::MoveToNextFrame()
     case WAIT_TIMEOUT:
         LUMINA_LOG_WARNING(
             RHI,
-            "SwapChain<hwnd=0x%x> timed out on WaitForGPU(): Signal=%d, ICurrBackBuffer=%d, NumFramesPresented=%d"
+            "SwapChain<hwnd= %p> timed out on WaitForGPU(): Signal=%llu, ICurrBackBuffer=%d, NumFramesPresented=%llu"
             , mHwnd, mFenceValues[mCurrentBackBufferIndex], mCurrentBackBufferIndex, mNumTotalFrames);
         break;
     default: break;
@@ -222,22 +216,25 @@ void SwapChain::MoveToNextFrame()
 
 void SwapChain::WaitForGPU()
 {
-    ID3D12Fence* pFence;
-    HRESULT HResult = mpDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
-    if (HResult != S_OK)
+    if (!mpPresentQueue || !mpFence || !mHEvent)
     {
-        LUMINA_LOG_ERROR(RHI, "WaitForGPU(): Failed to CreateFence()");
         return;
     }
 
-    mpPresentQueue->Signal(pFence, 1);
+    const uint64_t FenceValueToSignal = mFenceValues[mCurrentBackBufferIndex];
+    HRESULT HResult = mpPresentQueue->Signal(mpFence.Get(), FenceValueToSignal);
+    if (FAILED(HResult))
+    {
+        return;
+    }
 
-    HANDLE mHandleFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    pFence->SetEventOnCompletion(1, mHandleFenceEvent);
-    WaitForSingleObject(mHandleFenceEvent, INFINITE);
-    CloseHandle(mHandleFenceEvent);
+    if (mpFence->GetCompletedValue() < FenceValueToSignal)
+    {
+        mpFence->SetEventOnCompletion(FenceValueToSignal, mHEvent);
+        WaitForSingleObject(mHEvent, INFINITE);
+    }
 
-    pFence->Release();
+    mFenceValues[mCurrentBackBufferIndex]++;
 }
 
 void SwapChain::CreateRenderTargetViews()
@@ -248,27 +245,20 @@ void SwapChain::CreateRenderTargetViews()
     HRESULT HResult = {};
     for (int i = 0; i < mNumBackBuffers; i++)
     {
-        HResult = mpSwapChain->GetBuffer(i, IID_PPV_ARGS(&mRenderTargets[i]));
+        Microsoft::WRL::ComPtr<ID3D12Resource> pBackBuffer;
+        HResult = mpSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
         if (FAILED(HResult))
         {
-            LUMINA_LOG_ERROR(RHI, "SwapChain::GetBuffer(): Failed to get buffer");
             assert(false);
         }
-
-        this->mpDevice->CreateRenderTargetView(this->mRenderTargets[i], nullptr, RTVHandle);
+        mRenderTargets[i].CreateFromSwapChain(pBackBuffer.Get());
+        mpDevice->CreateRenderTargetView(mRenderTargets[i].GetResource(), nullptr, RTVHandle);
         RTVHandle.ptr += RenderTargetViewDescriptorSize;
-        SetName(this->mRenderTargets[i], "SwapChain<hwnd=0x%x>::RenderTarget[%d]", this->mHwnd, i);
+        SetName(this->mRenderTargets[i].GetResource(), "SwapChain<hwnd= %p>::RenderTarget[%d]", this->mHwnd, i);
     }
 }
 
 void SwapChain::DestroyRenderTargetViews()
 {
-    for (int i = 0; i < mNumBackBuffers; i++)
-    {
-        if (this->mRenderTargets[i])
-        {
-            this->mRenderTargets[i]->Release();
-            this->mRenderTargets[i] = nullptr;
-        }
-    }
+    mRenderTargets.clear();
 }

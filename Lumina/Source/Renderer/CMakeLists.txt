@@ -4,11 +4,13 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Cpp Files
 set(D3D12CORE_SOURCES
-        "src/D3D12Core/Device.cpp"
-        "src/D3D12Core/CommandQueue.cpp"
+        "src/D3D12Core/Core/Device.cpp"
+        "src/D3D12Core/Core/CommandQueue.cpp"
         "src/D3D12Core/Fence.cpp"
-        "src/D3D12Core/SwapChain.cpp"
+        "src/D3D12Core/Core/SwapChain.cpp"
         "src/D3D12Core/GraphicsDevice.cpp"
+        "src/D3D12Core/Core/CommandContext.cpp"
+        "src/D3D12Core/Resource/Texture.cpp"
 )
 
 set(RENDER_CORE_SOURCES
@@ -26,6 +28,7 @@ set(RENDER_CORE_SOURCES
         "src/RenderCore/BasePassMaterial.cpp"
         "src/RenderCore/SkyboxMaterial.cpp"
         "src/RenderCore/DeferredLightingMaterial.cpp"
+        "src/D3D12Core/Resource/Buffer.cpp"
 )
 
 set(RENDERING_SOURCES

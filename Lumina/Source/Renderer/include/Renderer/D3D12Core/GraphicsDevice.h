@@ -1,15 +1,17 @@
 ﻿#pragma once
 
-#include "Device.h"
-#include "CommandQueue.h"
+#include "Core/Device.h"
+#include "Core/CommandQueue.h"
 #include "D3D12MemAlloc.h"
-#include "SwapChain.h"
+#include "Core/SwapChain.h"
 #include "Common.h"
 #include "Buffer.h"
 #include "ResourceHeaps.h"
 
 #include <cstdint>
 #include <windows.h>
+
+#include "Core/CommandContext.h"
 
 // Hold GPU infras
 class GraphicsDevice
@@ -18,7 +20,7 @@ public:
     bool Initialize(HWND Hwnd, uint32_t Width, uint32_t Height);
     void Destroy();
 
-    ID3D12GraphicsCommandList* BeginFrame();
+    CommandContext* BeginFrame();
     void EndFrameAndPresent();
 
     void OnResize(uint32_t Width, uint32_t Height);
@@ -43,7 +45,7 @@ public:
     StaticResourceViewHeap& GetDsvHeap() { return mHeapDSV; }
 
 private:
-    D3D12_COMMAND_LIST_TYPE GetDX12CommandListType(ECommandQueueType Type);
+    static D3D12_COMMAND_LIST_TYPE GetDX12CommandListType(ECommandQueueType Type);
 
 private:
     HWND mHwnd = nullptr;
@@ -65,6 +67,7 @@ private:
 
     DynamicUploadHeap mDynamicUploadHeaps[NUM_SWAPCHAIN_BACKBUFFER];
 
+    CommandContext mGraphicsCommandContext[NUM_SWAPCHAIN_BACKBUFFER];
     ID3D12CommandAllocator* mpCommandAllocators[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};
     ID3D12CommandList* mpCommandLists[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};
     uint8_t mClosedCommandLists[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};

@@ -1,11 +1,12 @@
 ﻿#pragma once
 
-#include "CommandQueue.h"
-
 #include <d3d12.h>
 #include <dxgi.h>
 #include <dxgi1_5.h>
 #include <vector>
+
+#include "CommandQueue.h"
+#include "Renderer/D3D12Core/Resource/Texture.h"
 
 struct FSwapChainCreateDesc
 {
@@ -42,8 +43,10 @@ public:
         const D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{ mpDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart().ptr + RenderTargetViewDescriptorSize * mCurrentBackBufferIndex };
         return RTVHandle;
     }
-    [[nodiscard]] ID3D12Resource* GetCurrentBackBufferRenderTarget() const { return mRenderTargets[GetCurrentBackBufferIndex()]; }
-
+    [[nodiscard]] Texture* GetCurrentRenderTargetResource()
+    {
+        return &mRenderTargets[mCurrentBackBufferIndex];
+    }
 
 private:
     void CreateRenderTargetViews();
@@ -55,18 +58,18 @@ private:
     unsigned short mCurrentBackBufferIndex = 0;
     unsigned long long mNumTotalFrames = 0;
     bool mbVSync = false;
-
     HANDLE mHEvent = nullptr;
-    ID3D12Fence* mpFence = nullptr;
     std::vector<UINT64> mFenceValues;
 
-    std::vector<ID3D12Resource*> mRenderTargets;
-    ID3D12DescriptorHeap* mpDescriptorHeapRTV = nullptr;
-
+    // Observer
     ID3D12Device* mpDevice = nullptr;
-    IDXGIAdapter* mpAdapter = nullptr;
+    ID3D12CommandQueue* mpPresentQueue = nullptr;
 
-    IDXGISwapChain4* mpSwapChain = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12CommandQueue> mpPresentQueue = nullptr;
+    // Possess Resource
+    Microsoft::WRL::ComPtr<ID3D12Fence> mpFence;
+    Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mpDescriptorHeapRTV;
+
+    std::vector<Texture> mRenderTargets;
     DXGI_FORMAT mFormat = DXGI_FORMAT_UNKNOWN;
 };

@@ -17,11 +17,11 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     // Create Command Queues
     {
         LUMINA_TIME_LOG_SCOPE("Create Command Queues");
-        mCommandQueues[GRAPHICS].Create(&mDevice, GRAPHICS);
+        mCommandQueues[GRAPHICS].Create(mDevice.GetDevicePtr(), GRAPHICS);
         SetName(mCommandQueues[GRAPHICS].GetCommandQueue(), "Rendering Graphics Command Queue");
-        mCommandQueues[COPY].Create(&mDevice, COPY);
+        mCommandQueues[COPY].Create(mDevice.GetDevicePtr(), COPY);
         SetName(mCommandQueues[COPY].GetCommandQueue(), "Rendering Copy Command Queue");
-        mCommandQueues[COMPUTE].Create(&mDevice, COMPUTE);
+        mCommandQueues[COMPUTE].Create(mDevice.GetDevicePtr(), COMPUTE);
         SetName(mCommandQueues[COMPUTE].GetCommandQueue(), "Rendering Compute Command Queue");
     }
 
@@ -68,7 +68,10 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
             }
         }
     }
-
+    {
+        mGraphicsCommandContext[0].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][0]);
+        mGraphicsCommandContext[1].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][1]);
+    }
     // Create D3D12MA
     {
         D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
@@ -197,48 +200,30 @@ void GraphicsDevice::Destroy()
         mpAllocator->Release();
         mpAllocator = nullptr;
     }
-
-
 }
 
-ID3D12GraphicsCommandList* GraphicsDevice::BeginFrame()
+CommandContext* GraphicsDevice::BeginFrame()
 {
     mFrameIndex = mSwapChain.GetCurrentBackBufferIndex();
-    mpCommandAllocators[GRAPHICS][mFrameIndex]->Reset();
-    auto* RenderCommandList = static_cast<ID3D12GraphicsCommandList*>(mpCommandLists[GRAPHICS][mFrameIndex]);
-    RenderCommandList->Reset(mpCommandAllocators[GRAPHICS][mFrameIndex], nullptr);
+    CommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
+
+    pCurrentContext->Begin();
 
     ID3D12DescriptorHeap* ppHeaps[] = { mHeapCBV_SRV_UAV.GetHeap() };
-    RenderCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    pCurrentContext->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = mSwapChain.GetCurrentBackBufferRenderTarget();
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-    RenderCommandList->ResourceBarrier(1, &barrier);
-
-    return RenderCommandList;
+    return pCurrentContext;
 }
 
 void GraphicsDevice::EndFrameAndPresent()
 {
-    auto* RenderCommandList = static_cast<ID3D12GraphicsCommandList*>(mpCommandLists[GRAPHICS][mFrameIndex]);
+    CommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
 
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = mSwapChain.GetCurrentBackBufferRenderTarget();
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-    RenderCommandList->ResourceBarrier(1, &barrier);
+    pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_PRESENT);
+    pCurrentContext->Close();
 
-    RenderCommandList->Close();
-    ID3D12CommandList* ppCommandLists[] = { RenderCommandList };
+    ID3D12CommandList* ppCommandLists[] = { pCurrentContext->GetCommandList() };
     mCommandQueues[GRAPHICS].GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     mSwapChain.Present();
