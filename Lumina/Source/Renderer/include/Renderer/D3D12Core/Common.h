@@ -47,4 +47,4 @@ inline void SetName(ID3D12Object* pObject, const char* Format, ...)
     pObject->SetName(Utf16Buffer.c_str());
 }
 
-inline constexpr uint32_t NUM_SWAPCHAIN_BACKBUFFER = 2;
+inline constexpr uint32_t NUM_SWAPCHAIN_BACKBUFFER = 3;

@@ -4,16 +4,16 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Cpp Files
 set(D3D12CORE_SOURCES
-        "src/D3D12Core/Core/Device.cpp"
-        "src/D3D12Core/Core/CommandQueue.cpp"
-        "src/D3D12Core/Fence.cpp"
-        "src/D3D12Core/Core/SwapChain.cpp"
-        "src/D3D12Core/GraphicsDevice.cpp"
-        "src/D3D12Core/Core/CommandContext.cpp"
-        "src/D3D12Core/Resource/Texture.cpp"
+        "src/D3D12Core/Core/FDevice.cpp"
+        "src/D3D12Core/Core/FCommandQueue.cpp"
+        "src/D3D12Core/Core/FSwapChain.cpp"
+        "src/D3D12Core/Core/FCommandContext.cpp"
 )
 
 set(RENDER_CORE_SOURCES
+        "src/D3D12Core/Resource/Texture.cpp"
+        "src/D3D12Core/GraphicsDevice.cpp"
+        "src/D3D12Core/Fence.cpp"
         "src/D3D12Core/ResourceHeaps.cpp"
         "src/D3D12Core/ResourceView.cpp"
         "src/D3D12Core/Buffer.cpp"
@@ -29,6 +29,7 @@ set(RENDER_CORE_SOURCES
         "src/RenderCore/SkyboxMaterial.cpp"
         "src/RenderCore/DeferredLightingMaterial.cpp"
         "src/D3D12Core/Resource/Buffer.cpp"
+        "src/D3D12Core/Resource/ResourceUploader.cpp"
 )
 
 set(RENDERING_SOURCES

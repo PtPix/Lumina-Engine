@@ -1,15 +1,15 @@
 ﻿#include <cassert>
 
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Core/FCommandContext.h"
 
-CommandContext::~CommandContext()
+FCommandContext::~FCommandContext()
 {
     mpCommandList.Reset();
     mpCommandAllocator.Reset();
 }
 
-bool CommandContext::Initialize(Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator)
+bool FCommandContext::Initialize(ID3D12Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator)
 {
     assert(pDevice != nullptr);
     assert(pAllocator != nullptr);
@@ -26,12 +26,12 @@ bool CommandContext::Initialize(Device* pDevice, ECommandQueueType Type, ID3D12C
     default: break;
     }
 
-    HRESULT HResult = mpDevice->GetDevicePtr()->CreateCommandList(
+    HRESULT HResult = mpDevice->CreateCommandList(
         0, D3D12Type, mpCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mpCommandList)
         );
     if (FAILED(HResult))
     {
-        LUMINA_LOG_ERROR(RHI, "CommandContext::Initialize failed to create Command List.");
+        LUMINA_LOG_ERROR(RHI, "FCommandContext::Initialize failed to create Command List.");
         return false;
     }
 
@@ -41,7 +41,7 @@ bool CommandContext::Initialize(Device* pDevice, ECommandQueueType Type, ID3D12C
     return true;
 }
 
-void CommandContext::Begin()
+void FCommandContext::Begin()
 {
     mpCommandAllocator.Get()->Reset();
     mpCommandList->Reset(mpCommandAllocator.Get(), nullptr);
@@ -49,13 +49,13 @@ void CommandContext::Begin()
     mResourceBarriers.clear();
 }
 
-void CommandContext::Close()
+void FCommandContext::Close()
 {
     FlushResourceBarriers();
     mpCommandList->Close();
 }
 
-void CommandContext::TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState, bool bFlushImmediate)
+void FCommandContext::TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState, bool bFlushImmediate)
 {
     if (!pResource || !pResource->GetResource())
     {
@@ -85,7 +85,7 @@ void CommandContext::TransitionResource(GpuResource* pResource, D3D12_RESOURCE_S
     }
 }
 
-void CommandContext::FlushResourceBarriers()
+void FCommandContext::FlushResourceBarriers()
 {
     if (mResourceBarriers.empty())
     {
@@ -96,75 +96,81 @@ void CommandContext::FlushResourceBarriers()
     mResourceBarriers.clear();
 }
 
-void CommandContext::SetGraphicsRootSignature(ID3D12RootSignature* pRootSignature)
+void FCommandContext::SetGraphicsRootSignature(ID3D12RootSignature* pRootSignature)
 {
     mpCommandList->SetGraphicsRootSignature(pRootSignature);
 }
 
-void CommandContext::SetComputeRootSignature(ID3D12RootSignature* pRootSignature)
+void FCommandContext::SetComputeRootSignature(ID3D12RootSignature* pRootSignature)
 {
     mpCommandList->SetComputeRootSignature(pRootSignature);
 }
 
-void CommandContext::SetPipelineState(ID3D12PipelineState* pPipelineState)
+void FCommandContext::SetPipelineState(ID3D12PipelineState* pPipelineState)
 {
     mpCommandList->SetPipelineState(pPipelineState);
 }
 
-void CommandContext::SetViewport(const D3D12_VIEWPORT& Viewport)
+void FCommandContext::SetViewport(const D3D12_VIEWPORT& Viewport)
 {
     mpCommandList->RSSetViewports(1, &Viewport);
 }
 
-void CommandContext::SetScissorRect(const D3D12_RECT& Rect)
+void FCommandContext::SetScissorRect(const D3D12_RECT& Rect)
 {
     mpCommandList->RSSetScissorRects(1, &Rect);
 }
 
-void CommandContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE* pRTVs,
+void FCommandContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE* pRTVs,
     const D3D12_CPU_DESCRIPTOR_HANDLE* pDSV)
 {
     mpCommandList->OMSetRenderTargets(NumRTVs, pRTVs, FALSE, pDSV);
 }
 
-void CommandContext::ClearRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE RTV, const float Color[4])
+void FCommandContext::ClearRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE RTV, const float Color[4])
 {
     FlushResourceBarriers();
     mpCommandList->ClearRenderTargetView(RTV, Color, 0, nullptr);
 }
 
-void CommandContext::ClearDepthStencilView(D3D12_CPU_DESCRIPTOR_HANDLE DSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth,
+void FCommandContext::ClearDepthStencilView(D3D12_CPU_DESCRIPTOR_HANDLE DSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth,
     UINT8 Stencil)
 {
     FlushResourceBarriers();
     mpCommandList->ClearDepthStencilView(DSV, ClearFlags, Depth, Stencil, 0, nullptr);
 }
 
-void CommandContext::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY Topology)
+void FCommandContext::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY Topology)
 {
     mpCommandList->IASetPrimitiveTopology(Topology);
 }
 
-void CommandContext::DrawInstanced(UINT VertexCountPerInstance, UINT InstanceCount, UINT StartVertexLocation,
+void FCommandContext::DrawInstanced(UINT VertexCountPerInstance, UINT InstanceCount, UINT StartVertexLocation,
     UINT StartInstanceLocation)
 {
     FlushResourceBarriers();
     mpCommandList->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation);
 }
 
-void CommandContext::DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation,
+void FCommandContext::DrawIndexedInstanced(UINT IndexCountPerInstance, UINT InstanceCount, UINT StartIndexLocation,
     INT BaseVertexLocation, UINT StartInstanceLocation)
 {
     FlushResourceBarriers();
     mpCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
 }
 
-void CommandContext::Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
+void FCommandContext::Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
 {
     mpCommandList->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 }
 
-void CommandContext::SetDescriptorHeaps(UINT NumDescriptorHeaps, ID3D12DescriptorHeap* const* ppDescriptorHeaps)
+void FCommandContext::SetDescriptorHeaps(UINT NumDescriptorHeaps, ID3D12DescriptorHeap* const* ppDescriptorHeaps)
 {
     mpCommandList->SetDescriptorHeaps(NumDescriptorHeaps, ppDescriptorHeaps);
+}
+
+void FCommandContext::CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer,
+    UINT64 SrcOffset, UINT64 NumBytes)
+{
+    mpCommandList->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
 }

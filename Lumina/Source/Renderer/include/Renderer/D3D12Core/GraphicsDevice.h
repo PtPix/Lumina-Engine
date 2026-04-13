@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "Core/Device.h"
-#include "Core/CommandQueue.h"
+#include "Core/FDevice.h"
+#include "Core/FCommandQueue.h"
 #include "D3D12MemAlloc.h"
-#include "Core/SwapChain.h"
+#include "Core/FSwapChain.h"
 #include "Common.h"
 #include "Buffer.h"
 #include "ResourceHeaps.h"
@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <windows.h>
 
-#include "Core/CommandContext.h"
+#include "Core/FCommandContext.h"
 
 // Hold GPU infras
 class GraphicsDevice
@@ -20,18 +20,18 @@ public:
     bool Initialize(HWND Hwnd, uint32_t Width, uint32_t Height);
     void Destroy();
 
-    CommandContext* BeginFrame();
+    FCommandContext* BeginFrame();
     void EndFrameAndPresent();
 
     void OnResize(uint32_t Width, uint32_t Height);
 
 public:
     HWND GetWindowHandle() const { return mHwnd; }
-    const Device& GetDevice() const { return mDevice; }
+    FDevice& GetDevice() { return mDevice; }
     D3D12MA::Allocator* GetAllocator() const { return mpAllocator; }
 
-    CommandQueue& GetGraphicsQueue() { return mCommandQueues[GRAPHICS]; }
-    SwapChain& GetSwapChain() { return mSwapChain; }
+    FCommandQueue& GetGraphicsQueue() { return mCommandQueues[GRAPHICS]; }
+    FSwapChain& GetSwapChain() { return mSwapChain; }
 
     UploadHeap& GetUploadHeap() { return mHeapUpload; }
     DynamicUploadHeap& GetDynamicUploadHeap() { return mDynamicUploadHeaps[mFrameIndex]; }
@@ -44,6 +44,8 @@ public:
     StaticResourceViewHeap& GetRTVHeap() { return mHeapRTV; }
     StaticResourceViewHeap& GetDsvHeap() { return mHeapDSV; }
 
+    FCommandContext& GetGraphicsContext() { return mGraphicsCommandContext[0]; }
+
 private:
     static D3D12_COMMAND_LIST_TYPE GetDX12CommandListType(ECommandQueueType Type);
 
@@ -51,10 +53,10 @@ private:
     HWND mHwnd = nullptr;
     uint32_t mFrameIndex = 0;
 
-    Device mDevice;
+    FDevice mDevice;
     D3D12MA::Allocator* mpAllocator = nullptr;
-    CommandQueue mCommandQueues[NUM_COMMAND_QUEUE_TYPES];
-    SwapChain mSwapChain;
+    FCommandQueue mCommandQueues[NUM_COMMAND_QUEUE_TYPES];
+    FSwapChain mSwapChain;
 
     StaticResourceViewHeap mHeapDSV;
     StaticResourceViewHeap mHeapCBV_SRV_UAV;
@@ -67,7 +69,7 @@ private:
 
     DynamicUploadHeap mDynamicUploadHeaps[NUM_SWAPCHAIN_BACKBUFFER];
 
-    CommandContext mGraphicsCommandContext[NUM_SWAPCHAIN_BACKBUFFER];
+    FCommandContext mGraphicsCommandContext[NUM_SWAPCHAIN_BACKBUFFER];
     ID3D12CommandAllocator* mpCommandAllocators[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};
     ID3D12CommandList* mpCommandLists[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};
     uint8_t mClosedCommandLists[NUM_COMMAND_QUEUE_TYPES][NUM_SWAPCHAIN_BACKBUFFER] = {};

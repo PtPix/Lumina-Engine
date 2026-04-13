@@ -6,7 +6,7 @@
 class Buffer : public GpuResource
 {
 public:
-    virtual ~Buffer() { Destroy(); }
+    ~Buffer() override { Destroy(); }
 
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment,
         D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType,
@@ -16,8 +16,8 @@ public:
     void* Map();
     void Unmap();
 
-    size_t GetBufferSize() const { return mBufferSize; }
-    D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return mpResource ? mpResource->GetGPUVirtualAddress() : 0; }
+    [[nodiscard]] size_t GetBufferSize() const { return mBufferSize; }
+    [[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return mpResource ? mpResource->GetGPUVirtualAddress() : 0; }
 
 protected:
     Microsoft::WRL::ComPtr<D3D12MA::Allocation> mpAllocation;
@@ -50,7 +50,7 @@ class ConstantBuffer : public Buffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName = L"ConstantBuffer");
-    size_t GetAlignedSize() const { return mBufferSize; }
+    [[nodiscard]] size_t GetAlignedSize() const { return mBufferSize; }
 
 private:
     static size_t CalcAlignedSize(size_t SizeInBytes)
@@ -61,5 +61,6 @@ private:
 
 class UploadBuffer : public Buffer
 {
+public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName = L"UploadBuffer");
 };

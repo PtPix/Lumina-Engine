@@ -6,9 +6,9 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
     this->mHwnd = Hwnd;
 
-    // Create Device
+    // Create FDevice
     {
-        LUMINA_TIME_LOG_SCOPE("Create Device");
+        LUMINA_TIME_LOG_SCOPE("Create FDevice");
         FDeviceCreateDesc DeviceCreateDesc = {true, false, nullptr};
         const bool bDeviceCreateSucceeded = mDevice.Create(DeviceCreateDesc);
         assert(bDeviceCreateSucceeded);
@@ -17,11 +17,11 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     // Create Command Queues
     {
         LUMINA_TIME_LOG_SCOPE("Create Command Queues");
-        mCommandQueues[GRAPHICS].Create(mDevice.GetDevicePtr(), GRAPHICS);
+        mCommandQueues[GRAPHICS].Create(mDevice.GetDevice(), GRAPHICS);
         SetName(mCommandQueues[GRAPHICS].GetCommandQueue(), "Rendering Graphics Command Queue");
-        mCommandQueues[COPY].Create(mDevice.GetDevicePtr(), COPY);
+        mCommandQueues[COPY].Create(mDevice.GetDevice(), COPY);
         SetName(mCommandQueues[COPY].GetCommandQueue(), "Rendering Copy Command Queue");
-        mCommandQueues[COMPUTE].Create(mDevice.GetDevicePtr(), COMPUTE);
+        mCommandQueues[COMPUTE].Create(mDevice.GetDevice(), COMPUTE);
         SetName(mCommandQueues[COMPUTE].GetCommandQueue(), "Rendering Compute Command Queue");
     }
 
@@ -48,7 +48,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
             };
             for (int BufferIndex = 0; BufferIndex < NUM_SWAPCHAIN_BACKBUFFER; BufferIndex++)
             {
-                mDevice.GetDevicePtr()->CreateCommandAllocator(Type, IID_PPV_ARGS(&this->mpCommandAllocators[QueueType][BufferIndex]));
+                mDevice.GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(&this->mpCommandAllocators[QueueType][BufferIndex]));
                 SetName(mpCommandAllocators[QueueType][BufferIndex], fnGetCommandAllocatorName(BufferIndex).c_str());
             }
         }
@@ -61,7 +61,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
             D3D12_COMMAND_LIST_TYPE Type = GetDX12CommandListType(static_cast<ECommandQueueType>(QueueType));
             for (int BufferIndex = 0; BufferIndex < NUM_SWAPCHAIN_BACKBUFFER; BufferIndex++)
             {
-                mDevice.GetDevicePtr()->CreateCommandList(0, Type,
+                mDevice.GetDevice()->CreateCommandList(0, Type,
                     mpCommandAllocators[QueueType][BufferIndex], nullptr,
                     IID_PPV_ARGS(&mpCommandLists[QueueType][BufferIndex]));
                 static_cast<ID3D12GraphicsCommandList*>(mpCommandLists[QueueType][BufferIndex])->Close();
@@ -69,15 +69,16 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
         }
     }
     {
-        mGraphicsCommandContext[0].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][0]);
-        mGraphicsCommandContext[1].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][1]);
+        mGraphicsCommandContext[0].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][0]);
+        mGraphicsCommandContext[1].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][1]);
+        mGraphicsCommandContext[2].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][2]);
     }
     // Create D3D12MA
     {
         D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
         AllocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-        AllocatorDesc.pDevice = mDevice.GetDevicePtr();
-        AllocatorDesc.pAdapter = mDevice.GetAdapterPtr();
+        AllocatorDesc.pDevice = mDevice.GetDevice();
+        AllocatorDesc.pAdapter = mDevice.GetAdapter();
 
         HRESULT HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
         if (FAILED(HResult))
@@ -89,7 +90,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     // Heaps Initialize
     {
-        ID3D12Device* pDevice = mDevice.GetDevicePtr();
+        ID3D12Device* pDevice = mDevice.GetDevice();
 
         // Static Upload Heap
         const uint32_t UPLOAD_HEAP_SIZE = (512 + 256 + 128) * 1024 * 1024;
@@ -136,15 +137,16 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
         }
     }
 
-    // Create SwapChain
+    // Create FSwapChain
     {
         FSwapChainCreateDesc swapChainDesc = {};
-        swapChainDesc.pDevice = mDevice.GetDevicePtr();
+        swapChainDesc.pDevice = mDevice.GetDevice();
         swapChainDesc.pCommandQueue = &mCommandQueues[GRAPHICS];
         swapChainDesc.Hwnd = Hwnd;
         swapChainDesc.WindowHeight = Height;
         swapChainDesc.WindowWidth = Width;
         swapChainDesc.bVSync = true;
+        swapChainDesc.NumBackBuffers = NUM_SWAPCHAIN_BACKBUFFER;
 
         mSwapChain.Create(swapChainDesc);
     }
@@ -178,6 +180,7 @@ void GraphicsDevice::Destroy()
         }
     }
 
+
     mSwapChain.Destroy();
 
     for (auto& DynamicHeap : mDynamicUploadHeaps)
@@ -200,12 +203,17 @@ void GraphicsDevice::Destroy()
         mpAllocator->Release();
         mpAllocator = nullptr;
     }
+
+    mCommandQueues[0].Destroy();
+    mCommandQueues[1].Destroy();
+    mCommandQueues[2].Destroy();
+    mDevice.Destroy();
 }
 
-CommandContext* GraphicsDevice::BeginFrame()
+FCommandContext* GraphicsDevice::BeginFrame()
 {
     mFrameIndex = mSwapChain.GetCurrentBackBufferIndex();
-    CommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
+    FCommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
 
     pCurrentContext->Begin();
 
@@ -213,12 +221,13 @@ CommandContext* GraphicsDevice::BeginFrame()
     pCurrentContext->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+    pCurrentContext->FlushResourceBarriers();
     return pCurrentContext;
 }
 
 void GraphicsDevice::EndFrameAndPresent()
 {
-    CommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
+    FCommandContext* pCurrentContext = &mGraphicsCommandContext[mFrameIndex];
 
     pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_PRESENT);
     pCurrentContext->Close();

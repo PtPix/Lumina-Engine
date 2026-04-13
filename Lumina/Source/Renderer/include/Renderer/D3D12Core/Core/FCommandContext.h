@@ -4,18 +4,21 @@
 #include <wrl/client.h>
 #include <vector>
 
-#include "CommandQueue.h"
+#include "FCommandQueue.h"
 #include "Renderer/D3D12Core/Resource/GpuResource.h"
 
-class Device;
+class FDevice;
 
-class CommandContext
+class FCommandContext
 {
 public:
-    CommandContext() = default;
-    ~CommandContext();
+    FCommandContext() = default;
+    ~FCommandContext();
 
-    bool Initialize(Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator);
+    FCommandContext(const FCommandContext&) = delete;
+    FCommandContext& operator=(const FCommandContext&) = delete;
+
+    bool Initialize(ID3D12Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator);
 
     void Begin();
     void Close();
@@ -40,15 +43,18 @@ public:
     void Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 
     void SetDescriptorHeaps(UINT NumDescriptorHeaps, ID3D12DescriptorHeap* const* ppDescriptorHeaps);
+
+    void CopyBufferRegion( ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer, UINT64 SrcOffset, UINT64 NumBytes);
+
     // Getters
     ID3D12GraphicsCommandList* GetCommandList() { return mpCommandList.Get(); }
-    ECommandQueueType GetType() const { return mType; }
+    [[nodiscard]] ECommandQueueType GetType() const { return mType; }
 
 private:
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mpCommandList;
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mpCommandAllocator;
 
-    Device* mpDevice = nullptr;
+    ID3D12Device* mpDevice = nullptr;
     ECommandQueueType mType = GRAPHICS;
 
     std::vector<D3D12_RESOURCE_BARRIER> mResourceBarriers;

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+
 class FMesh;
 class FScene;
 class GraphicsDevice;
@@ -28,7 +30,7 @@ public:
     StaticModel() = default;
     ~StaticModel() = default;
 
-    bool LoadFromFile(const std::string& FilePath, GraphicsDevice& Device);
+    bool LoadFromFile(const std::string& FilePath, GraphicsDevice& Device, ResourceUploader* pUploader);
 
     size_t SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform);
 

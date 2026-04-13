@@ -23,7 +23,7 @@ bool LuminaApp::InitializeApp(GraphicsDevice* pDevice, HWND Hwnd, uint32_t Width
 
     mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(1, &mImGuiFontView);
     ImGui_ImplDX12_Init(
-        mpGraphicsDevice->GetDevice().GetDevicePtr(), NUM_SWAPCHAIN_BACKBUFFER, DXGI_FORMAT_R8G8B8A8_UNORM,
+        mpGraphicsDevice->GetDevice().GetDevice(), NUM_SWAPCHAIN_BACKBUFFER, DXGI_FORMAT_R8G8B8A8_UNORM,
         mpGraphicsDevice->GetCbvSrvUavHeap().GetHeap(),
         mImGuiFontView.GetCpuDescriptorHandle(),
         mImGuiFontView.GetGpuDescriptorHandle()

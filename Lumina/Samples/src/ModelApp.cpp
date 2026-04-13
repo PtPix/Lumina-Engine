@@ -17,15 +17,15 @@ bool ModelApp::OnInit()
         return false;
     }
 
-    mTextureManager.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetUploadHeap(), &mpGraphicsDevice->GetCbvSrvUavHeap());
+    mTextureManager.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetUploadHeap(), &mpGraphicsDevice->GetCbvSrvUavHeap());
 
     // Initialize Materials
-    if (!mBasePassMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mRenderer.GetRootSignature()))
+    if (!mBasePassMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mRenderer.GetRootSignature()))
     {
         return false;
     }
 
-    if (!mSkyboxMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevicePtr(), mRenderer.GetRootSignature()))
+    if (!mSkyboxMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mRenderer.GetRootSignature()))
     {
         return false;
     }
@@ -33,8 +33,11 @@ bool ModelApp::OnInit()
     // Load Models
     mScene.CharacterModel = new StaticModel();
     mScene.SkyboxModel = new StaticModel();
-    mScene.CharacterModel->LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf", *mpGraphicsDevice);
-    mScene.SkyboxModel->LoadFromFile("Assets/Models/Cube/Cube.gltf", *mpGraphicsDevice);
+    ResourceUploader Uploader;
+    FCommandContext Context;
+    Uploader.Initialize(mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetGraphicsContext(), &mpGraphicsDevice->GetGraphicsQueue());
+    mScene.CharacterModel->LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf", *mpGraphicsDevice, &Uploader);
+    mScene.SkyboxModel->LoadFromFile("Assets/Models/Cube/Cube.gltf", *mpGraphicsDevice, &Uploader);
 
     const char* TexturePaths[5] = {
         "Assets/Textures/DamagedHelmet/Default_albedo.jpg",
@@ -54,7 +57,7 @@ bool ModelApp::OnInit()
     }
 
     mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(5, &mHelmetPBRTable);
-    UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevicePtr()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = mHelmetPBRTable.GetCpuDescriptorHandle();
 
     for (int i = 0; i < 5; i++)
@@ -65,7 +68,7 @@ bool ModelApp::OnInit()
         SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         SRVDesc.Texture2D.MipLevels = 1;
 
-        mpGraphicsDevice->GetDevice().GetDevicePtr()->CreateShaderResourceView(mScene.PBRTextures[i]->Resource, &SRVDesc, DestHandle);
+        mpGraphicsDevice->GetDevice().GetDevice()->CreateShaderResourceView(mScene.PBRTextures[i]->Resource, &SRVDesc, DestHandle);
         DestHandle.ptr += DescriptorSize;
     }
 
@@ -87,8 +90,8 @@ bool ModelApp::OnInit()
     {
         mScene.GetRenderNodes()[i].pMaterial = &mSkyboxMaterial;
     }
-    mpGraphicsDevice->GetVertexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
-    mpGraphicsDevice->GetIndexBufferHeap().UploadData(mpGraphicsDevice->GetUploadHeap().GetCommandList());
+
+    Uploader.FlushAndSync(mpGraphicsDevice->GetDevice().GetDevice());
     mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
 
     return true;

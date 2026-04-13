@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <wrl/client.h>
 
+#include "D3D12MemAlloc.h"
+
 struct IDXGIFactory6;
 struct ID3D12Device4;
 struct ID3D12Device;
@@ -30,13 +32,15 @@ struct FDeviceCapabilities
     std::unordered_map<DXGI_FORMAT, bool> TypedUAVLoadFormatSupportMap;
 };
 
-class Device
+class FDevice
 {
 public:
     bool Create(const FDeviceCreateDesc& CreateDesc);
+    void Destroy();
 
-    [[nodiscard]] ID3D12Device* GetDevicePtr() const { return mpDevice.Get(); }
-    [[nodiscard]] IDXGIAdapter* GetAdapterPtr() const { return mpAdapter.Get(); }
+    [[nodiscard]] ID3D12Device* GetDevice() const { return mpDevice.Get(); }
+    [[nodiscard]] IDXGIAdapter* GetAdapter() const { return mpAdapter.Get(); }
+    [[nodiscard]] D3D12MA::Allocator* GetAllocator() const { return mpAllocator.Get(); }
 
     [[nodiscard]] unsigned GetDeviceMemoryMax() const;
     [[nodiscard]] unsigned GetDeviceMemoryAvailable() const;
@@ -46,6 +50,7 @@ public:
 private:
     Microsoft::WRL::ComPtr<ID3D12Device> mpDevice;
     Microsoft::WRL::ComPtr<IDXGIAdapter> mpAdapter;
+    Microsoft::WRL::ComPtr<D3D12MA::Allocator> mpAllocator;
 
     FDeviceCapabilities mCapabilities;
 };

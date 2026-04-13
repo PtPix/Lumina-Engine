@@ -1,9 +1,9 @@
 ﻿#include <cassert>
 
-#include "Renderer/D3D12Core/Core/SwapChain.h"
+#include "Renderer/D3D12Core/Core/FSwapChain.h"
 #include "Renderer/D3D12Core/Common.h"
 
-bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
+bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
 {
     // Assertions and Assignment
     assert(Desc.pDevice);
@@ -13,7 +13,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     this->mHwnd = Desc.Hwnd;
     this->mNumBackBuffers = Desc.NumBackBuffers;
     this->mpDevice = Desc.pDevice;
-    this->mpPresentQueue = Desc.pCommandQueue->GetCommandQueue();
+    this->mpPresentQueue = Desc.pCommandQueue;
     this->mbVSync = Desc.bVSync;
     this->mFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -23,7 +23,7 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     HResult = CreateDXGIFactory1(IID_PPV_ARGS(&pDxgiFactory));
     if (FAILED(HResult))
     {
-        LUMINA_LOG_ERROR(RHI, "SwapChain::Create(): Couldn't create DXGI Factory.");
+        LUMINA_LOG_ERROR(RHI, "FSwapChain::Create(): Couldn't create DXGI Factory.");
         return false;
     }
 
@@ -53,24 +53,12 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     }
     else
     {
-        std::string Reason;
-        switch (HResult)
-        {
-        case E_OUTOFMEMORY: Reason = "Out of memory"; break;
-        case DXGI_ERROR_INVALID_CALL: Reason = "Invalid call"; break;
-        default: Reason = "Unknown error"; break;
-        }
-        Log::Error("Couldn't create Swapchain: %s", Reason);
+        LUMINA_LOG_ERROR(RHI, "FSwapChain::Create(): Couldn't create Swapchain.");
+        return false;
     }
 
-    // Create Fence and Fence Event
     this->mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
     this->mFenceValues.resize(this->mNumBackBuffers, 0);
-    D3D12_FENCE_FLAGS FenceFlags = D3D12_FENCE_FLAG_NONE;
-    this->mpDevice->CreateFence(this->mFenceValues[this->mCurrentBackBufferIndex], FenceFlags, IID_PPV_ARGS(&this->mpFence));
-    ++mFenceValues[this->mCurrentBackBufferIndex];
-    this->mHEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-    assert(this->mHEvent != nullptr);
 
     // Create Descriptor Heap for Render target views
     D3D12_DESCRIPTOR_HEAP_DESC RenderTargetViewHeapDesc = {};
@@ -91,23 +79,16 @@ bool SwapChain::Create(const FSwapChainCreateDesc& Desc)
     return true;
 }
 
-void SwapChain::Destroy()
+void FSwapChain::Destroy()
 {
     WaitForGPU();
-
-    if (mHEvent)
-    {
-        CloseHandle(mHEvent);
-        mHEvent = nullptr;
-    }
 
     DestroyRenderTargetViews();
     mpDescriptorHeapRTV.Reset();
     mpSwapChain.Reset();
-    mpFence.Reset();
 }
 
-HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
+HRESULT FSwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
 {
     DestroyRenderTargetViews();
     for (int i = 0; i < this->mNumBackBuffers; i++)
@@ -116,7 +97,7 @@ HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
     }
 
     assert(this->mNumBackBuffers <= 3);
-    IUnknown* const Buffers[3] = { mpPresentQueue, mpPresentQueue, mpPresentQueue };
+    IUnknown* const Buffers[3] = { mpPresentQueue->GetCommandQueue(), mpPresentQueue->GetCommandQueue(), mpPresentQueue->GetCommandQueue() };
     UINT NodeMasks[3] = { 1, 1, 1 };
 
     HRESULT HResult = mpSwapChain->ResizeBuffers1(
@@ -137,7 +118,7 @@ HRESULT SwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
     return HResult;
 }
 
-HRESULT SwapChain::Present()
+HRESULT FSwapChain::Present()
 {
     constexpr UINT VSYNC_INTERVAL = 1;
     const bool& bVSync = this->mbVSync;
@@ -160,18 +141,18 @@ HRESULT SwapChain::Present()
         switch (HResult)
         {
         case DXGI_ERROR_DEVICE_RESET:
-            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_DEVICE_RESET");
+            LUMINA_LOG_ERROR(RHI, "FSwapChain::Present(): DXGI_ERROR_DEVICE_RESET");
             // TODO: call HandleDeviceReset() from whoever will be responsible
             break;
         case DXGI_ERROR_DEVICE_REMOVED:
-            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_DEVICE_REMOVED");
+            LUMINA_LOG_ERROR(RHI, "FSwapChain::Present(): DXGI_ERROR_DEVICE_REMOVED");
             break;
         case DXGI_ERROR_INVALID_CALL:
-            LUMINA_LOG_ERROR(RHI, "SwapChain::Present(): DXGI_ERROR_INVALID_CALL");
+            LUMINA_LOG_ERROR(RHI, "FSwapChain::Present(): DXGI_ERROR_INVALID_CALL");
             // TODO:
             break;
         case DXGI_STATUS_OCCLUDED:
-            LUMINA_LOG_WARNING(RHI, "SwapChain::Present(): DXGI_STATUS_OCCLUDED");
+            LUMINA_LOG_WARNING(RHI, "FSwapChain::Present(): DXGI_STATUS_OCCLUDED");
             break;
         default:
             assert(false);
@@ -181,63 +162,25 @@ HRESULT SwapChain::Present()
     return HResult;
 }
 
-void SwapChain::MoveToNextFrame()
+void FSwapChain::MoveToNextFrame()
 {
-    // Signal Command to queue
-    const UINT64 CurrentFenceValue = mFenceValues[this->mCurrentBackBufferIndex];
-    mpPresentQueue->Signal(mpFence.Get(), CurrentFenceValue);
+    mFenceValues[mCurrentBackBufferIndex] = mpPresentQueue->Signal();
 
-    // Update FrameIndex
     mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
     ++mNumTotalFrames;
 
-    // Wait until the next frame is ok
-    UINT64 FenceCompletedValue = mpFence->GetCompletedValue();
-    HRESULT HResult = {};
-    if (FenceCompletedValue < mFenceValues[mCurrentBackBufferIndex])
-    {
-        mpFence->SetEventOnCompletion(mFenceValues[mCurrentBackBufferIndex], mHEvent);
-        HResult = WaitForSingleObjectEx(mHEvent, INFINITE, FALSE);
-    }
-    switch (HResult)
-    {
-    case S_OK: break;
-    case WAIT_TIMEOUT:
-        LUMINA_LOG_WARNING(
-            RHI,
-            "SwapChain<hwnd= %p> timed out on WaitForGPU(): Signal=%llu, ICurrBackBuffer=%d, NumFramesPresented=%llu"
-            , mHwnd, mFenceValues[mCurrentBackBufferIndex], mCurrentBackBufferIndex, mNumTotalFrames);
-        break;
-    default: break;
-    }
-
-    mFenceValues[mCurrentBackBufferIndex] = CurrentFenceValue + 1;
+    mpPresentQueue->WaitForFenceValue(mFenceValues[mCurrentBackBufferIndex]);
 }
 
-void SwapChain::WaitForGPU()
+void FSwapChain::WaitForGPU()
 {
-    if (!mpPresentQueue || !mpFence || !mHEvent)
-    {
+    if (!mpPresentQueue)
         return;
-    }
 
-    const uint64_t FenceValueToSignal = mFenceValues[mCurrentBackBufferIndex];
-    HRESULT HResult = mpPresentQueue->Signal(mpFence.Get(), FenceValueToSignal);
-    if (FAILED(HResult))
-    {
-        return;
-    }
-
-    if (mpFence->GetCompletedValue() < FenceValueToSignal)
-    {
-        mpFence->SetEventOnCompletion(FenceValueToSignal, mHEvent);
-        WaitForSingleObject(mHEvent, INFINITE);
-    }
-
-    mFenceValues[mCurrentBackBufferIndex]++;
+    mpPresentQueue->Flush();
 }
 
-void SwapChain::CreateRenderTargetViews()
+void FSwapChain::CreateRenderTargetViews()
 {
     const UINT RenderTargetViewDescriptorSize = mpDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{ mpDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart() };
@@ -254,11 +197,11 @@ void SwapChain::CreateRenderTargetViews()
         mRenderTargets[i].CreateFromSwapChain(pBackBuffer.Get());
         mpDevice->CreateRenderTargetView(mRenderTargets[i].GetResource(), nullptr, RTVHandle);
         RTVHandle.ptr += RenderTargetViewDescriptorSize;
-        SetName(this->mRenderTargets[i].GetResource(), "SwapChain<hwnd= %p>::RenderTarget[%d]", this->mHwnd, i);
+        SetName(this->mRenderTargets[i].GetResource(), "FSwapChain<hwnd= %p>::RenderTarget[%d]", this->mHwnd, i);
     }
 }
 
-void SwapChain::DestroyRenderTargetViews()
+void FSwapChain::DestroyRenderTargetViews()
 {
     mRenderTargets.clear();
 }

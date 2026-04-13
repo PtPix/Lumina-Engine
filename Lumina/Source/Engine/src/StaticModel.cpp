@@ -9,7 +9,7 @@
 
 #include "Logger/Logger.h"
 
-bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Device)
+bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Device, ResourceUploader* pUploader)
 {
     Assimp::Importer Importer;
 
@@ -69,7 +69,7 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
         }
 
         FMesh Mesh = {};
-        Mesh.Initialize(&Device, Vertices.data(), sizeof(FStandardVertex), static_cast<UINT>(Vertices.size()), Indices.data(), static_cast<UINT>(Indices.size()));
+        Mesh.Initialize(&Device.GetDevice(), pUploader, Vertices.data(), sizeof(FStandardVertex), static_cast<UINT>(Vertices.size()), Indices.data(), static_cast<UINT>(Indices.size()));
         mMeshes.push_back(Mesh);
     }
 

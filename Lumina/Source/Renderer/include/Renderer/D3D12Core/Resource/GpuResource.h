@@ -9,8 +9,8 @@ public:
     GpuResource() = default;
     virtual ~GpuResource() = default;
 
-    ID3D12Resource* GetResource() const { return mpResource.Get(); }
-    D3D12_RESOURCE_STATES GetUsageState() const { return mUsageState; }
+    [[nodiscard]] ID3D12Resource* GetResource() const { return mpResource.Get(); }
+    [[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return mUsageState; }
     void SetUsageState(D3D12_RESOURCE_STATES UsageState) { mUsageState = UsageState; }
 
 protected:

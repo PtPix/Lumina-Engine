@@ -16,7 +16,7 @@ bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint3
     }
 
     mSceneRenderTargets.Initialize(
-        mGraphicsDevice->GetDevice().GetDevicePtr(),
+        mGraphicsDevice->GetDevice().GetDevice(),
         mGraphicsDevice->GetAllocator(),
         &mGraphicsDevice->GetRTVHeap(),
         &mGraphicsDevice->GetCbvSrvUavHeap(),
@@ -91,7 +91,7 @@ bool FDeferredShadingRenderer::CreateGlobalRootSignature()
         .AddStaticSampler(1, 0, D3D12_FILTER_MIN_MAG_MIP_POINT)
         .AllowInputLayout();
 
-    if (!Builder.Build(mGraphicsDevice->GetDevice().GetDevicePtr(), mGlobalRootSignature))
+    if (!Builder.Build(mGraphicsDevice->GetDevice().GetDevice(), mGlobalRootSignature))
     {
         LUMINA_LOG_ERROR(Renderer, "Failed to build Global Root Signature!");
         return false;
@@ -102,7 +102,7 @@ bool FDeferredShadingRenderer::CreateGlobalRootSignature()
 
 bool FDeferredShadingRenderer::InitMaterials()
 {
-    if (!mDeferredLightingMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevicePtr(), &mGlobalRootSignature))
+    if (!mDeferredLightingMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevice(), &mGlobalRootSignature))
     {
         return false;
     }

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "../../../Renderer/include/Renderer/D3D12Core/Core/SwapChain.h"
+#include "../../../Renderer/include/Renderer/D3D12Core/Core/FSwapChain.h"
 
 #include <windows.h>
 
@@ -43,7 +43,7 @@ struct IWindow
     virtual ~IWindow() = default;
 
     virtual void Show() = 0;
-    virtual void ToggleWindowedFullScreen(SwapChain* pSwapChain) = 0;
+    virtual void ToggleWindowedFullScreen(FSwapChain* pSwapChain) = 0;
     virtual void Minimize() = 0;
     virtual void SetMouseCapture(bool bCapture) = 0;
     virtual void Close() = 0;

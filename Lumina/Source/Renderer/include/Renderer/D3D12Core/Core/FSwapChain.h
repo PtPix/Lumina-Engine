@@ -5,25 +5,25 @@
 #include <dxgi1_5.h>
 #include <vector>
 
-#include "CommandQueue.h"
+#include "FCommandQueue.h"
 #include "Renderer/D3D12Core/Resource/Texture.h"
 
 struct FSwapChainCreateDesc
 {
     ID3D12Device* pDevice = nullptr;
-    CommandQueue* pCommandQueue = nullptr;
+    FCommandQueue* pCommandQueue = nullptr;
 
     HWND Hwnd = nullptr;
     int WindowWidth = 0;
     int WindowHeight = 0;
-    int NumBackBuffers = 2;
+    int NumBackBuffers = 3;
 
     bool bVSync = false;
     bool bFullScreen = false;
     bool bHDR = false;
 };
 
-class SwapChain
+class FSwapChain
 {
 public:
     bool Create(const FSwapChainCreateDesc& Desc);
@@ -58,17 +58,15 @@ private:
     unsigned short mCurrentBackBufferIndex = 0;
     unsigned long long mNumTotalFrames = 0;
     bool mbVSync = false;
-    HANDLE mHEvent = nullptr;
-    std::vector<UINT64> mFenceValues;
 
     // Observer
     ID3D12Device* mpDevice = nullptr;
-    ID3D12CommandQueue* mpPresentQueue = nullptr;
+    FCommandQueue* mpPresentQueue = nullptr;
 
     // Possess Resource
-    Microsoft::WRL::ComPtr<ID3D12Fence> mpFence;
     Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mpDescriptorHeapRTV;
+    std::vector<UINT64> mFenceValues;
 
     std::vector<Texture> mRenderTargets;
     DXGI_FORMAT mFormat = DXGI_FORMAT_UNKNOWN;

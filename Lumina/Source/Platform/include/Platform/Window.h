@@ -49,7 +49,7 @@ public:
 
     void Show() override;
     void Minimize() override;
-    void ToggleWindowedFullScreen(SwapChain* pSwapChain) override;
+    void ToggleWindowedFullScreen(FSwapChain* pSwapChain) override;
     void Close() override;
     void SetMouseCapture(bool bCapture) override;
 

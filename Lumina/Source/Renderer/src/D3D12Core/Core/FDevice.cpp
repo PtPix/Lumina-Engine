@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
 
 struct FGPUInfo
 {
@@ -33,7 +33,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &FeatureOptions5, sizeof(FeatureOptions5));
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Hardware ray tracing failed.");
+            LUMINA_LOG_WARNING(RHI, "FDevice::CheckFeatureSupport() : Hardware ray tracing failed.");
         }
         else
         {
@@ -47,7 +47,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &FeatureOptions1, sizeof(FeatureOptions1));
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Wave optimization failed.");
+            LUMINA_LOG_WARNING(RHI, "FDevice::CheckFeatureSupport() : Wave optimization failed.");
         }
         else
         {
@@ -61,7 +61,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &FeatureOptions4, sizeof(FeatureOptions4));
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Half Precision Float failed.");
+            LUMINA_LOG_WARNING(RHI, "FDevice::CheckFeatureSupport() : Half Precision Float failed.");
         }
         else
         {
@@ -75,7 +75,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureOptions7, sizeof(FeatureOptions7));
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : Mesh Shaders and Sampler Feedback failed.");
+            LUMINA_LOG_WARNING(RHI, "FDevice::CheckFeatureSupport() : Mesh Shaders and Sampler Feedback failed.");
         }
         else
         {
@@ -90,7 +90,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &FeatureOptions12, sizeof(FeatureOptions12));
         if (!SUCCEEDED(HResult))
         {
-            // Log::Warning("Device::CheckFeatureSupport() : Enhanced Barrier failed.");
+            // Log::Warning("FDevice::CheckFeatureSupport() : Enhanced Barrier failed.");
         }
         else
         {
@@ -106,7 +106,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         // Here we should check if the feature is supported and other formats are supported.
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_WARNING(RHI, "Device::CheckFeatureSupport() : TypedUAVLoads failed.");
+            LUMINA_LOG_WARNING(RHI, "FDevice::CheckFeatureSupport() : TypedUAVLoads failed.");
         }
         else
         {
@@ -160,7 +160,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
                     }
                     else
                     {
-                        // Log::Warning("Device::CheckFeatureSupport() : TypedUAVLoads for DXGI_FORMAT:%d failed.", Format);
+                        // Log::Warning("FDevice::CheckFeatureSupport() : TypedUAVLoads for DXGI_FORMAT:%d failed.", Format);
                     }
                 }
             }
@@ -173,7 +173,7 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
         HResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &FeatureMSAAQualityLevels, sizeof(FeatureMSAAQualityLevels));
         if (!SUCCEEDED(HResult))
         {
-            // Log::Warning("Device::CheckFeatureSupport() : MSAA Quality failed.");
+            // Log::Warning("FDevice::CheckFeatureSupport() : MSAA Quality failed.");
         }
         else
         {
@@ -248,7 +248,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
         else
         {
             const std::string AdapterDesc = StringUtils::WideToUTF8(Desc.Description);
-            Log::Warning("Device::Create() : Could not create D3D12Device with Feature_Level 12_1 for adapter %s, Trying with 12_0.", AdapterDesc.c_str());
+            Log::Warning("FDevice::Create() : Could not create D3D12Device with Feature_Level 12_1 for adapter %s, Trying with 12_0.", AdapterDesc.c_str());
             HResult = D3D12CreateDevice(pAdapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), nullptr);
             if (SUCCEEDED(HResult))
             {
@@ -256,7 +256,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
             }
             else
             {
-                Log::Error("Device::Create() : Could not create D3D12Device with Feature_Level 12_0 for adapter %s.", AdapterDesc.c_str());
+                Log::Error("FDevice::Create() : Could not create D3D12Device with Feature_Level 12_0 for adapter %s.", AdapterDesc.c_str());
             }
         }
 
@@ -272,7 +272,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
     return GPUs;
 }
 
-bool Device::Create(const FDeviceCreateDesc& CreateDesc)
+bool FDevice::Create(const FDeviceCreateDesc& CreateDesc)
 {
     HRESULT HResult = {};
 
@@ -289,11 +289,11 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
                 pDebugController->SetEnableGPUBasedValidation(true);
                 pDebugController->SetEnableSynchronizedCommandQueueValidation(true);
             }
-            LUMINA_LOG_INFO(RHI, "Device::Create() : Enable Debug %s", (CreateDesc.bEnableValidationLayer ? "and GPU Validation layers" : "layer"));
+            LUMINA_LOG_INFO(RHI, "FDevice::Create() : Enable Debug %s", (CreateDesc.bEnableValidationLayer ? "and GPU Validation layers" : "layer"));
         }
         else
         {
-            LUMINA_LOG_WARNING(RHI, "Device::Create(): D3D12GetDebugInterface() returned != S_OK: %l", HResult);
+            LUMINA_LOG_WARNING(RHI, "FDevice::Create(): D3D12GetDebugInterface() returned != S_OK: %l", HResult);
         }
     }
 
@@ -303,12 +303,12 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
     FGPUInfo& Adapter = Adapters[0];
 
     this->mpAdapter = Adapter.pAdapter;
-    // Create Device
+    // Create FDevice
     {
         HResult = D3D12CreateDevice(this->mpAdapter.Get(), Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
         if (!SUCCEEDED(HResult))
         {
-            LUMINA_LOG_ERROR(RHI, "Device::Create() : D3D12CreateDevice() failed");
+            LUMINA_LOG_ERROR(RHI, "FDevice::Create() : D3D12CreateDevice() failed");
             return false;
         }
     }
@@ -333,10 +333,30 @@ bool Device::Create(const FDeviceCreateDesc& CreateDesc)
     }
 
     CheckDeviceFeatureSupport(this->mpDevice.Get(), this->mCapabilities);
+
+    // Create D3D12MA
+    D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
+    AllocatorDesc.pDevice = mpDevice.Get();
+    AllocatorDesc.pAdapter = mpAdapter.Get();
+
+    HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
+    if (FAILED(HResult))
+    {
+        LUMINA_LOG_ERROR(RHI, "FDevice::Create() : Failed to create D3D12MA Allocator");
+        return false;
+    }
+
     return bDeviceCreated;
 }
 
-UINT Device::GetDeviceMemoryMax() const
+void FDevice::Destroy()
+{
+    mpAllocator.Reset();
+    mpDevice.Reset();
+    mpAllocator.Reset();
+}
+
+UINT FDevice::GetDeviceMemoryMax() const
 {
     DXGI_ADAPTER_DESC Desc = {};
     if (mpAdapter)
@@ -347,7 +367,7 @@ UINT Device::GetDeviceMemoryMax() const
     return 0;
 }
 
-UINT Device::GetDeviceMemoryAvailable() const
+UINT FDevice::GetDeviceMemoryAvailable() const
 {
     Microsoft::WRL::ComPtr<IDXGIAdapter3> pAdapter3;
     if (SUCCEEDED(mpAdapter->QueryInterface(IID_PPV_ARGS(&pAdapter3))))
