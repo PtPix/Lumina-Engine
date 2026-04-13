@@ -2,6 +2,7 @@
 
 #include "Renderer/D3D12Core/Core/FSwapChain.h"
 #include "Renderer/D3D12Core/Common.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
 
 bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
 {
@@ -60,18 +61,6 @@ bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
     this->mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
     this->mFenceValues.resize(this->mNumBackBuffers, 0);
 
-    // Create Descriptor Heap for Render target views
-    D3D12_DESCRIPTOR_HEAP_DESC RenderTargetViewHeapDesc = {};
-    RenderTargetViewHeapDesc.NumDescriptors = this->mNumBackBuffers;
-    RenderTargetViewHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    RenderTargetViewHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    HResult = mpDevice->CreateDescriptorHeap(&RenderTargetViewHeapDesc, IID_PPV_ARGS(&this->mpDescriptorHeapRTV));
-    if (FAILED(HResult))
-    {
-        LUMINA_LOG_ERROR(RHI,"Swapchain::Create(): Couldn't create RTV Heap: %d", HResult);
-        return false;
-    }
-
     // Create RTV for every buffer
     this->mRenderTargets.resize(this->mNumBackBuffers);
     CreateRenderTargetViews();
@@ -84,7 +73,6 @@ void FSwapChain::Destroy()
     WaitForGPU();
 
     DestroyRenderTargetViews();
-    mpDescriptorHeapRTV.Reset();
     mpSwapChain.Reset();
 }
 
@@ -182,9 +170,6 @@ void FSwapChain::WaitForGPU()
 
 void FSwapChain::CreateRenderTargetViews()
 {
-    const UINT RenderTargetViewDescriptorSize = mpDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{ mpDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart() };
-
     HRESULT HResult = {};
     for (int i = 0; i < mNumBackBuffers; i++)
     {
@@ -194,10 +179,8 @@ void FSwapChain::CreateRenderTargetViews()
         {
             assert(false);
         }
-        mRenderTargets[i].CreateFromSwapChain(pBackBuffer.Get());
-        mpDevice->CreateRenderTargetView(mRenderTargets[i].GetResource(), nullptr, RTVHandle);
-        RTVHandle.ptr += RenderTargetViewDescriptorSize;
-        SetName(this->mRenderTargets[i].GetResource(), "FSwapChain<hwnd= %p>::RenderTarget[%d]", this->mHwnd, i);
+        mRenderTargets[i].CreateFromSwapChain(mpDevice, pBackBuffer.Get());
+        SetName(this->mRenderTargets[i].GetResource(), "FSwapChain::RenderTarget[%d]", i);
     }
 }
 

@@ -346,11 +346,25 @@ bool FDevice::Create(const FDeviceCreateDesc& CreateDesc)
         return false;
     }
 
+    // Create Descriptor Allocators
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    {
+        D3D12_DESCRIPTOR_HEAP_TYPE HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i);
+        UINT PageSize = (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) ? 256 : 64;
+
+        mDescriptorAllocators[i] = std::make_unique<FDescriptorAllocator>(HeapType, PageSize);
+        mDescriptorAllocators[i]->Initialize(this);
+    }
+
     return bDeviceCreated;
 }
 
 void FDevice::Destroy()
 {
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    {
+        mDescriptorAllocators[i].reset();
+    }
     mpAllocator.Reset();
     mpDevice.Reset();
     mpAllocator.Reset();

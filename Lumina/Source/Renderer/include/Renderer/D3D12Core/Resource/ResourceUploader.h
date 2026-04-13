@@ -12,9 +12,9 @@ public:
 
 private:
     D3D12MA::Allocator* mpAllocator = nullptr;
-    FCommandContext* mCopyContext;
+    FCommandContext* mCopyContext = nullptr;
     std::vector<UploadBuffer> mTempUploadBuffers;
-    FCommandQueue* mCopyQueue;
+    FCommandQueue* mCopyQueue = nullptr;
 
     ID3D12Fence* mpFence = nullptr;
     uint64_t mFenceValue = 0;

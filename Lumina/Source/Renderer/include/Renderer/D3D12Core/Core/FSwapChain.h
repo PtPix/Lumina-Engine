@@ -10,7 +10,7 @@
 
 struct FSwapChainCreateDesc
 {
-    ID3D12Device* pDevice = nullptr;
+    FDevice* pDevice = nullptr;
     FCommandQueue* pCommandQueue = nullptr;
 
     HWND Hwnd = nullptr;
@@ -37,16 +37,8 @@ public:
     // Getter
     [[nodiscard]] unsigned short GetNumBackBuffers() const { return mNumBackBuffers; }
     [[nodiscard]] unsigned short GetCurrentBackBufferIndex() const { return mCurrentBackBufferIndex; }
-    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTVHandle() const
-    {
-        const UINT RenderTargetViewDescriptorSize = mpDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        const D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{ mpDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart().ptr + RenderTargetViewDescriptorSize * mCurrentBackBufferIndex };
-        return RTVHandle;
-    }
-    [[nodiscard]] Texture* GetCurrentRenderTargetResource()
-    {
-        return &mRenderTargets[mCurrentBackBufferIndex];
-    }
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTVHandle() const { return mRenderTargets[mCurrentBackBufferIndex].GetRTV(); }
+    [[nodiscard]] Texture* GetCurrentRenderTargetResource() { return &mRenderTargets[mCurrentBackBufferIndex]; }
 
 private:
     void CreateRenderTargetViews();
@@ -60,12 +52,11 @@ private:
     bool mbVSync = false;
 
     // Observer
-    ID3D12Device* mpDevice = nullptr;
+    FDevice* mpDevice = nullptr;
     FCommandQueue* mpPresentQueue = nullptr;
 
     // Possess Resource
     Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mpDescriptorHeapRTV;
     std::vector<UINT64> mFenceValues;
 
     std::vector<Texture> mRenderTargets;

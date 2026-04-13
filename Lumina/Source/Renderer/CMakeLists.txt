@@ -4,11 +4,18 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Cpp Files
 set(D3D12CORE_SOURCES
+        # Core
         "src/D3D12Core/Core/FDevice.cpp"
         "src/D3D12Core/Core/FCommandQueue.cpp"
         "src/D3D12Core/Core/FSwapChain.cpp"
         "src/D3D12Core/Core/FCommandContext.cpp"
+
+        # Descriptors
+        "src/D3D12Core/Descriptors/FDescriptorAllocation.cpp"
+        "src/D3D12Core/Descriptors/FDescriptorAllocatorPage.cpp"
+        "src/D3D12Core/Descriptors/FDescriptorAllocator.cpp"
 )
+
 
 set(RENDER_CORE_SOURCES
         "src/D3D12Core/Resource/Texture.cpp"

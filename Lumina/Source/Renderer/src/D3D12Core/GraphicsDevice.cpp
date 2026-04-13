@@ -140,7 +140,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     // Create FSwapChain
     {
         FSwapChainCreateDesc swapChainDesc = {};
-        swapChainDesc.pDevice = mDevice.GetDevice();
+        swapChainDesc.pDevice = &mDevice;
         swapChainDesc.pCommandQueue = &mCommandQueues[GRAPHICS];
         swapChainDesc.Hwnd = Hwnd;
         swapChainDesc.WindowHeight = Height;

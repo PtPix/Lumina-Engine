@@ -1,10 +1,12 @@
 #pragma once
 
 #include <dxgiformat.h>
+#include <memory>
 #include <unordered_map>
 #include <wrl/client.h>
 
 #include "D3D12MemAlloc.h"
+#include "Renderer/D3D12Core/Descriptors/FDescriptorAllocator.h"
 
 struct IDXGIFactory6;
 struct ID3D12Device4;
@@ -47,11 +49,18 @@ public:
 
     [[nodiscard]] const FDeviceCapabilities& GetDeviceCapabilities() const { return mCapabilities; }
 
+    FDescriptorAllocator* GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+    {
+        return mDescriptorAllocators[Type].get();
+    }
+
 private:
     Microsoft::WRL::ComPtr<ID3D12Device> mpDevice;
     Microsoft::WRL::ComPtr<IDXGIAdapter> mpAdapter;
     Microsoft::WRL::ComPtr<D3D12MA::Allocator> mpAllocator;
 
     FDeviceCapabilities mCapabilities;
+
+    std::unique_ptr<FDescriptorAllocator> mDescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 };
 
