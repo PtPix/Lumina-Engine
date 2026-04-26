@@ -5,11 +5,16 @@
 #include <vector>
 #include <cstdint>
 
-#include "../D3D12Core/PipelineState.h"
+#include "Renderer/D3D12Core/PipelineState.h"
 #include "Renderer/D3D12Core/RootSignature.h"
 
-struct ID3D12Device;
-struct ID3D12GraphicsCommandList;
+struct FTexture;
+class FDevice;
+class FCommandContext;
+class Texture;
+
+// struct ID3D12Device;
+// struct ID3D12GraphicsCommandList;
 
 enum class ERenderPass : uint32_t
 {
@@ -50,20 +55,35 @@ public:
     MaterialBase() = default;
     virtual ~MaterialBase() = default;
 
-    virtual bool Initialize(ID3D12Device* Device, RootSignature* RootSig) = 0;
-    virtual void Bind(ID3D12GraphicsCommandList* CommandList) const = 0;
+    virtual bool Initialize(FDevice* Device, RootSignature* RootSig) = 0;
+    virtual void Bind(FCommandContext* Context) const = 0;
     virtual void Destroy() = 0;
 
     [[nodiscard]] ERenderPass GetRenderPassFlags() const { return mRenderPassFlags; }
     [[nodiscard]] bool SupportsPass(ERenderPass Pass) const { return (mRenderPassFlags & Pass) != 0; }
 
-    void SetSrvTable(D3D12_GPU_DESCRIPTOR_HANDLE Table) { mSrvTable = Table; }
+    // void SetSrvTable(D3D12_GPU_DESCRIPTOR_HANDLE Table) { mSrvTable = Table; }
+
+    void SetTexture(UINT RootIndex, UINT Offset, Texture* pTexture);
+    void SetTextures(UINT RootIndex, UINT StartOffset, Texture** ppTexture, UINT NumTextures);
 
 protected:
     bool InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& Desc);
 
+    void BindTextures(FCommandContext& Context) const;
+
     ERenderPass mRenderPassFlags = ERenderPass::None;
     RootSignature* mRootSignature = nullptr;
     PipelineState mPipelineState;
-    D3D12_GPU_DESCRIPTOR_HANDLE mSrvTable = {};
+
+    struct FTextureBinding
+    {
+        UINT RootIndex;
+        UINT Offset;
+        Texture* pTexture;
+    };
+
+    std::vector<FTextureBinding> mBoundTextures;
+
+    // D3D12_GPU_DESCRIPTOR_HANDLE mSrvTable = {};
 };

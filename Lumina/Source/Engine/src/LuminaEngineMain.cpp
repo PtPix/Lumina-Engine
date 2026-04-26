@@ -1,28 +1,21 @@
-﻿#include "Engine/LuminaEngine.h"
-#include "Logger/Logger.h"
+﻿#include <memory>
 
-#include <memory>
-
+#include "Engine/LuminaEngine.h"
 #include "Engine/Input.h"
+#include "Logger/Logger.h"
+#include "Renderer/Renderer.h"
 
 bool LuminaEngine::Initialize(FStartupParameters& StartupParameters, LuminaApp* Application)
 {
     mCurrentApp = Application;
+
     InitializeWindows(StartupParameters);
 
-    if (!mGraphicsDevice.Initialize(mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight()))
-    {
-        LUMINA_LOG_ERROR(Engine, "Can't Initialize Graphics Device.");
-        return false;
-    }
+    Renderer::Initialize(mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight());
 
-    if (!mCurrentApp)
-    {
-        LUMINA_LOG_ERROR(Engine, "Can't Run Engine without App.");
-        return false;
-    }
+    Input::Init();
 
-    mCurrentApp->InitializeApp(&mGraphicsDevice, mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight());
+    mCurrentApp->InitializeApp(mpMainWindow->GetHWND(), mpMainWindow->GetWidth(), mpMainWindow->GetHeight());
 
     return true;
 }
@@ -31,7 +24,8 @@ void LuminaEngine::Run()
 {
     mbIsRunning = true;
     mTimer.Reset();
-    Input::Init();
+    const double FIXED_DT = 1.0 / 60.0;
+    double Accumulator = 0.0;
 
     MSG msg = {};
     while (mbIsRunning)
@@ -47,27 +41,34 @@ void LuminaEngine::Run()
                 break;
             }
         }
-        if (!mbIsRunning)
-        {
-            break;
-        }
-
-        mTimer.Tick();
-
-        mCurrentApp->UpdateApp(mTimer.GetDeltaTime());
-        mCurrentApp->RenderApp();
+        if (!mbIsRunning) break;
 
         Input::Update();
 
-        if (mTimer.UpdateAndCheckReportInterval())
+        mTimer.Tick();
+        double DeltaTime = mTimer.GetDeltaTime();
+        if (DeltaTime > 0.25) DeltaTime = 0.25;
+
+        Accumulator += DeltaTime;
+        while (Accumulator >= FIXED_DT)
         {
-            LUMINA_LOG_INFO(Engine, "FPS: %.2f, Avg Frame: %.3fms, Total: %.1fs",
-                   mTimer.GetFPS(), mTimer.GetAvgFrameTimeMs(), mTimer.GetTotalTime());
+            mCurrentApp->FixedUpdateApp(FIXED_DT);
+            Accumulator -= FIXED_DT;
         }
+
+        mCurrentApp->UpdateApp(DeltaTime);
+
+        FCommandContext* pMainContext = Renderer::BeginFrame();
+
+        mCurrentApp->RenderApp(pMainContext);
+
+        Renderer::EndFrame(pMainContext);
     }
 
     mCurrentApp->DestroyApp();
-    mGraphicsDevice.Destroy();
+
+    Renderer::Shutdown();
+
     if (mpMainWindow)
     {
         mpMainWindow.reset();

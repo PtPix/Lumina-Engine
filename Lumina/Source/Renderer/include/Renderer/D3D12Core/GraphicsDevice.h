@@ -43,8 +43,9 @@ public:
     StaticResourceViewHeap& GetCbvSrvUavHeap() { return mHeapCBV_SRV_UAV; }
     StaticResourceViewHeap& GetRTVHeap() { return mHeapRTV; }
     StaticResourceViewHeap& GetDsvHeap() { return mHeapDSV; }
+    StaticResourceViewHeap& GetImGuiSrvHeap() { return mHeapImGuiSRV; }
 
-    FCommandContext& GetGraphicsContext() { return mGraphicsCommandContext[0]; }
+    FCommandContext& GetGraphicsContext() { return mGraphicsCommandContext[mFrameIndex]; }
 
 private:
     static D3D12_COMMAND_LIST_TYPE GetDX12CommandListType(ECommandQueueType Type);
@@ -61,6 +62,7 @@ private:
     StaticResourceViewHeap mHeapDSV;
     StaticResourceViewHeap mHeapCBV_SRV_UAV;
     StaticResourceViewHeap mHeapRTV;
+    StaticResourceViewHeap mHeapImGuiSRV;  // ImGui 专用 shader-visible SRV heap
 
     StaticBufferHeap mStaticHeapVertexBuffer;
     StaticBufferHeap mStaticHeapIndexBuffer;

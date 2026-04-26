@@ -15,12 +15,14 @@ bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint3
         return false;
     }
 
-    mSceneRenderTargets.Initialize(
-        mGraphicsDevice->GetDevice().GetDevice(),
-        mGraphicsDevice->GetAllocator(),
-        &mGraphicsDevice->GetRTVHeap(),
-        &mGraphicsDevice->GetCbvSrvUavHeap(),
-        &mGraphicsDevice->GetDsvHeap(), mWidth, mHeight);
+    // mSceneRenderTargets.Initialize(
+    //     mGraphicsDevice->GetDevice().GetDevice(),
+    //     mGraphicsDevice->GetAllocator(),
+    //     &mGraphicsDevice->GetRTVHeap(),
+    //     &mGraphicsDevice->GetCbvSrvUavHeap(),
+    //     &mGraphicsDevice->GetDsvHeap(), mWidth, mHeight);
+    // 现在的 Initialize 非常干净：
+    mSceneRenderTargets.Initialize(&mGraphicsDevice->GetDevice(), mGraphicsDevice->GetAllocator(), mWidth, mHeight);
 
     if (!InitMaterials())
     {
@@ -32,11 +34,12 @@ bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint3
     return true;
 }
 
-void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
+void FDeferredShadingRenderer::Render(FCommandContext* pCommandContext, const FSceneView& View,
     const FScene& Scene)
 {
-    ID3D12DescriptorHeap* ppHeaps[] = { mGraphicsDevice->GetCbvSrvUavHeap().GetHeap() };
-    pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    ID3D12GraphicsCommandList* pCommandList = static_cast<ID3D12GraphicsCommandList*>(pCommandContext->GetCommandList());
+    // ID3D12DescriptorHeap* ppHeaps[] = { mGraphicsDevice->GetCbvSrvUavHeap().GetHeap() };
+    // pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     pCommandList->SetGraphicsRootSignature(mGlobalRootSignature.Get());
 
     D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(mWidth), static_cast<float>(mHeight), 0.0f, 1.0f };
@@ -56,8 +59,8 @@ void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, c
     mSceneRenderTargets.Clear(pCommandList);
     mSceneRenderTargets.BindBasePass(pCommandList);
 
-    RenderPass(pCommandList, View, Scene, ERenderPass::Skybox);
-    RenderPass(pCommandList, View, Scene, ERenderPass::BasePass);
+    RenderPass(pCommandContext, View, Scene, ERenderPass::Skybox);
+    RenderPass(pCommandContext, View, Scene, ERenderPass::BasePass);
 
     mSceneRenderTargets.TransitionToLightingPass(pCommandList);
 
@@ -65,7 +68,7 @@ void FDeferredShadingRenderer::Render(ID3D12GraphicsCommandList* pCommandList, c
     pCommandList->OMSetRenderTargets(1, &BackBufferRTV, false, nullptr);
     const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     pCommandList->ClearRenderTargetView(BackBufferRTV, ClearColor, 0, nullptr);
-    RenderDeferredLighting(pCommandList, View, Scene);
+    RenderDeferredLighting(pCommandContext, View, Scene);
 
     mSceneRenderTargets.TransitionToBasePass(pCommandList);
 }
@@ -102,7 +105,7 @@ bool FDeferredShadingRenderer::CreateGlobalRootSignature()
 
 bool FDeferredShadingRenderer::InitMaterials()
 {
-    if (!mDeferredLightingMaterial.Initialize(mGraphicsDevice->GetDevice().GetDevice(), &mGlobalRootSignature))
+    if (!mDeferredLightingMaterial.Initialize(&mGraphicsDevice->GetDevice(), &mGlobalRootSignature))
     {
         return false;
     }
@@ -110,9 +113,10 @@ bool FDeferredShadingRenderer::InitMaterials()
     return true;
 }
 
-void FDeferredShadingRenderer::RenderPass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
+void FDeferredShadingRenderer::RenderPass(FCommandContext* pCommandContext, const FSceneView& View,
     const FScene& Scene, ERenderPass Pass)
 {
+    ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
     pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     for (auto& Node : Scene.GetRenderNodes())
@@ -122,7 +126,7 @@ void FDeferredShadingRenderer::RenderPass(ID3D12GraphicsCommandList* pCommandLis
             continue;
         }
 
-        Node.pMaterial->Bind(pCommandList);
+        Node.pMaterial->Bind(pCommandContext);
 
         FPrimitiveUniformData ModelData = {};
 
@@ -151,17 +155,22 @@ void FDeferredShadingRenderer::RenderPass(ID3D12GraphicsCommandList* pCommandLis
             pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
         }
 
-        Node.pMesh->Draw(pCommandList);
+        Node.pMesh->Draw(pCommandContext);
     }
 }
 
-void FDeferredShadingRenderer::RenderDeferredLighting(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View,
+void FDeferredShadingRenderer::RenderDeferredLighting(FCommandContext* pCommandContext, const FSceneView& View,
     const FScene& Scene)
 {
-    mDeferredLightingMaterial.Bind(pCommandList);
+    mDeferredLightingMaterial.Bind(pCommandContext);
+    ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
     pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCommandList->SetGraphicsRootDescriptorTable(4, Scene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
-    pCommandList->SetGraphicsRootDescriptorTable(5, mSceneRenderTargets.GetSrvTable().GetGpuDescriptorHandle());
+    // pCommandList->SetGraphicsRootDescriptorTable(4, Scene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
+    // D3D12_CPU_DESCRIPTOR_HANDLE GBufferTableCpuHandle = mSceneRenderTargets.GetSrvTable().GetCpuDescriptorHandle();
+
+    // 将 5 张 GBuffer 贴图推入 RootIndex 5 (偏移量0)
+    pCommandContext->SetGraphicsRootDescriptorTable(5, 0, mSceneRenderTargets.GetSrvTableCpuHandle(), 5);
+    // pCommandList->SetGraphicsRootDescriptorTable(5, mSceneRenderTargets.GetSrvTable().GetGpuDescriptorHandle());
 
     // Upload light data
     FDirectionalLightUniformData MainLight = {};
@@ -171,5 +180,6 @@ void FDeferredShadingRenderer::RenderDeferredLighting(ID3D12GraphicsCommandList*
     memcpy(MainLightAllocation.CpuAddress, &MainLight, sizeof(FDirectionalLightUniformData));
     pCommandList->SetGraphicsRootConstantBufferView(1, MainLightAllocation.GpuAddress);
 
-    pCommandList->DrawInstanced(3, 1, 0 ,0);
+    pCommandContext->DrawInstanced(3, 1, 0, 0);
+    // pCommandList->DrawInstanced(3, 1, 0 ,0);
 }

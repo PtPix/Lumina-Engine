@@ -61,7 +61,6 @@ private:
     std::unique_ptr<Window> mpMainWindow;
     WindowNameLookup_t    mWinNameLookup;
 
-    GraphicsDevice mGraphicsDevice;
     LuminaApp* mCurrentApp{};
     FrameTimer mTimer;
     bool mbIsRunning = false;

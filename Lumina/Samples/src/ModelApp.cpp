@@ -17,15 +17,15 @@ bool ModelApp::OnInit()
         return false;
     }
 
-    mTextureManager.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mpGraphicsDevice->GetAllocator(), &mpGraphicsDevice->GetUploadHeap(), &mpGraphicsDevice->GetCbvSrvUavHeap());
+    mTextureManager.Initialize(&mpGraphicsDevice->GetDevice());
 
     // Initialize Materials
-    if (!mBasePassMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mRenderer.GetRootSignature()))
+    if (!mBasePassMaterial.Initialize(&mpGraphicsDevice->GetDevice(), mRenderer.GetRootSignature()))
     {
         return false;
     }
 
-    if (!mSkyboxMaterial.Initialize(mpGraphicsDevice->GetDevice().GetDevice(), mRenderer.GetRootSignature()))
+    if (!mSkyboxMaterial.Initialize(&mpGraphicsDevice->GetDevice(), mRenderer.GetRootSignature()))
     {
         return false;
     }
@@ -48,7 +48,7 @@ bool ModelApp::OnInit()
     };
     for (int i = 0; i < 5; i++)
     {
-        mScene.PBRTextures[i] = mTextureManager.GetOrCreateTextureFromFile(TexturePaths[i]);
+        mScene.PBRTextures[i] = mTextureManager.GetOrCreateTextureFromFile(TexturePaths[i], &Uploader);
         if (!mScene.PBRTextures[i])
         {
             Log::Error("Failed to load texture: %s", TexturePaths[i]);
@@ -56,26 +56,29 @@ bool ModelApp::OnInit()
         }
     }
 
-    mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(5, &mHelmetPBRTable);
-    UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = mHelmetPBRTable.GetCpuDescriptorHandle();
+    // mpGraphicsDevice->GetCbvSrvUavHeap().AllocateDescriptor(5, &mHelmetPBRTable);
+    // UINT DescriptorSize = mpGraphicsDevice->GetDevice().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    // D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = mHelmetPBRTable.GetCpuDescriptorHandle();
 
-    for (int i = 0; i < 5; i++)
-    {
-        D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-        SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        SRVDesc.Format = mScene.PBRTextures[i]->Format;
-        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        SRVDesc.Texture2D.MipLevels = 1;
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    //     SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    //     SRVDesc.Format = mScene.PBRTextures[i]->Format;
+    //     SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    //     SRVDesc.Texture2D.MipLevels = 1;
+    //
+    //     mpGraphicsDevice->GetDevice().GetDevice()->CreateShaderResourceView(mScene.PBRTextures[i]->Resource, &SRVDesc, DestHandle);
+    //     DestHandle.ptr += DescriptorSize;
+    // }
 
-        mpGraphicsDevice->GetDevice().GetDevice()->CreateShaderResourceView(mScene.PBRTextures[i]->Resource, &SRVDesc, DestHandle);
-        DestHandle.ptr += DescriptorSize;
-    }
+    mScene.SkyboxTexture = mTextureManager.GetOrCreateTextureFromFile("Assets/Textures/Environments/Skybox.hdr", &Uploader);
 
-    mScene.SkyboxTexture = mTextureManager.GetOrCreateTextureFromFile("Assets/Textures/Environments/Skybox.hdr");
+    mSkyboxMaterial.SetTexture(4, 0, mScene.SkyboxTexture);
+    mBasePassMaterial.SetTextures(4, 0, mScene.PBRTextures, 5);
 
-    mBasePassMaterial.SetSrvTable(mHelmetPBRTable.GetGpuDescriptorHandle());
-    mSkyboxMaterial.SetSrvTable(mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
+    // mBasePassMaterial.SetSrvTable(mHelmetPBRTable.GetGpuDescriptorHandle());
+    // mSkyboxMaterial.SetSrvTable(mScene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
 
     size_t HelmetIndex = mScene.CharacterModel->SumbitToScene(&mScene, DirectX::XMMatrixIdentity());
     size_t HelmetEndIndex = mScene.GetRenderNodes().size();
@@ -92,7 +95,7 @@ bool ModelApp::OnInit()
     }
 
     Uploader.FlushAndSync(mpGraphicsDevice->GetDevice().GetDevice());
-    mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
+    // mpGraphicsDevice->GetUploadHeap().UploadToGPUAndWait(mpGraphicsDevice->GetGraphicsQueue().GetCommandQueue());
 
     return true;
 }
@@ -124,9 +127,9 @@ void ModelApp::OnUpdate(double DeltaTime)
     mView = mCamera.GetSceneView(mWidth, mHeight);
 }
 
-void ModelApp::OnRender(ID3D12GraphicsCommandList* pCommandList)
+void ModelApp::OnRender(FCommandContext* pCommandContext)
 {
-    mRenderer.Render(pCommandList, mView, mScene);
+    mRenderer.Render(pCommandContext, mView, mScene);
 }
 
 void ModelApp::OnRenderUI()

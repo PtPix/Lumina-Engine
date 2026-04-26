@@ -45,7 +45,7 @@ public:
 
     bool Initialize(GraphicsDevice* pGraphicsDevice, uint32_t Width, uint32_t Height);
 
-    void Render(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene);
+    void Render(FCommandContext* pContext, const FSceneView& View, const FScene& Scene);
 
     void Destroy();
 
@@ -55,8 +55,8 @@ private:
     bool CreateGlobalRootSignature();
     bool InitMaterials();
 
-    void RenderPass(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene, ERenderPass Pass);
-    void RenderDeferredLighting(ID3D12GraphicsCommandList* pCommandList, const FSceneView& View, const FScene& Scene);
+    void RenderPass(FCommandContext* pCommandContext, const FSceneView& View, const FScene& Scene, ERenderPass Pass);
+    void RenderDeferredLighting(FCommandContext* pCommandContext, const FSceneView& View, const FScene& Scene);
 
 private:
     GraphicsDevice* mGraphicsDevice = nullptr;
@@ -68,5 +68,5 @@ private:
 
     DeferredLightingMaterial mDeferredLightingMaterial;
 
-    ResourceView mHelmetPBRTable;
+    // ResourceView mHelmetPBRTable;
 };

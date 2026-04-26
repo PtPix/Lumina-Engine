@@ -15,9 +15,15 @@ void FMesh::Initialize(FDevice* pDevice, ResourceUploader* pUploader, const void
     pUploader->QueueUpload(&mIndexBuffer, Indices, IndexCount * sizeof(uint32_t));
 }
 
-void FMesh::Draw(ID3D12GraphicsCommandList* pCommandList) const
+void FMesh::Draw(FCommandContext* pCommandContext) const
 {
+    ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
     pCommandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
     pCommandList->IASetIndexBuffer(&mIndexBufferView);
-    pCommandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
+
+    // 🔴 最致命的一步：必须调用 Context 的 Draw，触发 Commit 拦截！
+    pCommandContext->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
+    // pCommandList->IASetVertexBuffers(0, 1, &mVertexBufferView);
+    // pCommandList->IASetIndexBuffer(&mIndexBufferView);
+    // pCommandList->DrawIndexedInstanced(mIndexCount, 1, 0, 0, 0);
 }

@@ -9,7 +9,7 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     // Create FDevice
     {
         LUMINA_TIME_LOG_SCOPE("Create FDevice");
-        FDeviceCreateDesc DeviceCreateDesc = {true, false, nullptr};
+        FDeviceCreateDesc DeviceCreateDesc = {true, true, nullptr};
         const bool bDeviceCreateSucceeded = mDevice.Create(DeviceCreateDesc);
         assert(bDeviceCreateSucceeded);
     }
@@ -68,11 +68,11 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
             }
         }
     }
-    {
-        mGraphicsCommandContext[0].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][0]);
-        mGraphicsCommandContext[1].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][1]);
-        mGraphicsCommandContext[2].Initialize(mDevice.GetDevice(), GRAPHICS, mpCommandAllocators[GRAPHICS][2]);
-    }
+    // {
+    //     mGraphicsCommandContext[0].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][0]);
+    //     mGraphicsCommandContext[1].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][1]);
+    //     mGraphicsCommandContext[2].Initialize(&mDevice, GRAPHICS, mpCommandAllocators[GRAPHICS][2]);
+    // }
     // Create D3D12MA
     {
         D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
@@ -109,6 +109,12 @@ bool GraphicsDevice::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
             constexpr uint32_t NumUavDesc = 100;
             constexpr bool bCpuVisible = false;
             mHeapCBV_SRV_UAV.Create(pDevice, L"HeapCBV_SRV_UAV", EResourceHeapType::CBV_SRV_UAV_HEAP, NumCbvDesc + NumSrvDesc + NumUavDesc, bCpuVisible);
+        }
+
+        {
+            // ImGui 专用独立 shader-visible SRV heap（字体纹理 + 用户纹理）
+            constexpr uint32_t NumImGuiSrvDesc = 64;
+            mHeapImGuiSRV.Create(pDevice, L"HeapImGuiSRV", EResourceHeapType::CBV_SRV_UAV_HEAP, NumImGuiSrvDesc, false);
         }
 
         {
@@ -217,8 +223,8 @@ FCommandContext* GraphicsDevice::BeginFrame()
 
     pCurrentContext->Begin();
 
-    ID3D12DescriptorHeap* ppHeaps[] = { mHeapCBV_SRV_UAV.GetHeap() };
-    pCurrentContext->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    // ID3D12DescriptorHeap* ppHeaps[] = { mHeapCBV_SRV_UAV.GetHeap() };
+    // pCurrentContext->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
     pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
     pCurrentContext->FlushResourceBarriers();
@@ -232,10 +238,11 @@ void GraphicsDevice::EndFrameAndPresent()
     pCurrentContext->TransitionResource(mSwapChain.GetCurrentRenderTargetResource(), D3D12_RESOURCE_STATE_PRESENT);
     pCurrentContext->Close();
 
-    ID3D12CommandList* ppCommandLists[] = { pCurrentContext->GetCommandList() };
-    mCommandQueues[GRAPHICS].GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    uint64_t FenceValue = mCommandQueues[GRAPHICS].ExecuteCommandList(pCurrentContext->GetCommandList());
 
     mSwapChain.Present();
+    pCurrentContext->CleanupDynamicHeaps(FenceValue);
     mSwapChain.MoveToNextFrame();
 }
 

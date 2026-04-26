@@ -14,6 +14,11 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/Descriptors/FDescriptorAllocation.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocatorPage.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocator.cpp"
+        "src/D3D12Core/Descriptors/FDynamicDescriptorHeap.cpp"
+
+        "src/D3D12Core/D3D12Backend.cpp"
+        "src/UI/UIRenderer.cpp"
+        "src/Renderer.cpp"
 )
 
 
@@ -57,6 +62,7 @@ target_include_directories(Renderer PUBLIC
 target_link_libraries(Renderer PRIVATE LuminaCore)
 target_link_libraries(Renderer PUBLIC D3D12MAd)
 target_link_libraries(Renderer PUBLIC DXC)
+target_link_libraries(Renderer PUBLIC ImGUI)
 
 target_link_libraries(Renderer PRIVATE
     d3d12.lib

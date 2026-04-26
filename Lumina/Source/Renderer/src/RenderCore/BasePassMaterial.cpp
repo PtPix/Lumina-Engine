@@ -1,6 +1,9 @@
 #include "Renderer/RenderCore/BasePassMaterial.h"
 
-bool BasePassMaterial::Initialize(ID3D12Device* Device, RootSignature* RootSig)
+#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
+
+bool BasePassMaterial::Initialize(FDevice* Device, RootSignature* RootSig)
 {
     mRootSignature = RootSig;
 
@@ -20,20 +23,20 @@ bool BasePassMaterial::Initialize(ID3D12Device* Device, RootSignature* RootSig)
     };
     Desc.DepthStencilViewFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-    return InitializePipeline(Device, Desc);
+    return InitializePipeline(Device->GetDevice(), Desc);
 }
 
-void BasePassMaterial::Bind(ID3D12GraphicsCommandList* CommandList) const
+void BasePassMaterial::Bind(FCommandContext* Context) const
 {
     if (mPipelineState.Get())
     {
-        CommandList->SetPipelineState(mPipelineState.Get());
+        Context->SetPipelineState(mPipelineState.Get());
     }
-
-    if (mSrvTable.ptr != 0)
-    {
-        CommandList->SetGraphicsRootDescriptorTable(5, mSrvTable);
-    }
+    BindTextures(*Context);
+    // if (mSrvTable.ptr != 0)
+    // {
+    //     CommandList->SetGraphicsRootDescriptorTable(5, mSrvTable);
+    // }
 }
 
 void BasePassMaterial::Destroy()

@@ -14,8 +14,8 @@ struct FSwapChainCreateDesc
     FCommandQueue* pCommandQueue = nullptr;
 
     HWND Hwnd = nullptr;
-    int WindowWidth = 0;
-    int WindowHeight = 0;
+    uint32_t WindowWidth = 0;
+    uint32_t WindowHeight = 0;
     int NumBackBuffers = 3;
 
     bool bVSync = false;

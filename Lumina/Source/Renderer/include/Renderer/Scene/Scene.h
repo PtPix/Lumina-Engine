@@ -36,8 +36,8 @@ public:
     StaticModel* SkyboxModel = nullptr;
     StaticModel* CharacterModel = nullptr;
 
-    FTexture* SkyboxTexture = nullptr;
-    FTexture* PBRTextures[5] = { nullptr };
+    Texture* SkyboxTexture = nullptr;
+    Texture* PBRTextures[5];
 
     float Metallic = 0.0f;
     float Roughness = 0.0f;

@@ -14,7 +14,7 @@ class ModelApp : public LuminaApp
 public:
     bool OnInit() override;
     void OnUpdate(double DeltaTime) override;
-    void OnRender(ID3D12GraphicsCommandList* pCommandList) override;
+    void OnRender(FCommandContext* pCommandContext) override;
     void OnRenderUI() override;
     void OnDestroy() override;
 

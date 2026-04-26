@@ -1,7 +1,7 @@
 ﻿#include "Logger/Logger.h"
 #include "Engine/Settings.h"
 #include "Engine/LuminaEngine.h"
-#include "Samples/ModelApp.h"
+#include "Editor/LuminaEditor.h"
 
 #include <memory>
 
@@ -17,7 +17,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdSh
 
     // Init Engine
     auto Engine = std::make_unique<LuminaEngine>();
-    auto App = std::make_unique<ModelApp>();
+    auto App = std::make_unique<LuminaEditor>();
 
     if (!Engine->Initialize(StartupParameters, App.get()))
     {

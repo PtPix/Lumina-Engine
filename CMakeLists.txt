@@ -23,6 +23,6 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Renderer")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Engine")
 
 # Compile Samples
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Samples")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Editor")
 
 

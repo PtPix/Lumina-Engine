@@ -1,6 +1,33 @@
 ﻿#include "Renderer/RenderCore/Material.h"
 #include "../../include/Renderer/D3D12Core/RootSignature.h"
 #include "../../include/Renderer/D3D12Core/ShaderCompiler.h"
+#include "Renderer/D3D12Core/Texture.h"
+#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Resource/Texture.h"
+
+void MaterialBase::SetTexture(UINT RootIndex, UINT Offset, Texture* pTexture)
+{
+    if (!pTexture) return;
+
+    for (auto& Binding : mBoundTextures)
+    {
+        if (Binding.RootIndex == RootIndex && Binding.Offset == Offset)
+        {
+            Binding.pTexture = pTexture;
+            return;
+        }
+    }
+
+    mBoundTextures.push_back({ RootIndex, Offset, pTexture });
+}
+
+void MaterialBase::SetTextures(UINT RootIndex, UINT StartOffset, Texture** ppTexture, UINT NumTextures)
+{
+    for (UINT i = 0; i < NumTextures; i++)
+    {
+        SetTexture(RootIndex, StartOffset + i, ppTexture[i]);
+    }
+}
 
 bool MaterialBase::InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& MaterialDesc)
 {
@@ -64,4 +91,15 @@ bool MaterialBase::InitializePipeline(ID3D12Device* Device, const FMaterialInitD
     }
 
     return true;
+}
+
+void MaterialBase::BindTextures(FCommandContext& Context) const
+{
+    for (const auto& Binding : mBoundTextures)
+    {
+        if (Binding.pTexture)
+        {
+            Context.SetGraphicsRootDescriptorTable(Binding.RootIndex, Binding.Offset, Binding.pTexture->GetSRV());
+        }
+    }
 }

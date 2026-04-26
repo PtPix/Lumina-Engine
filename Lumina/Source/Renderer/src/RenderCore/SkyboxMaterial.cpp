@@ -1,6 +1,9 @@
 #include "Renderer/RenderCore/SkyboxMaterial.h"
 
-bool SkyboxMaterial::Initialize(ID3D12Device* Device, RootSignature* RootSig)
+#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
+
+bool SkyboxMaterial::Initialize(FDevice* Device, RootSignature* RootSig)
 {
     mRootSignature = RootSig;
 
@@ -21,20 +24,21 @@ bool SkyboxMaterial::Initialize(ID3D12Device* Device, RootSignature* RootSig)
     Desc.DepthStencilViewFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     Desc.bEnableDepthTest = false;
 
-    return InitializePipeline(Device, Desc);
+    return InitializePipeline(Device->GetDevice(), Desc);
 }
 
-void SkyboxMaterial::Bind(ID3D12GraphicsCommandList* CommandList) const
+void SkyboxMaterial::Bind(FCommandContext* Context) const
 {
     if (mPipelineState.Get())
     {
-        CommandList->SetPipelineState(mPipelineState.Get());
+        Context->SetPipelineState(mPipelineState.Get());
     }
 
-    if (mSrvTable.ptr != 0)
-    {
-        CommandList->SetGraphicsRootDescriptorTable(4, mSrvTable);
-    }
+    BindTextures(*Context);
+    // if (mSrvTable.ptr != 0)
+    // {
+    //     Context->SetGraphicsRootDescriptorTable(4, mSrvTable);
+    // }
 }
 
 void SkyboxMaterial::Destroy()

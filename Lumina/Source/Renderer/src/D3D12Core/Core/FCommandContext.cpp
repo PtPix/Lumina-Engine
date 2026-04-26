@@ -9,13 +9,11 @@ FCommandContext::~FCommandContext()
     mpCommandAllocator.Reset();
 }
 
-bool FCommandContext::Initialize(ID3D12Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator)
+bool FCommandContext::Initialize(FDevice* pDevice, D3D12_COMMAND_LIST_TYPE Type)
 {
     assert(pDevice != nullptr);
-    assert(pAllocator != nullptr);
 
     mpDevice = pDevice;
-    mpCommandAllocator = pAllocator;
     mType = Type;
 
     D3D12_COMMAND_LIST_TYPE D3D12Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -26,7 +24,9 @@ bool FCommandContext::Initialize(ID3D12Device* pDevice, ECommandQueueType Type, 
     default: break;
     }
 
-    HRESULT HResult = mpDevice->CreateCommandList(
+    mpDevice->GetDevice()->CreateCommandAllocator(D3D12Type, IID_PPV_ARGS(&mpCommandAllocator));
+
+    HRESULT HResult = mpDevice->GetDevice()->CreateCommandList(
         0, D3D12Type, mpCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mpCommandList)
         );
     if (FAILED(HResult))
@@ -37,6 +37,11 @@ bool FCommandContext::Initialize(ID3D12Device* pDevice, ECommandQueueType Type, 
 
     mpCommandList->Close();
     mResourceBarriers.reserve(16);
+
+    if (Type == GRAPHICS || Type == COMPUTE)
+    {
+        mDynamicDescriptorHeap = std::make_unique<FDynamicDescriptorHeap>(mpDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+    }
 
     return true;
 }
@@ -149,6 +154,7 @@ void FCommandContext::DrawInstanced(UINT VertexCountPerInstance, UINT InstanceCo
     UINT StartInstanceLocation)
 {
     FlushResourceBarriers();
+    mDynamicDescriptorHeap->CommitStagedDescriptorsForDraw(*this);
     mpCommandList->DrawInstanced(VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation);
 }
 
@@ -156,11 +162,14 @@ void FCommandContext::DrawIndexedInstanced(UINT IndexCountPerInstance, UINT Inst
     INT BaseVertexLocation, UINT StartInstanceLocation)
 {
     FlushResourceBarriers();
+    mDynamicDescriptorHeap->CommitStagedDescriptorsForDraw(*this);
     mpCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
 }
 
 void FCommandContext::Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
 {
+    FlushResourceBarriers();
+    mDynamicDescriptorHeap->CommitStagedDescriptorsForDispatch(*this);
     mpCommandList->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 }
 
@@ -173,4 +182,9 @@ void FCommandContext::CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOff
     UINT64 SrcOffset, UINT64 NumBytes)
 {
     mpCommandList->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
+}
+
+void FCommandContext::CleanupDynamicHeaps(uint64_t FenceValue)
+{
+    mDynamicDescriptorHeap->CleanupUsedHeaps(FenceValue);
 }

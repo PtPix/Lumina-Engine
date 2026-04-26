@@ -3,8 +3,10 @@
 #include <d3d12.h>
 #include <wrl/client.h>
 #include <vector>
+#include <memory>
 
 #include "FCommandQueue.h"
+#include "Renderer/D3D12Core/Descriptors/FDynamicDescriptorHeap.h"
 #include "Renderer/D3D12Core/Resource/GpuResource.h"
 
 class FDevice;
@@ -18,13 +20,25 @@ public:
     FCommandContext(const FCommandContext&) = delete;
     FCommandContext& operator=(const FCommandContext&) = delete;
 
-    bool Initialize(ID3D12Device* pDevice, ECommandQueueType Type, ID3D12CommandAllocator* pAllocator);
+    // Basic Operations
+    bool Initialize(FDevice* pDevice, D3D12_COMMAND_LIST_TYPE Type);
 
     void Begin();
     void Close();
 
+    // Barrier Operations
     void TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState, bool bFlushImmediate = false);
     void FlushResourceBarriers();
+
+    // Bind Descriptor
+    inline void SetGraphicsRootDescriptorTable(UINT RootIndex, UINT Offset, D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, UINT NumDescriptors = 1)
+    {
+        mDynamicDescriptorHeap->StageDescriptors(RootIndex, Offset, NumDescriptors, CpuHandle);
+    }
+    inline void SetComputeRootDescriptorTable(UINT RootIndex, D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, UINT NumDescriptors = 1)
+    {
+        mDynamicDescriptorHeap->StageDescriptors(RootIndex, 0, NumDescriptors, CpuHandle);
+    }
 
     // Wrappers
     void SetGraphicsRootSignature(ID3D12RootSignature* pRootSignature);
@@ -46,16 +60,21 @@ public:
 
     void CopyBufferRegion( ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer, UINT64 SrcOffset, UINT64 NumBytes);
 
+    void CleanupDynamicHeaps(uint64_t FenceValue);
+
     // Getters
     ID3D12GraphicsCommandList* GetCommandList() { return mpCommandList.Get(); }
-    [[nodiscard]] ECommandQueueType GetType() const { return mType; }
+    ID3D12CommandAllocator* GetCommandAllocator() { return mpCommandAllocator.Get(); }
+    [[nodiscard]] D3D12_COMMAND_LIST_TYPE GetType() const { return mType; }
 
 private:
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mpCommandList;
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mpCommandAllocator;
 
-    ID3D12Device* mpDevice = nullptr;
-    ECommandQueueType mType = GRAPHICS;
+    FDevice* mpDevice = nullptr;
+    D3D12_COMMAND_LIST_TYPE mType = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
     std::vector<D3D12_RESOURCE_BARRIER> mResourceBarriers;
+
+    std::unique_ptr<FDynamicDescriptorHeap> mDynamicDescriptorHeap;
 };

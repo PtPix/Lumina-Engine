@@ -15,7 +15,7 @@ public:
     void Initialize(FDevice* pDevice, ResourceUploader* pUploader, const void* Vertices, UINT VertexSize,
         UINT VertexCount, const void* Indices, UINT IndexCount);
 
-    void Draw(ID3D12GraphicsCommandList* pCommandList) const;
+    void Draw(FCommandContext* pCommandContext) const;
 
 private:
     VertexBuffer mVertexBuffer;
