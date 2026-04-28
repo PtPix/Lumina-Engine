@@ -188,3 +188,13 @@ void FCommandContext::CleanupDynamicHeaps(uint64_t FenceValue)
 {
     mDynamicDescriptorHeap->CleanupUsedHeaps(FenceValue);
 }
+
+void FCommandContext::IASetVertexBuffers(UINT StartSlot, UINT NumViews, const D3D12_VERTEX_BUFFER_VIEW* pViews)
+{
+    mpCommandList->IASetVertexBuffers(StartSlot, NumViews, pViews);
+}
+
+void FCommandContext::IASetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW* pViews)
+{
+    mpCommandList->IASetIndexBuffer(pViews);
+}

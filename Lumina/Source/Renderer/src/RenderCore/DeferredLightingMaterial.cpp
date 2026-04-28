@@ -3,7 +3,7 @@
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 
-bool DeferredLightingMaterial::Initialize(FDevice* Device, RootSignature* RootSig)
+bool DeferredLightingMaterial::Initialize(FDevice* Device, FRootSignature* RootSig)
 {
     mRootSignature = RootSig;
 

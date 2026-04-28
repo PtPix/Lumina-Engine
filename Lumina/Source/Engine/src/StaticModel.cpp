@@ -4,12 +4,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
-#include "Renderer/D3D12Core/GraphicsDevice.h"
-#include "Renderer/Scene/Scene.h"
-
-#include "Logger/Logger.h"
-
-bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Device, ResourceUploader* pUploader)
+bool StaticModel::LoadFromFile(const std::string& FilePath)
 {
     Assimp::Importer Importer;
 
@@ -34,14 +29,15 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
     }
 
     // Get SubMeshes
-    ID3D12GraphicsCommandList* pUploadCommandList = Device.GetUploadHeap().GetCommandList();
+    mMeshesData.clear();
     for (unsigned int i = 0; i < pScene->mNumMeshes; i++)
     {
         aiMesh* pAiMesh = pScene->mMeshes[i];
-        std::vector<FStandardVertex> Vertices;
-        std::vector<uint32_t> Indices;
+        FMeshData MeshData;
+        MeshData.MaterialIndex = pAiMesh->mMaterialIndex;
 
-        // Get Vertices data
+        // Get Vertex Data
+        MeshData.Vertices.reserve(pAiMesh->mNumVertices);
         for (unsigned int j = 0; j < pAiMesh->mNumVertices; j++)
         {
             FStandardVertex Vertex = {};
@@ -55,34 +51,23 @@ bool StaticModel::LoadFromFile(const std::string& FilePath, GraphicsDevice& Devi
             {
                 Vertex.TexCoord = { pAiMesh->mTextureCoords[0][j].x, pAiMesh->mTextureCoords[0][j].y };
             }
-            Vertices.push_back(Vertex);
+            MeshData.Vertices.push_back(Vertex);
         }
 
-        // Get Index data
+        // Get Index Data
+        MeshData.Indices.reserve(pAiMesh->mNumFaces * 3);
         for (unsigned int j = 0; j < pAiMesh->mNumFaces; j++)
         {
             aiFace Face = pAiMesh->mFaces[j];
             for (unsigned int k = 0; k < Face.mNumIndices; k++)
             {
-                Indices.push_back(Face.mIndices[k]);
+                MeshData.Indices.push_back(Face.mIndices[k]);
             }
         }
 
-        FMesh Mesh = {};
-        Mesh.Initialize(&Device.GetDevice(), pUploader, Vertices.data(), sizeof(FStandardVertex), static_cast<UINT>(Vertices.size()), Indices.data(), static_cast<UINT>(Indices.size()));
-        mMeshes.push_back(Mesh);
+        mMeshesData.push_back(std::move(MeshData));
     }
 
-    LUMINA_LOG_INFO(StaticModel, "Loaded %s [Meshes: %zu, Materials: %zu]", FilePath.c_str(), mMeshes.size(), mMaterialNames.size());
+    LUMINA_LOG_INFO(StaticModel, "Loaded %s [Meshes: %zu, Materials: %zu]", FilePath.c_str(), mMeshesData.size(), mMaterialNames.size());
     return true;
-}
-
-size_t StaticModel::SumbitToScene(FScene* pScene, const DirectX::XMMATRIX& Transform)
-{
-    size_t StartIndex = pScene->GetRenderNodes().size();
-    for (auto& Mesh : mMeshes)
-    {
-        pScene->AddRenderNode(&Mesh, nullptr, Transform);
-    }
-    return StartIndex;
 }

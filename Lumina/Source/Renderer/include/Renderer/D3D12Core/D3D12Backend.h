@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Core/FSwapChain.h"
+#include "Descriptors/FBindlessDescriptorHeap.h"
 
 class FDevice;
 class FCommandQueue;
@@ -26,6 +27,8 @@ public:
 
     // Getters
     static FDevice* GetDevice() { return &mDevice; }
+    static FSwapChain* GetSwapChain() { return &mSwapChain; }
+    static D3D12MA::Allocator* GetAllocator() { return mpAllocator; }
 
     static FCommandQueue* GetGraphicsQueue() { return &mGraphicsQueue; }
     static FCommandQueue* GetComputeQueue() { return &mComputeQueue; }
@@ -34,6 +37,8 @@ public:
     static FDescriptorAllocator* GetSrvUavCbvAllocator() { return &mSrvUavCbvAllocator; }
     static FDescriptorAllocator* GetRtvAllocator() { return &mRtvAllocator; }
     static FDescriptorAllocator* GetDsvAllocator() { return &mDsvAllocator; }
+
+    static FBindlessDescriptorHeap* GetBindlessDescriptorHeap() { return &mBindlessDescriptorHeap; }
 
     static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() { return mSwapChain.GetCurrentBackBufferRTVHandle(); }
     static GpuResource* GetCurrentBackBufferResource() { return mSwapChain.GetCurrentRenderTargetResource(); }
@@ -45,6 +50,7 @@ private:
     // Core
     static FDevice mDevice;
     static FSwapChain mSwapChain;
+    static D3D12MA::Allocator* mpAllocator;
 
     // CommandQueue
     static FCommandQueue mGraphicsQueue;
@@ -52,9 +58,12 @@ private:
     static FCommandQueue mCopyQueue;
 
     // Descriptor
+    // CPU
     static FDescriptorAllocator mSrvUavCbvAllocator;
     static FDescriptorAllocator mRtvAllocator;
     static FDescriptorAllocator mDsvAllocator;
+    // GPU
+    static FBindlessDescriptorHeap mBindlessDescriptorHeap;
 
     // Command Context
     static std::vector<FCommandContext*> mContextPool[4];

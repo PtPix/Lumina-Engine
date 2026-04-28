@@ -3,7 +3,7 @@
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 
-bool BasePassMaterial::Initialize(FDevice* Device, RootSignature* RootSig)
+bool BasePassMaterial::Initialize(FDevice* Device, FRootSignature* RootSig)
 {
     mRootSignature = RootSig;
 

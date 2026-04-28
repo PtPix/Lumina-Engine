@@ -39,3 +39,10 @@ target_link_libraries(Engine PRIVATE
         kernel32.lib
         winmm.lib
 )
+
+# PCH. Make include shorter
+target_precompile_headers(Engine PRIVATE
+        <Logger/Logger.h>
+        <Profiler/Profiler.h>
+        <StringUtils/StringConv.h>
+)

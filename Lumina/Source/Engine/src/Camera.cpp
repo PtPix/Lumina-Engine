@@ -32,7 +32,6 @@ void Camera::AddRotationInput(float DeltaYaw, float DeltaPitch)
     mYaw += DeltaYaw * mLookSpeed;
     mPitch += DeltaPitch * mLookSpeed;
     mPitch = std::clamp(mPitch, -DirectX::XM_PIDIV2 + 0.01f, DirectX::XM_PIDIV2 - 0.01f);
-
     mbViewDirty = true;
 }
 

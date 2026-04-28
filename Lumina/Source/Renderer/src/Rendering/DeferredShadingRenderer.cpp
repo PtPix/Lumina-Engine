@@ -1,185 +1,185 @@
-﻿#include "Renderer/Rendering/DeferredShadingRenderer.h"
-
-#include "../../../Source/Engine/include/Assets/StaticModel.h"
-
-#include "../../include/Renderer/D3D12Core/Texture.h"
-
-bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint32_t Width, uint32_t Height)
-{
-    mGraphicsDevice = pGraphicsDevice;
-    mWidth = Width;
-    mHeight = Height;
-
-    if (!CreateGlobalRootSignature())
-    {
-        return false;
-    }
-
-    // mSceneRenderTargets.Initialize(
-    //     mGraphicsDevice->GetDevice().GetDevice(),
-    //     mGraphicsDevice->GetAllocator(),
-    //     &mGraphicsDevice->GetRTVHeap(),
-    //     &mGraphicsDevice->GetCbvSrvUavHeap(),
-    //     &mGraphicsDevice->GetDsvHeap(), mWidth, mHeight);
-    // 现在的 Initialize 非常干净：
-    mSceneRenderTargets.Initialize(&mGraphicsDevice->GetDevice(), mGraphicsDevice->GetAllocator(), mWidth, mHeight);
-
-    if (!InitMaterials())
-    {
-        return false;
-    }
-
-
-
-    return true;
-}
-
-void FDeferredShadingRenderer::Render(FCommandContext* pCommandContext, const FSceneView& View,
-    const FScene& Scene)
-{
-    ID3D12GraphicsCommandList* pCommandList = static_cast<ID3D12GraphicsCommandList*>(pCommandContext->GetCommandList());
-    // ID3D12DescriptorHeap* ppHeaps[] = { mGraphicsDevice->GetCbvSrvUavHeap().GetHeap() };
-    // pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    pCommandList->SetGraphicsRootSignature(mGlobalRootSignature.Get());
-
-    D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(mWidth), static_cast<float>(mHeight), 0.0f, 1.0f };
-    D3D12_RECT scissorRect = {0, 0, static_cast<LONG>(mWidth), static_cast<LONG>(mHeight)};
-    pCommandList->RSSetViewports(1, &viewport);
-    pCommandList->RSSetScissorRects(1, &scissorRect);
-
-    FViewUniformData ViewUniformData = {};
-    ViewUniformData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(View.ViewProjectionMatrix);
-    ViewUniformData.InverseViewProjectionMatrix = DirectX::XMMatrixTranspose(View.InverseViewProjectionMatrix);
-    ViewUniformData.CameraPosition = DirectX::XMFLOAT4(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z,1.0f);
-    ViewUniformData.ScreenResolution = DirectX::XMFLOAT2(static_cast<float>(View.ViewportWidth), static_cast<float>(View.ViewportHeight));
-    FDynamicAllocation ViewUniformDataAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FViewUniformData));
-    memcpy(ViewUniformDataAllocation.CpuAddress, &ViewUniformData, sizeof(FViewUniformData));
-    pCommandList->SetGraphicsRootConstantBufferView(0, ViewUniformDataAllocation.GpuAddress);
-
-    mSceneRenderTargets.Clear(pCommandList);
-    mSceneRenderTargets.BindBasePass(pCommandList);
-
-    RenderPass(pCommandContext, View, Scene, ERenderPass::Skybox);
-    RenderPass(pCommandContext, View, Scene, ERenderPass::BasePass);
-
-    mSceneRenderTargets.TransitionToLightingPass(pCommandList);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = mGraphicsDevice->GetSwapChain().GetCurrentBackBufferRTVHandle();
-    pCommandList->OMSetRenderTargets(1, &BackBufferRTV, false, nullptr);
-    const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    pCommandList->ClearRenderTargetView(BackBufferRTV, ClearColor, 0, nullptr);
-    RenderDeferredLighting(pCommandContext, View, Scene);
-
-    mSceneRenderTargets.TransitionToBasePass(pCommandList);
-}
-
-void FDeferredShadingRenderer::Destroy()
-{
-    mSceneRenderTargets.DestroyRenderTargets();
-    mGraphicsDevice = nullptr;
-    mDeferredLightingMaterial.Destroy();
-}
-
-bool FDeferredShadingRenderer::CreateGlobalRootSignature()
-{
-    RootSignatureBuilder Builder;
-
-    Builder.AddConstantBufferView(0)
-        .AddConstantBufferView(1)
-        .AddConstantBufferView(2)
-        .AddConstantBufferView(3)
-        .AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 5, 0, D3D12_SHADER_VISIBILITY_PIXEL)
-        .AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL)
-        .AddStaticSampler(0, 0, D3D12_FILTER_ANISOTROPIC)
-        .AddStaticSampler(1, 0, D3D12_FILTER_MIN_MAG_MIP_POINT)
-        .AllowInputLayout();
-
-    if (!Builder.Build(mGraphicsDevice->GetDevice().GetDevice(), mGlobalRootSignature))
-    {
-        LUMINA_LOG_ERROR(Renderer, "Failed to build Global Root Signature!");
-        return false;
-    }
-
-    return true;
-}
-
-bool FDeferredShadingRenderer::InitMaterials()
-{
-    if (!mDeferredLightingMaterial.Initialize(&mGraphicsDevice->GetDevice(), &mGlobalRootSignature))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-void FDeferredShadingRenderer::RenderPass(FCommandContext* pCommandContext, const FSceneView& View,
-    const FScene& Scene, ERenderPass Pass)
-{
-    ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
-    pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    for (auto& Node : Scene.GetRenderNodes())
-    {
-        if (!Node.pMesh || !Node.pMaterial || !Node.pMaterial->SupportsPass(Pass))
-        {
-            continue;
-        }
-
-        Node.pMaterial->Bind(pCommandContext);
-
-        FPrimitiveUniformData ModelData = {};
-
-        if (Pass == ERenderPass::Skybox)
-        {
-            DirectX::XMMATRIX SkyTranslation = DirectX::XMMatrixTranslation(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z);
-            ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix * SkyTranslation);
-        }
-        else
-        {
-            ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix);
-        }
-
-        FDynamicAllocation ModelAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FPrimitiveUniformData));
-        memcpy(ModelAllocation.CpuAddress, &ModelData, sizeof(FPrimitiveUniformData));
-        pCommandList->SetGraphicsRootConstantBufferView(2, ModelAllocation.GpuAddress);
-
-        if (Pass == ERenderPass::BasePass)
-        {
-            FMaterialUniformData MaterialData = {};
-            MaterialData.Metallic = Scene.Metallic;
-            MaterialData.Roughness = Scene.Roughness;
-            MaterialData.AO = Scene.AO;
-            FDynamicAllocation MaterialAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FMaterialUniformData));
-            memcpy(MaterialAllocation.CpuAddress, &MaterialData, sizeof(FMaterialUniformData));
-            pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
-        }
-
-        Node.pMesh->Draw(pCommandContext);
-    }
-}
-
-void FDeferredShadingRenderer::RenderDeferredLighting(FCommandContext* pCommandContext, const FSceneView& View,
-    const FScene& Scene)
-{
-    mDeferredLightingMaterial.Bind(pCommandContext);
-    ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
-    pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    // pCommandList->SetGraphicsRootDescriptorTable(4, Scene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
-    // D3D12_CPU_DESCRIPTOR_HANDLE GBufferTableCpuHandle = mSceneRenderTargets.GetSrvTable().GetCpuDescriptorHandle();
-
-    // 将 5 张 GBuffer 贴图推入 RootIndex 5 (偏移量0)
-    pCommandContext->SetGraphicsRootDescriptorTable(5, 0, mSceneRenderTargets.GetSrvTableCpuHandle(), 5);
-    // pCommandList->SetGraphicsRootDescriptorTable(5, mSceneRenderTargets.GetSrvTable().GetGpuDescriptorHandle());
-
-    // Upload light data
-    FDirectionalLightUniformData MainLight = {};
-    MainLight.LightColor = DirectX::XMFLOAT4(Scene.MainLight.Color.x, Scene.MainLight.Color.y, Scene.MainLight.Color.z, 1.0f);
-    MainLight.LightDirection = DirectX::XMFLOAT4(Scene.MainLight.Direction.x, Scene.MainLight.Direction.y, Scene.MainLight.Direction.z, 1.0f);
-    FDynamicAllocation MainLightAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FDirectionalLightUniformData));
-    memcpy(MainLightAllocation.CpuAddress, &MainLight, sizeof(FDirectionalLightUniformData));
-    pCommandList->SetGraphicsRootConstantBufferView(1, MainLightAllocation.GpuAddress);
-
-    pCommandContext->DrawInstanced(3, 1, 0, 0);
-    // pCommandList->DrawInstanced(3, 1, 0 ,0);
-}
+﻿// #include "Renderer/Rendering/DeferredShadingRenderer.h"
+//
+// #include "../../../Source/Engine/include/Assets/StaticModel.h"
+//
+// #include "../../include/Renderer/D3D12Core/Texture.h"
+//
+// bool FDeferredShadingRenderer::Initialize(GraphicsDevice* pGraphicsDevice, uint32_t Width, uint32_t Height)
+// {
+//     mGraphicsDevice = pGraphicsDevice;
+//     mWidth = Width;
+//     mHeight = Height;
+//
+//     if (!CreateGlobalRootSignature())
+//     {
+//         return false;
+//     }
+//
+//     // mSceneRenderTargets.Initialize(
+//     //     mGraphicsDevice->GetDevice().GetDevice(),
+//     //     mGraphicsDevice->GetAllocator(),
+//     //     &mGraphicsDevice->GetRTVHeap(),
+//     //     &mGraphicsDevice->GetCbvSrvUavHeap(),
+//     //     &mGraphicsDevice->GetDsvHeap(), mWidth, mHeight);
+//     // 现在的 Initialize 非常干净：
+//     mSceneRenderTargets.Initialize(&mGraphicsDevice->GetDevice(), mGraphicsDevice->GetAllocator(), mWidth, mHeight);
+//
+//     if (!InitMaterials())
+//     {
+//         return false;
+//     }
+//
+//
+//
+//     return true;
+// }
+//
+// void FDeferredShadingRenderer::Render(FCommandContext* pCommandContext, const FSceneView& View,
+//     const FScene& Scene)
+// {
+//     ID3D12GraphicsCommandList* pCommandList = static_cast<ID3D12GraphicsCommandList*>(pCommandContext->GetCommandList());
+//     // ID3D12DescriptorHeap* ppHeaps[] = { mGraphicsDevice->GetCbvSrvUavHeap().GetHeap() };
+//     // pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+//     pCommandList->SetGraphicsRootSignature(mGlobalRootSignature.Get());
+//
+//     D3D12_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(mWidth), static_cast<float>(mHeight), 0.0f, 1.0f };
+//     D3D12_RECT scissorRect = {0, 0, static_cast<LONG>(mWidth), static_cast<LONG>(mHeight)};
+//     pCommandList->RSSetViewports(1, &viewport);
+//     pCommandList->RSSetScissorRects(1, &scissorRect);
+//
+//     FViewUniformData ViewUniformData = {};
+//     ViewUniformData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(View.ViewProjectionMatrix);
+//     ViewUniformData.InverseViewProjectionMatrix = DirectX::XMMatrixTranspose(View.InverseViewProjectionMatrix);
+//     ViewUniformData.CameraPosition = DirectX::XMFLOAT4(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z,1.0f);
+//     ViewUniformData.ScreenResolution = DirectX::XMFLOAT2(static_cast<float>(View.ViewportWidth), static_cast<float>(View.ViewportHeight));
+//     FDynamicAllocation ViewUniformDataAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FViewUniformData));
+//     memcpy(ViewUniformDataAllocation.CpuAddress, &ViewUniformData, sizeof(FViewUniformData));
+//     pCommandList->SetGraphicsRootConstantBufferView(0, ViewUniformDataAllocation.GpuAddress);
+//
+//     mSceneRenderTargets.Clear(pCommandList);
+//     mSceneRenderTargets.BindBasePass(pCommandList);
+//
+//     RenderPass(pCommandContext, View, Scene, ERenderPass::Skybox);
+//     RenderPass(pCommandContext, View, Scene, ERenderPass::BasePass);
+//
+//     mSceneRenderTargets.TransitionToLightingPass(pCommandList);
+//
+//     D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = mGraphicsDevice->GetSwapChain().GetCurrentBackBufferRTVHandle();
+//     pCommandList->OMSetRenderTargets(1, &BackBufferRTV, false, nullptr);
+//     const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+//     pCommandList->ClearRenderTargetView(BackBufferRTV, ClearColor, 0, nullptr);
+//     RenderDeferredLighting(pCommandContext, View, Scene);
+//
+//     mSceneRenderTargets.TransitionToBasePass(pCommandList);
+// }
+//
+// void FDeferredShadingRenderer::Destroy()
+// {
+//     mSceneRenderTargets.DestroyRenderTargets();
+//     mGraphicsDevice = nullptr;
+//     mDeferredLightingMaterial.Destroy();
+// }
+//
+// bool FDeferredShadingRenderer::CreateGlobalRootSignature()
+// {
+//     RootSignatureBuilder Builder;
+//
+//     Builder.AddConstantBufferView(0)
+//         .AddConstantBufferView(1)
+//         .AddConstantBufferView(2)
+//         .AddConstantBufferView(3)
+//         .AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 5, 0, D3D12_SHADER_VISIBILITY_PIXEL)
+//         .AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL)
+//         .AddStaticSampler(0, 0, D3D12_FILTER_ANISOTROPIC)
+//         .AddStaticSampler(1, 0, D3D12_FILTER_MIN_MAG_MIP_POINT)
+//         .AllowInputLayout();
+//
+//     if (!Builder.Build(mGraphicsDevice->GetDevice().GetDevice(), mGlobalRootSignature))
+//     {
+//         LUMINA_LOG_ERROR(Renderer, "Failed to build Global Root Signature!");
+//         return false;
+//     }
+//
+//     return true;
+// }
+//
+// bool FDeferredShadingRenderer::InitMaterials()
+// {
+//     if (!mDeferredLightingMaterial.Initialize(&mGraphicsDevice->GetDevice(), &mGlobalRootSignature))
+//     {
+//         return false;
+//     }
+//
+//     return true;
+// }
+//
+// void FDeferredShadingRenderer::RenderPass(FCommandContext* pCommandContext, const FSceneView& View,
+//     const FScene& Scene, ERenderPass Pass)
+// {
+//     ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
+//     pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//
+//     for (auto& Node : Scene.GetRenderNodes())
+//     {
+//         if (!Node.pMesh || !Node.pMaterial || !Node.pMaterial->SupportsPass(Pass))
+//         {
+//             continue;
+//         }
+//
+//         Node.pMaterial->Bind(pCommandContext);
+//
+//         FPrimitiveUniformData ModelData = {};
+//
+//         if (Pass == ERenderPass::Skybox)
+//         {
+//             DirectX::XMMATRIX SkyTranslation = DirectX::XMMatrixTranslation(View.CameraPosition.x, View.CameraPosition.y, View.CameraPosition.z);
+//             ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix * SkyTranslation);
+//         }
+//         else
+//         {
+//             ModelData.ModelMatrix = DirectX::XMMatrixTranspose(Node.ModelMatrix);
+//         }
+//
+//         FDynamicAllocation ModelAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FPrimitiveUniformData));
+//         memcpy(ModelAllocation.CpuAddress, &ModelData, sizeof(FPrimitiveUniformData));
+//         pCommandList->SetGraphicsRootConstantBufferView(2, ModelAllocation.GpuAddress);
+//
+//         if (Pass == ERenderPass::BasePass)
+//         {
+//             FMaterialUniformData MaterialData = {};
+//             MaterialData.Metallic = Scene.Metallic;
+//             MaterialData.Roughness = Scene.Roughness;
+//             MaterialData.AO = Scene.AO;
+//             FDynamicAllocation MaterialAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FMaterialUniformData));
+//             memcpy(MaterialAllocation.CpuAddress, &MaterialData, sizeof(FMaterialUniformData));
+//             pCommandList->SetGraphicsRootConstantBufferView(3, MaterialAllocation.GpuAddress);
+//         }
+//
+//         Node.pMesh->Draw(pCommandContext);
+//     }
+// }
+//
+// void FDeferredShadingRenderer::RenderDeferredLighting(FCommandContext* pCommandContext, const FSceneView& View,
+//     const FScene& Scene)
+// {
+//     mDeferredLightingMaterial.Bind(pCommandContext);
+//     ID3D12GraphicsCommandList* pCommandList = pCommandContext->GetCommandList();
+//     pCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//     // pCommandList->SetGraphicsRootDescriptorTable(4, Scene.SkyboxTexture->SourceView.GetGpuDescriptorHandle());
+//     // D3D12_CPU_DESCRIPTOR_HANDLE GBufferTableCpuHandle = mSceneRenderTargets.GetSrvTable().GetCpuDescriptorHandle();
+//
+//     // 将 5 张 GBuffer 贴图推入 RootIndex 5 (偏移量0)
+//     pCommandContext->SetGraphicsRootDescriptorTable(5, 0, mSceneRenderTargets.GetSrvTableCpuHandle(), 5);
+//     // pCommandList->SetGraphicsRootDescriptorTable(5, mSceneRenderTargets.GetSrvTable().GetGpuDescriptorHandle());
+//
+//     // Upload light data
+//     FDirectionalLightUniformData MainLight = {};
+//     MainLight.LightColor = DirectX::XMFLOAT4(Scene.MainLight.Color.x, Scene.MainLight.Color.y, Scene.MainLight.Color.z, 1.0f);
+//     MainLight.LightDirection = DirectX::XMFLOAT4(Scene.MainLight.Direction.x, Scene.MainLight.Direction.y, Scene.MainLight.Direction.z, 1.0f);
+//     FDynamicAllocation MainLightAllocation = mGraphicsDevice->GetDynamicUploadHeap().Allocate(sizeof(FDirectionalLightUniformData));
+//     memcpy(MainLightAllocation.CpuAddress, &MainLight, sizeof(FDirectionalLightUniformData));
+//     pCommandList->SetGraphicsRootConstantBufferView(1, MainLightAllocation.GpuAddress);
+//
+//     pCommandContext->DrawInstanced(3, 1, 0, 0);
+//     // pCommandList->DrawInstanced(3, 1, 0 ,0);
+// }

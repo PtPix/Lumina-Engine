@@ -1,7 +1,9 @@
 ﻿#pragma once
 
 #include <windows.h>
-#include <cstdint>
+
+#include "D3D12Core/RootSignature.h"
+#include "Resources/FMesh.h"
 
 class FCommandContext;
 
@@ -15,4 +17,12 @@ public:
 
     static void EndFrame(FCommandContext* pContext);
 
+    static FMesh* CreateMesh(const FMeshData& CpuData);
+
+    static FRootSignature* GetBindlessRootSignature() { return &mBindlessRootSignature; }
+
+private:
+    static void InitializeBindlessRootSignature();
+
+    static FRootSignature mBindlessRootSignature;
 };

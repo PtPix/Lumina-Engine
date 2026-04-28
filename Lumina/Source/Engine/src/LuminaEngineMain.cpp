@@ -43,7 +43,7 @@ void LuminaEngine::Run()
         }
         if (!mbIsRunning) break;
 
-        Input::Update();
+
 
         mTimer.Tick();
         double DeltaTime = mTimer.GetDeltaTime();
@@ -59,7 +59,7 @@ void LuminaEngine::Run()
         mCurrentApp->UpdateApp(DeltaTime);
 
         FCommandContext* pMainContext = Renderer::BeginFrame();
-
+        Input::Update();
         mCurrentApp->RenderApp(pMainContext);
 
         Renderer::EndFrame(pMainContext);

@@ -20,11 +20,11 @@ struct FRootParameterConfig
     UINT NumDescriptors;
 };
 
-class RootSignature
+class FRootSignature
 {
 public:
-    RootSignature() = default;
-    ~RootSignature();
+    FRootSignature() = default;
+    ~FRootSignature();
 
     void Destroy();
     [[nodiscard]] ID3D12RootSignature* Get() const { return mRootSignature; }
@@ -47,7 +47,7 @@ public:
 
     RootSignatureBuilder& AllowInputLayout();
 
-    bool Build(ID3D12Device* Device, RootSignature& OutRootSignature);
+    bool Build(ID3D12Device* Device, FRootSignature& OutRootSignature);
 
 private:
     std::vector<D3D12_ROOT_PARAMETER> mRootParameters;

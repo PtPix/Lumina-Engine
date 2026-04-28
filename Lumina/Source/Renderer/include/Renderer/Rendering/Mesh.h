@@ -18,8 +18,8 @@ public:
     void Draw(FCommandContext* pCommandContext) const;
 
 private:
-    VertexBuffer mVertexBuffer;
-    IndexBuffer mIndexBuffer;
+    FVertexBuffer mVertexBuffer;
+    FIndexBuffer mIndexBuffer;
     D3D12_VERTEX_BUFFER_VIEW mVertexBufferView{};
     D3D12_INDEX_BUFFER_VIEW mIndexBufferView{};
     UINT mIndexCount = 0;

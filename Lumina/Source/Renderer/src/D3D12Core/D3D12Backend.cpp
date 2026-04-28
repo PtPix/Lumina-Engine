@@ -11,6 +11,7 @@
 
 FDevice D3D12Backend::mDevice;
 FSwapChain D3D12Backend::mSwapChain;
+D3D12MA::Allocator* D3D12Backend::mpAllocator;
 
 FCommandQueue D3D12Backend::mGraphicsQueue;
 FCommandQueue D3D12Backend::mComputeQueue;
@@ -19,6 +20,8 @@ FCommandQueue D3D12Backend::mCopyQueue;
 FDescriptorAllocator D3D12Backend::mSrvUavCbvAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 FDescriptorAllocator D3D12Backend::mRtvAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64);
 FDescriptorAllocator D3D12Backend::mDsvAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 64);
+
+FBindlessDescriptorHeap D3D12Backend::mBindlessDescriptorHeap;
 
 std::vector<FCommandContext*> D3D12Backend::mContextPool[4];
 std::vector<FCommandContext*> D3D12Backend::mAvailableContextPool[4];
@@ -69,6 +72,28 @@ bool D3D12Backend::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
         mSrvUavCbvAllocator.Initialize(&mDevice);
         mRtvAllocator.Initialize(&mDevice);
         mDsvAllocator.Initialize(&mDevice);
+    }
+
+    // Create D3D12MA
+    {
+        LUMINA_TIME_LOG_SCOPE("Create D3D12 Memory Allocator");
+        D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
+        AllocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+        AllocatorDesc.pDevice = mDevice.GetDevice();
+        AllocatorDesc.pAdapter = mDevice.GetAdapter();
+
+        HRESULT HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
+        if (FAILED(HResult))
+        {
+            LUMINA_LOG_ERROR(RHI, "D3D12MA allocator creation failed");
+            assert(false);
+        }
+    }
+
+    // Create Bindless Descriptor Heap
+    {
+        LUMINA_TIME_LOG_SCOPE("Create Bindless Descriptor Heap");
+        mBindlessDescriptorHeap.Initialize(&mDevice);
     }
 
     return true;

@@ -3,10 +3,10 @@
 #include "Renderer/D3D12Core/Resource/GpuResource.h"
 #include "D3D12MemAlloc.h"
 
-class Buffer : public GpuResource
+class FBuffer : public GpuResource
 {
 public:
-    ~Buffer() override { Destroy(); }
+    ~FBuffer() override { Destroy(); }
 
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment,
         D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType,
@@ -24,7 +24,7 @@ protected:
     size_t mBufferSize = 0;
 };
 
-class VertexBuffer : public Buffer
+class FVertexBuffer : public FBuffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t StrideInBytes, const wchar_t* pName = L"VertexBuffer");
@@ -35,7 +35,7 @@ private:
     D3D12_VERTEX_BUFFER_VIEW mView = {};
 };
 
-class IndexBuffer : public Buffer
+class FIndexBuffer : public FBuffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, DXGI_FORMAT Format, const wchar_t* pName = L"IndexBuffer");
@@ -46,7 +46,7 @@ private:
     D3D12_INDEX_BUFFER_VIEW mView = {};
 };
 
-class ConstantBuffer : public Buffer
+class FConstantBuffer : public FBuffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName = L"ConstantBuffer");
@@ -59,7 +59,7 @@ private:
     }
 };
 
-class UploadBuffer : public Buffer
+class FUploadBuffer : public FBuffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName = L"UploadBuffer");

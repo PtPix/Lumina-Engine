@@ -21,6 +21,7 @@ bool LuminaEditor::OnInit()
 void LuminaEditor::OnUpdate(double DeltaTime)
 {
     UIRenderer::BeginFrame();
+
     if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
     {
         mTestLayers[mActiveLayerIndex]->OnUpdate(DeltaTime);
@@ -41,17 +42,17 @@ void LuminaEditor::OnRender(FCommandContext* pCommandContext)
     {
         mTestLayers[mActiveLayerIndex]->OnRender(pCommandContext);
     }
-
 }
 
 void LuminaEditor::OnRenderUI(FCommandContext* pCommandContext)
 {
-    RenderEditorUI();
+    // RenderEditorUI();
 
     if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
     {
         mTestLayers[mActiveLayerIndex]->OnRenderUI();
     }
+
     UIRenderer::Render(pCommandContext);
 }
 

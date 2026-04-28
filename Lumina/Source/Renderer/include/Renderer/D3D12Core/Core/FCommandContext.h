@@ -62,6 +62,9 @@ public:
 
     void CleanupDynamicHeaps(uint64_t FenceValue);
 
+    void IASetVertexBuffers( UINT StartSlot, UINT NumViews, const D3D12_VERTEX_BUFFER_VIEW* pViews);
+    void IASetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW* pViews);
+
     // Getters
     ID3D12GraphicsCommandList* GetCommandList() { return mpCommandList.Get(); }
     ID3D12CommandAllocator* GetCommandAllocator() { return mpCommandAllocator.Get(); }

@@ -1,11 +1,11 @@
 ﻿#include "../../include/Renderer/D3D12Core/RootSignature.h"
 
-RootSignature::~RootSignature()
+FRootSignature::~FRootSignature()
 {
     Destroy();
 }
 
-void RootSignature::Destroy()
+void FRootSignature::Destroy()
 {
     if (mRootSignature)
     {
@@ -104,7 +104,7 @@ RootSignatureBuilder& RootSignatureBuilder::AllowInputLayout()
     return *this;
 }
 
-bool RootSignatureBuilder::Build(ID3D12Device* Device, RootSignature& OutRootSignature)
+bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSignature)
 {
     size_t RangeIndex = 0;
     for (auto& RootParam : mRootParameters)

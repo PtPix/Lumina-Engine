@@ -10,9 +10,9 @@ void ResourceUploader::Initialize(D3D12MA::Allocator* pAllocator, FCommandContex
     mCopyContext->Begin();
 }
 
-void ResourceUploader::QueueUpload(Buffer* pDestBuffer, const void* pData, size_t DataSize)
+void ResourceUploader::QueueUpload(FBuffer* pDestBuffer, const void* pData, size_t DataSize)
 {
-    UploadBuffer TempBuffer;
+    FUploadBuffer TempBuffer;
     TempBuffer.Create(mpAllocator, DataSize, L"TempUpload");
 
     void* pMapped = TempBuffer.Map();
@@ -27,7 +27,7 @@ void ResourceUploader::QueueUpload(Buffer* pDestBuffer, const void* pData, size_
     mTempUploadBuffers.push_back(std::move(TempBuffer));
 }
 
-void ResourceUploader::UploadTexture(FDevice* pDevice, Texture* pDestTexture, const void* pData, uint32_t Width,
+void ResourceUploader::UploadTexture(FDevice* pDevice, FTexture* pDestTexture, const void* pData, uint32_t Width,
     uint32_t Height, uint32_t BytesPerPixel)
 {
     ID3D12Resource* pDestResource = pDestTexture->GetResource();
@@ -38,7 +38,7 @@ void ResourceUploader::UploadTexture(FDevice* pDevice, Texture* pDestTexture, co
     UINT NumRows; UINT64 RowSizeInBytes; UINT64 TotalBytes;
     pDevice->GetDevice()->GetCopyableFootprints(&Desc, 0, 1, 0, &Footprint, &NumRows, &RowSizeInBytes, &TotalBytes);
 
-    UploadBuffer TempBuffer;
+    FUploadBuffer TempBuffer;
     TempBuffer.Create(mpAllocator, TotalBytes, L"TempUpload_Texture");
     // // 2. 利用 D3D12MA 创建一个临时的 UploadBuffer
     // D3D12MA::ALLOCATION_DESC AllocDesc = {};
@@ -87,7 +87,7 @@ void ResourceUploader::UploadTexture(FDevice* pDevice, Texture* pDestTexture, co
     mTempUploadBuffers.push_back(std::move(TempBuffer));
 }
 
-void ResourceUploader::FlushAndSync(ID3D12Device* pDevice)
+void ResourceUploader::FlushAndSync()
 {
     if (mTempUploadBuffers.empty())
     {

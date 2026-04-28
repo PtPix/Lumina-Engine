@@ -3,7 +3,7 @@
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 
-bool SkyboxMaterial::Initialize(FDevice* Device, RootSignature* RootSig)
+bool SkyboxMaterial::Initialize(FDevice* Device, FRootSignature* RootSig)
 {
     mRootSignature = RootSig;
 

@@ -11,7 +11,7 @@
 struct FTexture;
 class FDevice;
 class FCommandContext;
-class Texture;
+class FTexture;
 
 // struct ID3D12Device;
 // struct ID3D12GraphicsCommandList;
@@ -55,7 +55,7 @@ public:
     MaterialBase() = default;
     virtual ~MaterialBase() = default;
 
-    virtual bool Initialize(FDevice* Device, RootSignature* RootSig) = 0;
+    virtual bool Initialize(FDevice* Device, FRootSignature* RootSig) = 0;
     virtual void Bind(FCommandContext* Context) const = 0;
     virtual void Destroy() = 0;
 
@@ -64,8 +64,8 @@ public:
 
     // void SetSrvTable(D3D12_GPU_DESCRIPTOR_HANDLE Table) { mSrvTable = Table; }
 
-    void SetTexture(UINT RootIndex, UINT Offset, Texture* pTexture);
-    void SetTextures(UINT RootIndex, UINT StartOffset, Texture** ppTexture, UINT NumTextures);
+    void SetTexture(UINT RootIndex, UINT Offset, FTexture* pTexture);
+    void SetTextures(UINT RootIndex, UINT StartOffset, FTexture** ppTexture, UINT NumTextures);
 
 protected:
     bool InitializePipeline(ID3D12Device* Device, const FMaterialInitDesc& Desc);
@@ -73,14 +73,14 @@ protected:
     void BindTextures(FCommandContext& Context) const;
 
     ERenderPass mRenderPassFlags = ERenderPass::None;
-    RootSignature* mRootSignature = nullptr;
+    FRootSignature* mRootSignature = nullptr;
     PipelineState mPipelineState;
 
     struct FTextureBinding
     {
         UINT RootIndex;
         UINT Offset;
-        Texture* pTexture;
+        FTexture* pTexture;
     };
 
     std::vector<FTextureBinding> mBoundTextures;

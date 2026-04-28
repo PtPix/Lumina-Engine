@@ -19,35 +19,37 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/D3D12Backend.cpp"
         "src/UI/UIRenderer.cpp"
         "src/Renderer.cpp"
+        "src/Resources/FMesh.cpp"
+        "src/D3D12Core/Descriptors/FBindlessDescriptorHeap.cpp"
 )
 
 
 set(RENDER_CORE_SOURCES
-        "src/D3D12Core/Resource/Texture.cpp"
-        "src/D3D12Core/GraphicsDevice.cpp"
-        "src/D3D12Core/Fence.cpp"
-        "src/D3D12Core/ResourceHeaps.cpp"
-        "src/D3D12Core/ResourceView.cpp"
-        "src/D3D12Core/Buffer.cpp"
-        "src/D3D12Core/Texture.cpp"
-        "src/RenderCore/TextureManager.cpp"
-        "src/Rendering/SceneRenderTargets.cpp"
+        "src/D3D12Core/Resource/FTexture.cpp"
+        # "src/D3D12Core/GraphicsDevice.cpp"
+        # "src/D3D12Core/Fence.cpp"
+        # "src/D3D12Core/ResourceHeaps.cpp"
+        # "src/D3D12Core/ResourceView.cpp"
+        # "src/D3D12Core/Buffer.cpp"
+        # "src/D3D12Core/Texture.cpp"
+        # "src/RenderCore/TextureManager.cpp"
+        # "src/Rendering/SceneRenderTargets.cpp"
         "src/D3D12Core/Shader.cpp"
         "src/D3D12Core/ShaderCompiler.cpp"
         "src/D3D12Core/RootSignature.cpp"
         "src/D3D12Core/PipelineState.cpp"
-        "src/RenderCore/Material.cpp"
-        "src/RenderCore/BasePassMaterial.cpp"
-        "src/RenderCore/SkyboxMaterial.cpp"
-        "src/RenderCore/DeferredLightingMaterial.cpp"
+        # "src/RenderCore/Material.cpp"
+        # "src/RenderCore/BasePassMaterial.cpp"
+        # "src/RenderCore/SkyboxMaterial.cpp"
+        # "src/RenderCore/DeferredLightingMaterial.cpp"
         "src/D3D12Core/Resource/Buffer.cpp"
         "src/D3D12Core/Resource/ResourceUploader.cpp"
 )
 
 set(RENDERING_SOURCES
-        "src/Rendering/SceneRenderTargets.cpp"
-        "src/Rendering/DeferredShadingRenderer.cpp"
-        "src/Rendering/Mesh.cpp"
+        # "src/Rendering/SceneRenderTargets.cpp"
+        # "src/Rendering/DeferredShadingRenderer.cpp"
+        # "src/Rendering/Mesh.cpp"
 )
 
 # Build Library

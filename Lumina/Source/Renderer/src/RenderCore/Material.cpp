@@ -3,9 +3,9 @@
 #include "../../include/Renderer/D3D12Core/ShaderCompiler.h"
 #include "Renderer/D3D12Core/Texture.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
-#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "Renderer/D3D12Core/Resource/FTexture.h"
 
-void MaterialBase::SetTexture(UINT RootIndex, UINT Offset, Texture* pTexture)
+void MaterialBase::SetTexture(UINT RootIndex, UINT Offset, FTexture* pTexture)
 {
     if (!pTexture) return;
 
@@ -21,7 +21,7 @@ void MaterialBase::SetTexture(UINT RootIndex, UINT Offset, Texture* pTexture)
     mBoundTextures.push_back({ RootIndex, Offset, pTexture });
 }
 
-void MaterialBase::SetTextures(UINT RootIndex, UINT StartOffset, Texture** ppTexture, UINT NumTextures)
+void MaterialBase::SetTextures(UINT RootIndex, UINT StartOffset, FTexture** ppTexture, UINT NumTextures)
 {
     for (UINT i = 0; i < NumTextures; i++)
     {

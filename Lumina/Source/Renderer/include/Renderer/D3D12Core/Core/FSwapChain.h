@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "FCommandQueue.h"
-#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "Renderer/D3D12Core/Resource/FTexture.h"
 
 struct FSwapChainCreateDesc
 {
@@ -38,7 +38,7 @@ public:
     [[nodiscard]] unsigned short GetNumBackBuffers() const { return mNumBackBuffers; }
     [[nodiscard]] unsigned short GetCurrentBackBufferIndex() const { return mCurrentBackBufferIndex; }
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTVHandle() const { return mRenderTargets[mCurrentBackBufferIndex].GetRTV(); }
-    [[nodiscard]] Texture* GetCurrentRenderTargetResource() { return &mRenderTargets[mCurrentBackBufferIndex]; }
+    [[nodiscard]] FTexture* GetCurrentRenderTargetResource() { return &mRenderTargets[mCurrentBackBufferIndex]; }
 
 private:
     void CreateRenderTargetViews();
@@ -59,6 +59,6 @@ private:
     Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
     std::vector<UINT64> mFenceValues;
 
-    std::vector<Texture> mRenderTargets;
+    std::vector<FTexture> mRenderTargets;
     DXGI_FORMAT mFormat = DXGI_FORMAT_UNKNOWN;
 };

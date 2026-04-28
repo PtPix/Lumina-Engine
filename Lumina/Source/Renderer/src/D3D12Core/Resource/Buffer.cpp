@@ -4,7 +4,7 @@
 #include "Renderer/D3D12Core/Common.h"
 #include "Logger/Logger.h"
 
-bool Buffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment, D3D12_RESOURCE_FLAGS Flags,
+bool FBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment, D3D12_RESOURCE_FLAGS Flags,
                     D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType, const wchar_t* pName)
 {
     assert(pAllocator != nullptr);
@@ -51,14 +51,14 @@ bool Buffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t A
     return true;
 }
 
-void Buffer::Destroy()
+void FBuffer::Destroy()
 {
     mpAllocation.Reset();
     mpResource.Reset();
     mBufferSize = 0;
 }
 
-void* Buffer::Map()
+void* FBuffer::Map()
 {
     void* pMappedData = nullptr;
     if (mpResource)
@@ -69,7 +69,7 @@ void* Buffer::Map()
     return pMappedData;
 }
 
-void Buffer::Unmap()
+void FBuffer::Unmap()
 {
     if (mpResource)
     {
@@ -77,10 +77,10 @@ void Buffer::Unmap()
     }
 }
 
-bool VertexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t StrideInBytes,
+bool FVertexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t StrideInBytes,
     const wchar_t* pName)
 {
-    if (!Buffer::Create(pAllocator, SizeInBytes, StrideInBytes, D3D12_RESOURCE_FLAG_NONE,
+    if (!FBuffer::Create(pAllocator, SizeInBytes, StrideInBytes, D3D12_RESOURCE_FLAG_NONE,
         D3D12_RESOURCE_STATE_COMMON, D3D12_HEAP_TYPE_DEFAULT, pName))
     {
         return false;
@@ -93,9 +93,9 @@ bool VertexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, si
     return true;
 }
 
-bool IndexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, DXGI_FORMAT Format, const wchar_t* pName)
+bool FIndexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, DXGI_FORMAT Format, const wchar_t* pName)
 {
-    if (!Buffer::Create(pAllocator, SizeInBytes, 16, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, D3D12_HEAP_TYPE_DEFAULT, pName))
+    if (!FBuffer::Create(pAllocator, SizeInBytes, 16, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, D3D12_HEAP_TYPE_DEFAULT, pName))
     {
         return false;
     }
@@ -107,11 +107,11 @@ bool IndexBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, DXG
     return true;
 }
 
-bool ConstantBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName)
+bool FConstantBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName)
 {
     size_t AlignedSize = CalcAlignedSize(SizeInBytes);
 
-    if (!Buffer::Create(
+    if (!FBuffer::Create(
         pAllocator, AlignedSize, 256, D3D12_RESOURCE_FLAG_NONE,
         D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, pName
         ))
@@ -122,9 +122,9 @@ bool ConstantBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, 
     return true;
 }
 
-bool UploadBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName)
+bool FUploadBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName)
 {
-    return Buffer::Create(
+    return FBuffer::Create(
         pAllocator, SizeInBytes, 1,
         D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ,
         D3D12_HEAP_TYPE_UPLOAD, pName
