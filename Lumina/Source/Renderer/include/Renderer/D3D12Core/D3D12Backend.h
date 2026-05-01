@@ -3,69 +3,54 @@
 #include <windows.h>
 #include <cstdint>
 #include <d3d12.h>
-#include <vector>
+#include <memory>
 
+#include "Core/FDevice.h"
 #include "Core/FSwapChain.h"
-#include "Descriptors/FBindlessDescriptorHeap.h"
 
 class FDevice;
 class FCommandQueue;
 class FDescriptorAllocator;
 class FCommandContext;
 class FSwapChain;
+class FBindlessDescriptorHeap;
+class GpuResource;
+
+namespace D3D12MA { class Allocator; }
 
 class D3D12Backend
 {
 public:
     static bool Initialize(HWND Hwnd, uint32_t Width, uint32_t Height);
     static void Shutdown();
-    static void OnResize(uint32_t Width, uint32_t Height) {}
+    static void OnResize(uint32_t Width, uint32_t Height);
     static void FlushGPU();
 
     static void BeginFrame();
     static void EndFrameAndPresent();
 
     // Getters
-    static FDevice* GetDevice() { return &mDevice; }
-    static FSwapChain* GetSwapChain() { return &mSwapChain; }
-    static D3D12MA::Allocator* GetAllocator() { return mpAllocator; }
+    static FDevice* GetDevice() { return mpDevice.get(); }
+    static FSwapChain* GetSwapChain() { return mpSwapChain.get(); }
+    static D3D12MA::Allocator* GetAllocator() { return mpDevice->GetAllocator(); }
 
-    static FCommandQueue* GetGraphicsQueue() { return &mGraphicsQueue; }
-    static FCommandQueue* GetComputeQueue() { return &mComputeQueue; }
-    static FCommandQueue* GetCopyQueue() { return &mCopyQueue; }
+    static FCommandQueue* GetGraphicsQueue() { return mpDevice->GetGraphicsCommandQueue(); }
+    static FCommandQueue* GetComputeQueue() { return mpDevice->GetComputeCommandQueue(); }
+    static FCommandQueue* GetCopyQueue() { return mpDevice->GetCopyCommandQueue(); }
 
-    static FDescriptorAllocator* GetSrvUavCbvAllocator() { return &mSrvUavCbvAllocator; }
-    static FDescriptorAllocator* GetRtvAllocator() { return &mRtvAllocator; }
-    static FDescriptorAllocator* GetDsvAllocator() { return &mDsvAllocator; }
+    static FDescriptorAllocator* GetSrvUavCbvAllocator() { return mpDevice->GetSRVAllocator(); }
+    static FDescriptorAllocator* GetRtvAllocator() { return mpDevice->GetRTVAllocator(); }
+    static FDescriptorAllocator* GetDsvAllocator() { return mpDevice->GetDSVAllocator(); }
 
-    static FBindlessDescriptorHeap* GetBindlessDescriptorHeap() { return &mBindlessDescriptorHeap; }
+    static FBindlessDescriptorHeap* GetBindlessDescriptorHeap() { return mpDevice->GetBindlessDescriptorHeap(); }
 
-    static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() { return mSwapChain.GetCurrentBackBufferRTVHandle(); }
-    static GpuResource* GetCurrentBackBufferResource() { return mSwapChain.GetCurrentRenderTargetResource(); }
+    static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() { return mpSwapChain->GetCurrentBackBufferRTVHandle(); }
+    static GpuResource* GetCurrentBackBufferResource() { return mpSwapChain->GetCurrentRenderTargetResource(); }
 
-    static FCommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type = D3D12_COMMAND_LIST_TYPE_DIRECT);
-    static void FreeContext(FCommandContext* pContext);
+    static FCommandContext* AllocateContext();
+    static uint64_t ExecuteGraphicsContext(FCommandContext* pCommandContext);
 
 private:
-    // Core
-    static FDevice mDevice;
-    static FSwapChain mSwapChain;
-    static D3D12MA::Allocator* mpAllocator;
-
-    // CommandQueue
-    static FCommandQueue mGraphicsQueue;
-    static FCommandQueue mComputeQueue;
-    static FCommandQueue mCopyQueue;
-
-    // Descriptor
-    // CPU
-    static FDescriptorAllocator mSrvUavCbvAllocator;
-    static FDescriptorAllocator mRtvAllocator;
-    static FDescriptorAllocator mDsvAllocator;
-    // GPU
-    static FBindlessDescriptorHeap mBindlessDescriptorHeap;
-
-    // Command Context
-    static std::vector<FCommandContext*> mContextPool[4];
-    static std::vector<FCommandContext*> mAvailableContextPool[4];
+    static std::unique_ptr<FDevice> mpDevice;
+    static std::unique_ptr<FSwapChain> mpSwapChain;
 };

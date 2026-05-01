@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Renderer/RenderTypes.h"
-#include "Renderer/D3D12Core/Resource/Buffer.h"
+#include "Renderer/D3D12Core/Resource/FBuffer.h"
 
 class FMesh;
 

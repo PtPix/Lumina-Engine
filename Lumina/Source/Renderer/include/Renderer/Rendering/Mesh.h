@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <d3d12.h>
 
-#include "Renderer/D3D12Core/Resource/Buffer.h"
+#include "Renderer/D3D12Core/Resource/FBuffer.h"
 #include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 
 class GraphicsDevice;

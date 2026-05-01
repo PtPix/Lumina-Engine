@@ -3,7 +3,6 @@
 #include <d3d12.h>
 #include <vector>
 
-
 enum class ERootParameterType
 {
     CBV,
@@ -42,7 +41,9 @@ public:
     RootSignatureBuilder& AddRootConstants(UINT ShaderRegister, UINT RegisterSpace, UINT NumValues);
     RootSignatureBuilder& AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace = 0);
     RootSignatureBuilder& AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace = 0);
-    RootSignatureBuilder& AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE RangeType, UINT NumDescriptors, UINT ShaderRegister, UINT RegisterSpace = 0, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL);
+
+    RootSignatureBuilder& AddDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE1>& Ranges, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL);
+
     RootSignatureBuilder& AddStaticSampler(UINT ShaderRegister, UINT RegisterSpace = 0, D3D12_FILTER Filter = D3D12_FILTER_MIN_MAG_MIP_POINT);
 
     RootSignatureBuilder& AllowInputLayout();
@@ -50,8 +51,9 @@ public:
     bool Build(ID3D12Device* Device, FRootSignature& OutRootSignature);
 
 private:
-    std::vector<D3D12_ROOT_PARAMETER> mRootParameters;
+    std::vector<D3D12_ROOT_PARAMETER1> mRootParameters;
     D3D12_ROOT_SIGNATURE_FLAGS mFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-    std::vector<D3D12_DESCRIPTOR_RANGE> mDescriptorRanges;
     std::vector<D3D12_STATIC_SAMPLER_DESC> mStaticSamplers;
+
+    std::vector<std::vector<D3D12_DESCRIPTOR_RANGE1>> mDescriptorRangesArray;
 };

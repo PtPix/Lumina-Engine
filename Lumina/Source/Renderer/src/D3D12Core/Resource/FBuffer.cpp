@@ -1,11 +1,32 @@
 ﻿#include <cassert>
 
-#include "Renderer/D3D12Core/Resource/Buffer.h"
+#include "Renderer/D3D12Core/Resource/FBuffer.h"
 #include "Renderer/D3D12Core/Common.h"
 #include "Logger/Logger.h"
 
+FBuffer::FBuffer(FBuffer&& Other) noexcept
+{
+    *this = std::move(Other);
+}
+
+FBuffer& FBuffer::operator=(FBuffer&& Other) noexcept
+{
+    if (this != &Other)
+    {
+        Destroy();
+
+        mpAllocation = Other.mpAllocation;
+        mBufferSize = Other.mBufferSize;
+        Other.mpAllocation = nullptr;
+
+        mpResource = std::move(Other.mpResource);
+        mUsageState = Other.mUsageState;
+    }
+    return *this;
+}
+
 bool FBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment, D3D12_RESOURCE_FLAGS Flags,
-                    D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType, const wchar_t* pName)
+                     D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType, const wchar_t* pName)
 {
     assert(pAllocator != nullptr);
     assert(SizeInBytes > 0);
@@ -125,7 +146,7 @@ bool FConstantBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes,
 bool FUploadBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName)
 {
     return FBuffer::Create(
-        pAllocator, SizeInBytes, 1,
+        pAllocator, SizeInBytes, 256,
         D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ,
         D3D12_HEAP_TYPE_UPLOAD, pName
         );

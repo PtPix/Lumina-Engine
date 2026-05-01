@@ -8,7 +8,7 @@ FBindlessDescriptorHeap::~FBindlessDescriptorHeap()
     mpDescriptorHeap.Reset();
 }
 
-bool FBindlessDescriptorHeap::Initialize(FDevice* pDevice, UINT MaxDescriptors)
+bool FBindlessDescriptorHeap::Initialize(const FDevice* pDevice, UINT MaxDescriptors)
 {
     mMaxDescriptors = MaxDescriptors;
     mDescriptorSize = pDevice->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -51,15 +51,35 @@ uint32_t FBindlessDescriptorHeap::AllocateSlot()
     return Index;
 }
 
-void FBindlessDescriptorHeap::FreeSlot(uint32_t Index)
+void FBindlessDescriptorHeap::FreeSlot(uint32_t Index, FCommandQueue* pQueue, uint64_t FenceValue)
 {
     std::lock_guard<std::mutex> Lock(mAllocationMutex);
-    // TODO: Should record fence value until GPU is finished.
-    mFreeSlots.push(Index);
+
+    mDeferredFreeSlots.push_back( {pQueue, FenceValue, Index} );
 }
 
-void FBindlessDescriptorHeap::CreateSRVFromCPUHandle(FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle,
-    uint32_t DestIndex)
+void FBindlessDescriptorHeap::ReleaseStaleSlots()
+{
+    std::lock_guard<std::mutex> Lock(mAllocationMutex);
+
+    for (size_t i = 0; i < mDeferredFreeSlots.size();)
+    {
+        if (mDeferredFreeSlots[i].pCommandQueue->IsFenceComplete(mDeferredFreeSlots[i].FenceValue))
+        {
+            mFreeSlots.push(mDeferredFreeSlots[i].SlotIndex);
+
+            mDeferredFreeSlots[i] = mDeferredFreeSlots.back();
+            mDeferredFreeSlots.pop_back();
+        }
+        else
+        {
+            i++;
+        }
+    }
+}
+
+void FBindlessDescriptorHeap::CreateSRVFromCPUHandle(const FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle,
+                                                     uint32_t DestIndex) const
 {
     D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = GetCpuHandle(DestIndex);
     pDevice->GetDevice()->CopyDescriptorsSimple(1, DestHandle, SrcCpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

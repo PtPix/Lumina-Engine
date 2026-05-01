@@ -1,4 +1,4 @@
-﻿#include "../../include/Renderer/D3D12Core/RootSignature.h"
+﻿#include "../../../include/Renderer/D3D12Core/Pipeline/RootSignature.h"
 
 FRootSignature::~FRootSignature()
 {
@@ -16,14 +16,14 @@ void FRootSignature::Destroy()
 
 RootSignatureBuilder::RootSignatureBuilder()
 {
-    mRootParameters.reserve(32);
-    mDescriptorRanges.reserve(32);
-    mStaticSamplers.reserve(32);
+    mRootParameters.reserve(16);
+    mStaticSamplers.reserve(16);
+    mDescriptorRangesArray.reserve(16);
 }
 
 RootSignatureBuilder& RootSignatureBuilder::AddRootConstants(UINT ShaderRegister, UINT RegisterSpace, UINT NumValues)
 {
-    D3D12_ROOT_PARAMETER RootParameter = {};
+    D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     RootParameter.Constants.ShaderRegister = ShaderRegister;
     RootParameter.Constants.RegisterSpace = RegisterSpace;
@@ -35,10 +35,11 @@ RootSignatureBuilder& RootSignatureBuilder::AddRootConstants(UINT ShaderRegister
 
 RootSignatureBuilder& RootSignatureBuilder::AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace)
 {
-    D3D12_ROOT_PARAMETER RootParameter = {};
+    D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     RootParameter.Descriptor.ShaderRegister = ShaderRegister;
     RootParameter.Descriptor.RegisterSpace = RegisterSpace;
+    RootParameter.Descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE;
     RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     mRootParameters.push_back(RootParameter);
     return *this;
@@ -46,33 +47,28 @@ RootSignatureBuilder& RootSignatureBuilder::AddConstantBufferView(UINT ShaderReg
 
 RootSignatureBuilder& RootSignatureBuilder::AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace)
 {
-    D3D12_ROOT_PARAMETER RootParameter = {};
+    D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
     RootParameter.Descriptor.ShaderRegister = ShaderRegister;
     RootParameter.Descriptor.RegisterSpace = RegisterSpace;
+    RootParameter.Descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE;
     RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     mRootParameters.push_back(RootParameter);
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE RangeType,
-    UINT NumDescriptors, UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY Visibility)
+RootSignatureBuilder& RootSignatureBuilder::AddDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE1>& Ranges,
+    D3D12_SHADER_VISIBILITY Visibility)
 {
-    D3D12_DESCRIPTOR_RANGE DescriptorRange = {};
-    DescriptorRange.RangeType = RangeType;
-    DescriptorRange.NumDescriptors = NumDescriptors;
-    DescriptorRange.BaseShaderRegister = ShaderRegister;
-    DescriptorRange.RegisterSpace = RegisterSpace;
-    DescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-    mDescriptorRanges.push_back(DescriptorRange);
+    mDescriptorRangesArray.push_back(Ranges);
 
-    D3D12_ROOT_PARAMETER RootParameter = {};
+    D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    RootParameter.DescriptorTable.NumDescriptorRanges = 1;
-    RootParameter.DescriptorTable.pDescriptorRanges = &mDescriptorRanges[mDescriptorRanges.size() - 1];
+    RootParameter.DescriptorTable.NumDescriptorRanges = static_cast<UINT>(Ranges.size());
+    RootParameter.DescriptorTable.pDescriptorRanges = nullptr;
     RootParameter.ShaderVisibility = Visibility;
-    mRootParameters.push_back(RootParameter);
 
+    mRootParameters.push_back(RootParameter);
     return *this;
 }
 
@@ -106,31 +102,40 @@ RootSignatureBuilder& RootSignatureBuilder::AllowInputLayout()
 
 bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSignature)
 {
-    size_t RangeIndex = 0;
+    size_t TableIndex = 0;
     for (auto& RootParam : mRootParameters)
     {
         if (RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         {
-            RootParam.DescriptorTable.pDescriptorRanges = &mDescriptorRanges[RangeIndex++];
+            RootParam.DescriptorTable.pDescriptorRanges = mDescriptorRangesArray[TableIndex].data();
+            TableIndex++;
         }
     }
 
-    D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-    RootSignatureDesc.NumParameters = static_cast<UINT>(mRootParameters.size());
-    RootSignatureDesc.pParameters = mRootParameters.empty() ? nullptr : mRootParameters.data();
-    RootSignatureDesc.NumStaticSamplers = static_cast<UINT>(mStaticSamplers.size());
-    RootSignatureDesc.pStaticSamplers = mStaticSamplers.empty() ? nullptr : mStaticSamplers.data();
-    RootSignatureDesc.Flags = mFlags;
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
+    RootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    RootSignatureDesc.Desc_1_1.NumParameters = static_cast<UINT>(mRootParameters.size());
+    RootSignatureDesc.Desc_1_1.pParameters = mRootParameters.empty() ? nullptr : mRootParameters.data();
+    RootSignatureDesc.Desc_1_1.NumStaticSamplers = static_cast<UINT>(mStaticSamplers.size());
+    RootSignatureDesc.Desc_1_1.pStaticSamplers = mStaticSamplers.data();
+    RootSignatureDesc.Desc_1_1.Flags = mFlags;
+
+    D3D12_FEATURE_DATA_ROOT_SIGNATURE FeatureData = {};
+    FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    if (FAILED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &FeatureData, sizeof(FeatureData))))
+    {
+        FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+    }
 
     ID3DBlob* SignatureBlob = nullptr;
     ID3DBlob* ErrorBlob = nullptr;
 
-    HRESULT HResult = D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &SignatureBlob, &ErrorBlob);
+    HRESULT HResult = D3D12SerializeVersionedRootSignature(&RootSignatureDesc, &SignatureBlob, &ErrorBlob);
     if (FAILED(HResult))
     {
         if (ErrorBlob)
         {
-            Log::Error("Failed to serialize root signature: %s", (char*)ErrorBlob->GetBufferPointer());
+            Log::Error("Failed to serialize root signature: %s", static_cast<char*>(ErrorBlob->GetBufferPointer()));
             ErrorBlob->Release();
         }
         return false;
@@ -139,20 +144,8 @@ bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSi
     OutRootSignature.Destroy();
     HResult = Device->CreateRootSignature(0, SignatureBlob->GetBufferPointer(), SignatureBlob->GetBufferSize(), IID_PPV_ARGS(&OutRootSignature.mRootSignature));
 
-    if (SignatureBlob)
-    {
-        SignatureBlob->Release();
-    }
-    if (ErrorBlob)
-    {
-        ErrorBlob->Release();
-    }
+    if (SignatureBlob) SignatureBlob->Release();
+    if (ErrorBlob) ErrorBlob->Release();
 
-    if (FAILED(HResult))
-    {
-        LUMINA_LOG_ERROR(RHI, "Failed to create root signature");
-        return false;
-    }
-
-    return true;
+    return SUCCEEDED(HResult);
 }

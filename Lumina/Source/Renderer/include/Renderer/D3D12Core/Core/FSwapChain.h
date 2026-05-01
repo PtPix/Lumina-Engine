@@ -26,9 +26,12 @@ struct FSwapChainCreateDesc
 class FSwapChain
 {
 public:
+    FSwapChain() = default;
+    ~FSwapChain() { Destroy(); }
+
     bool Create(const FSwapChainCreateDesc& Desc);
     void Destroy();
-    HRESULT Resize(int Width, int Height, DXGI_FORMAT Format);
+    HRESULT Resize(int Width, int Height, DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM);
 
     HRESULT Present();
     void MoveToNextFrame();
@@ -45,6 +48,9 @@ private:
     void DestroyRenderTargetViews();
 
 private:
+    // Possess Resource
+    Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
+
     HWND mHwnd = nullptr;
     unsigned short mNumBackBuffers = 0;
     unsigned short mCurrentBackBufferIndex = 0;
@@ -55,10 +61,7 @@ private:
     FDevice* mpDevice = nullptr;
     FCommandQueue* mpPresentQueue = nullptr;
 
-    // Possess Resource
-    Microsoft::WRL::ComPtr<IDXGISwapChain4> mpSwapChain;
-    std::vector<UINT64> mFenceValues;
-
     std::vector<FTexture> mRenderTargets;
+    std::vector<UINT64> mFenceValues;
     DXGI_FORMAT mFormat = DXGI_FORMAT_UNKNOWN;
 };

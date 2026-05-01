@@ -8,8 +8,7 @@
 #include "Logger/Logger.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/GraphicsDevice.h"
-#include "Renderer/D3D12Core/ShaderCompiler.h"
+#include "../../../Source/Renderer/include/Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 
 void PBRModelTestLayer::OnAttach()
@@ -107,36 +106,37 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
 
 void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
 {
-    ID3D12GraphicsCommandList* pCmdList = pCommandContext->GetCommandList();
+    D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = D3D12Backend::GetCurrentBackBufferRTV();
+    D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle = mDepthBuffer.GetDSV();
 
-    D3D12_CPU_DESCRIPTOR_HANDLE backBufferRTV = D3D12Backend::GetCurrentBackBufferRTV();
-    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = mDepthBuffer.GetDSV();
-    pCmdList->OMSetRenderTargets(1, &backBufferRTV, FALSE, &dsvHandle);
+    pCommandContext->SetRenderTargets(1, &BackBufferRTV, &DsvHandle);
 
     const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    pCmdList->ClearRenderTargetView(backBufferRTV, clearColor, 0, nullptr);
-    pCmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-    float Width = 1280;
-    float Height = 720;
-    D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (float)Width, (float)Height, 0.0f, 1.0f };
+    pCommandContext->ClearRenderTargetView(BackBufferRTV, clearColor);
+    pCommandContext->ClearDepthStencilView(DsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
+
+    float Width = 1280; float Height = 720;
+    D3D12_VIEWPORT viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
     D3D12_RECT scissorRect = { 0, 0, (LONG)Width, (LONG)Height };
-    pCmdList->RSSetViewports(1, &viewport);
-    pCmdList->RSSetScissorRects(1, &scissorRect);
-    pCmdList->SetGraphicsRootSignature(Renderer::GetBindlessRootSignature()->Get());
+    pCommandContext->SetViewport(viewport);
+    pCommandContext->SetScissorRect(scissorRect);
+
+    pCommandContext->SetGraphicsRootSignature(Renderer::GetBindlessRootSignature()->Get());
+    pCommandContext->SetPipelineState(mBasePassPSO.Get());
+    pCommandContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     // Bind Bindless Descriptor Heap
     ID3D12DescriptorHeap* ppHeaps[] = { D3D12Backend::GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pCommandContext->SetDescriptorHeaps(1, ppHeaps);
-    pCmdList->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
-    pCmdList->SetGraphicsRootConstantBufferView(2, mGlobalPassBuffer.GetGPUVirtualAddress());
 
-    // ==========================================
-    // 3. 绑定 BasePass 的管线状态
-    // ==========================================
-    pCmdList->SetPipelineState(mBasePassPSO.Get());
-    pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // Bind Bindless Descriptor Table and Global Data
+    pCommandContext->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
+    pCommandContext->SetGraphicsRootConstantBufferView(2, mGlobalPassBuffer.GetGPUVirtualAddress());
+
+    // DrawCall
     for (auto& SceneObject : mSceneObjects)
     {
-        pCommandContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 1, &SceneObject.BindlessIndex, 0);
+        pCommandContext->SetGraphicsRoot32BitConstants(0, 1, &SceneObject.BindlessIndex, 0);
         SceneObject.pMesh->Draw(pCommandContext);
     }
 }

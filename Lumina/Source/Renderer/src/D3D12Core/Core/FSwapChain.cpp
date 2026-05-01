@@ -1,8 +1,9 @@
 ﻿#include <cassert>
 
 #include "Renderer/D3D12Core/Core/FSwapChain.h"
-#include "Renderer/D3D12Core/Common.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Core/FCommandQueue.h"
+#include "Renderer/D3D12Core/Common.h"
 
 bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
 {
@@ -17,6 +18,9 @@ bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
     this->mpPresentQueue = Desc.pCommandQueue;
     this->mbVSync = Desc.bVSync;
     this->mFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    mFenceValues.resize(mNumBackBuffers, 0);
+    mRenderTargets.resize(mNumBackBuffers);
 
     // Create DXGIFactory.
     HRESULT HResult = {};
@@ -42,27 +46,24 @@ bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
 
     Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
     HResult = pDxgiFactory->CreateSwapChainForHwnd(
-        Desc.pCommandQueue->GetCommandQueue(),
-        this->mHwnd,
+        mpPresentQueue->GetCommandQueue(),
+        mHwnd,
         &SwapChainDesc,
         nullptr, nullptr,
         &pSwapChain
         );
-    if (SUCCEEDED(HResult))
-    {
-        pSwapChain.As(&this->mpSwapChain);
-    }
-    else
+    if (FAILED(HResult))
     {
         LUMINA_LOG_ERROR(RHI, "FSwapChain::Create(): Couldn't create Swapchain.");
         return false;
     }
 
-    this->mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
-    this->mFenceValues.resize(this->mNumBackBuffers, 0);
+    // Ban ALT+ENTER
+    pDxgiFactory->MakeWindowAssociation(mHwnd, DXGI_MWA_NO_ALT_ENTER);
 
-    // Create RTV for every buffer
-    this->mRenderTargets.resize(this->mNumBackBuffers);
+    pSwapChain.As(&this->mpSwapChain);
+    mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
+
     CreateRenderTargetViews();
 
     return true;
@@ -78,51 +79,37 @@ void FSwapChain::Destroy()
 
 HRESULT FSwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
 {
+    if (!mpSwapChain) return S_FALSE;
+
+    WaitForGPU();
+
     DestroyRenderTargetViews();
-    for (int i = 0; i < this->mNumBackBuffers; i++)
-    {
-        mFenceValues[i] = mFenceValues[mpSwapChain->GetCurrentBackBufferIndex()];
-    }
 
-    assert(this->mNumBackBuffers <= 3);
-    IUnknown* const Buffers[3] = { mpPresentQueue->GetCommandQueue(), mpPresentQueue->GetCommandQueue(), mpPresentQueue->GetCommandQueue() };
-    UINT NodeMasks[3] = { 1, 1, 1 };
-
-    HRESULT HResult = mpSwapChain->ResizeBuffers1(
-        (UINT)this->mNumBackBuffers,
-        Width, Height,
-        Format,
-        this->mbVSync ? 0 : DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING,
-        NodeMasks,
-        Buffers
+    HRESULT HResult = mpSwapChain->ResizeBuffers(
+        mNumBackBuffers, Width, Height, Format,
+        mbVSync ? 0 : DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
         );
+
     if (SUCCEEDED(HResult))
     {
+        mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
+        mFormat = Format;
         CreateRenderTargetViews();
     }
 
-    this->mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
-    this->mFormat = Format;
+    std::fill(mFenceValues.begin(), mFenceValues.end(), 0);
+
     return HResult;
 }
 
 HRESULT FSwapChain::Present()
 {
-    constexpr UINT VSYNC_INTERVAL = 1;
-    const bool& bVSync = this->mbVSync;
-
     // TODO: glitch should be dealed
 
-    HRESULT HResult = {};
-    UINT FlagPresent = bVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING;
-    if (bVSync)
-    {
-        HResult = mpSwapChain->Present(VSYNC_INTERVAL, FlagPresent);
-    }
-    else
-    {
-        HResult = mpSwapChain->Present(0, FlagPresent);
-    }
+    UINT FlagPresent = mbVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING;
+    UINT SyncInterval = mbVSync ? 1 : 0;
+
+    HRESULT HResult = mpSwapChain->Present(SyncInterval, FlagPresent);
 
     if (FAILED(HResult))
     {
@@ -155,9 +142,10 @@ void FSwapChain::MoveToNextFrame()
     mFenceValues[mCurrentBackBufferIndex] = mpPresentQueue->Signal();
 
     mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
-    ++mNumTotalFrames;
 
     mpPresentQueue->WaitForFenceValue(mFenceValues[mCurrentBackBufferIndex]);
+
+    ++mNumTotalFrames;
 }
 
 void FSwapChain::WaitForGPU()
@@ -170,11 +158,12 @@ void FSwapChain::WaitForGPU()
 
 void FSwapChain::CreateRenderTargetViews()
 {
-    HRESULT HResult = {};
+    mRenderTargets.resize(mNumBackBuffers);
+
     for (int i = 0; i < mNumBackBuffers; i++)
     {
         Microsoft::WRL::ComPtr<ID3D12Resource> pBackBuffer;
-        HResult = mpSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
+        HRESULT HResult = mpSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
         if (FAILED(HResult))
         {
             assert(false);

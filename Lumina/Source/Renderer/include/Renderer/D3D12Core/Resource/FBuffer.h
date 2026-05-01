@@ -6,7 +6,12 @@
 class FBuffer : public GpuResource
 {
 public:
+    FBuffer() = default;
     ~FBuffer() override { Destroy(); }
+    FBuffer(const FBuffer&) = delete;
+    FBuffer& operator=(const FBuffer&) = delete;
+    FBuffer(FBuffer&& Other) noexcept;
+    FBuffer& operator=(FBuffer&& Other) noexcept;
 
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment,
         D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType,

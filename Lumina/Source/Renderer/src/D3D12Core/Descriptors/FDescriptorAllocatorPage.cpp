@@ -3,7 +3,7 @@
 #include "Renderer/D3D12Core/Descriptors/FDescriptorAllocatorPage.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 
-FDescriptorAllocatorPage::FDescriptorAllocatorPage(FDevice* pDevice, D3D12_DESCRIPTOR_HEAP_TYPE Type,
+FDescriptorAllocatorPage::FDescriptorAllocatorPage(const FDevice* pDevice, D3D12_DESCRIPTOR_HEAP_TYPE Type,
                                                    UINT NumDescriptors)
         : mHeapType(Type), mNumDescriptorsInHeap(NumDescriptors), mNumFreeHandles(NumDescriptors)
 {
@@ -16,6 +16,8 @@ FDescriptorAllocatorPage::FDescriptorAllocatorPage(FDevice* pDevice, D3D12_DESCR
     HRESULT HResult = pDevice->GetDevice()->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&mpDescriptorHeap));
     assert(SUCCEEDED(HResult));
 
+    mNumFreeHandles = NumDescriptors;
+    mFreeList[0] = mNumDescriptorsInHeap;
     mBaseCpuHandle = mpDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     mDescriptorSize = pDevice->GetDevice()->GetDescriptorHandleIncrementSize(mHeapType);
 }
@@ -27,19 +29,39 @@ bool FDescriptorAllocatorPage::HasSpace(UINT NumDescriptors) const
 
 FDescriptorAllocation FDescriptorAllocatorPage::Allocate(UINT NumDescriptors)
 {
-    if (!HasSpace(NumDescriptors))
+    std::lock_guard<std::mutex> Lock(mPageMutex);
+
+    // Fast Path
+    if (!HasSpace(NumDescriptors)) { return {}; }
+
+    // Check Free List
+    for (auto it = mFreeList.begin(); it != mFreeList.end(); ++it)
     {
-        return FDescriptorAllocation();
+        UINT Offset = it->first;
+        UINT Size = it->second;
+
+        if (Size >= NumDescriptors)
+        {
+            mFreeList.erase(it);
+            if (Size > NumDescriptors)
+            {
+                mFreeList[Offset + NumDescriptors] = Size - NumDescriptors;
+            }
+
+            mNumFreeHandles -= NumDescriptors;
+            D3D12_CPU_DESCRIPTOR_HANDLE Handle = { mBaseCpuHandle.ptr + static_cast<SIZE_T>(Offset) * mDescriptorSize };
+
+            return {Handle, NumDescriptors, mDescriptorSize, shared_from_this(), Offset};
+        }
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE Handle = { mBaseCpuHandle.ptr + static_cast<SIZE_T>(mCurrentOffset) * mDescriptorSize };
-
-    mCurrentOffset += NumDescriptors;
-    mNumFreeHandles -= NumDescriptors;
-
-    return FDescriptorAllocation(Handle, NumDescriptors, mDescriptorSize, shared_from_this());
+    return {};
 }
 
-void FDescriptorAllocatorPage::Free(FDescriptorAllocation&& Allocation)
+void FDescriptorAllocatorPage::Free(UINT Offset, UINT NumDescriptors)
 {
+    std::lock_guard<std::mutex> Lock(mPageMutex);
+
+    mFreeList[Offset] = NumDescriptors;
+    mNumFreeHandles += NumDescriptors;
 }

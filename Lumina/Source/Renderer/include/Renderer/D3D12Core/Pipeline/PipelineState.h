@@ -32,8 +32,6 @@ public:
     GraphicsPipelineStateBuilder& EnableDepthTest();
     GraphicsPipelineStateBuilder& SetDepthStencilFormat(DXGI_FORMAT Format);
 
-
-
     GraphicsPipelineStateBuilder& SetBlendState(const D3D12_BLEND_DESC& BlendDesc);
     GraphicsPipelineStateBuilder& SetRasterizeState(const D3D12_RASTERIZER_DESC& RasterDesc);
     GraphicsPipelineStateBuilder& SetDepthStencilState(const D3D12_DEPTH_STENCIL_DESC& DepthStencilDesc);

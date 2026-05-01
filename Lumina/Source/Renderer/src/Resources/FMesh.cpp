@@ -1,8 +1,9 @@
 ﻿#include "Renderer/Resources/FMesh.h"
 
-#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
 
-bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, ResourceUploader* pUploader)
+bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, FResourceUploader* pUploader)
 {
     mIndexCount = static_cast<uint32_t>(MeshData.Indices.size());
 

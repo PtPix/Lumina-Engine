@@ -43,8 +43,6 @@ void LuminaEngine::Run()
         }
         if (!mbIsRunning) break;
 
-
-
         mTimer.Tick();
         double DeltaTime = mTimer.GetDeltaTime();
         if (DeltaTime > 0.25) DeltaTime = 0.25;

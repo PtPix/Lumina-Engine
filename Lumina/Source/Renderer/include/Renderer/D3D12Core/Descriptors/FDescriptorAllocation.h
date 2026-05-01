@@ -9,7 +9,8 @@ class FDescriptorAllocation
 {
 public:
     FDescriptorAllocation() = default;
-    FDescriptorAllocation(D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, UINT NumHandles, UINT DescriptorSize, std::shared_ptr<FDescriptorAllocatorPage> pPage);
+    FDescriptorAllocation(D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, UINT NumHandles, UINT DescriptorSize,
+        std::shared_ptr<FDescriptorAllocatorPage> pPage, UINT Offset);
     ~FDescriptorAllocation();
 
     FDescriptorAllocation(const FDescriptorAllocation&) = delete;
@@ -24,9 +25,10 @@ public:
     void Free();
 
 private:
-    D3D12_CPU_DESCRIPTOR_HANDLE mCpuHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE mCpuHandle{};
     UINT mNumHandles = 0;
     UINT mDescriptorSize = 0;
 
     std::shared_ptr<FDescriptorAllocatorPage> mpPage;
+    UINT mOffset = 0;
 };

@@ -4,18 +4,19 @@
 #include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Common.h"
 
-void FCommandQueue::Create(ID3D12Device* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority, const char* pName)
+void FCommandQueue::Create(FDevice* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority, const char* pName)
 {
-    if (!pDevice)
+    if (!pDevice || !pDevice->GetDevice())
     {
         LUMINA_LOG_ERROR(RHI, "CommandQueue::Initialize failed: Null device");
         return;
     }
 
-    HRESULT HResult = {};
-    D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = CreateCommandQueueDesc(Type, Priority);
+    mpDevice = pDevice;
+    mType = Type;
 
-    HResult = pDevice->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));
+    D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = CreateCommandQueueDesc(Type, Priority);
+    HRESULT HResult = pDevice->GetDevice()->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));
     if (FAILED(HResult))
     {
         LUMINA_LOG_ERROR(RHI, "Couldn't create Command Queue");
@@ -27,27 +28,42 @@ void FCommandQueue::Create(ID3D12Device* pDevice, ECommandQueueType Type, EComma
     }
 
     // Create Execute fence
-    pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mpFence));
-    mFenceEvnetHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    pDevice->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mpFence));
+    mFenceEventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     mNextFenceValue = 1;
     mLastCompletedFenceValue = 0;
 }
 
 void FCommandQueue::Destroy()
 {
-    if (mFenceEvnetHandle)
+    if (mFenceEventHandle)
     {
-        CloseHandle(mFenceEvnetHandle);
-        mFenceEvnetHandle = nullptr;
+        CloseHandle(mFenceEventHandle);
+        mFenceEventHandle = nullptr;
     }
     mpFence.Reset();
     mpCommandQueue.Reset();
 }
 
-uint64_t FCommandQueue::ExecuteCommandList(ID3D12CommandList* pCommandList)
+FCommandContext* FCommandQueue::AllocateContext()
 {
-    mpCommandQueue->ExecuteCommandLists(1, &pCommandList);
-    return Signal();
+    ReclaimContexts();
+
+    if (mAvailableContexts.empty())
+    {
+        auto pNewContext = std::make_unique<FCommandContext>();
+        pNewContext->Initialize(mpDevice, mD3D12CommandListType);
+        pNewContext->Begin();
+
+        mContextPool.push_back(std::move(pNewContext));
+        return mContextPool.back().get();
+    }
+
+    FCommandContext* pContext = mAvailableContexts.front();
+    mAvailableContexts.pop();
+
+    pContext->Begin();
+    return pContext;
 }
 
 uint64_t FCommandQueue::Signal()
@@ -70,8 +86,8 @@ void FCommandQueue::WaitForFenceValue(uint64_t FenceValue)
 {
     if (!IsFenceComplete(FenceValue))
     {
-        mpFence->SetEventOnCompletion(FenceValue, mFenceEvnetHandle);
-        WaitForSingleObject(mFenceEvnetHandle, INFINITE);
+        mpFence->SetEventOnCompletion(FenceValue, mFenceEventHandle);
+        WaitForSingleObject(mFenceEventHandle, INFINITE);
         mLastCompletedFenceValue = FenceValue;
     }
 }
@@ -84,6 +100,37 @@ void FCommandQueue::Flush()
 void FCommandQueue::WaitQueue(FCommandQueue* pOtherQueue, uint64_t FenceValue)
 {
     mpCommandQueue->Wait(pOtherQueue->mpFence.Get(), FenceValue);
+}
+
+uint64_t FCommandQueue::ExecuteCommandContext(FCommandContext* pContext)
+{
+    pContext->Close();
+
+    ID3D12CommandList* ppCommandLists[] = { pContext->GetCommandList() };
+    mpCommandQueue->ExecuteCommandLists(1, ppCommandLists);
+
+    uint64_t FenceValue = Signal();
+    mInFlightContexts.push({ FenceValue, pContext });
+
+    return FenceValue;
+}
+
+void FCommandQueue::ReclaimContexts()
+{
+    while (!mInFlightContexts.empty())
+    {
+        auto& [FenceValue, pContext] = mInFlightContexts.front();
+
+        if (IsFenceComplete(FenceValue))
+        {
+            mAvailableContexts.push(pContext);
+            mInFlightContexts.pop();
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 D3D12_COMMAND_QUEUE_DESC FCommandQueue::CreateCommandQueueDesc(ECommandQueueType Type, ECommandQueuePriority Priority)

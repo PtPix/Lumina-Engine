@@ -1,6 +1,6 @@
 #include "Renderer/Rendering/Mesh.h"
 #include "Renderer/D3D12Core/GraphicsDevice.h"
-#include "Renderer/D3D12Core/Resource/Buffer.h"
+#include "Renderer/D3D12Core/Resource/FBuffer.h"
 #include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 
 void FMesh::Initialize(FDevice* pDevice, ResourceUploader* pUploader, const void* Vertices, UINT VertexSize,

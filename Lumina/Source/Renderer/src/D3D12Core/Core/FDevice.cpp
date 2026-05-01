@@ -8,8 +8,9 @@
 #include <vector>
 
 #include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Common.h"
 
-struct FGPUInfo
+struct FGpuInfo
 {
     std::string DeviceName;
     unsigned DeviceID;
@@ -182,9 +183,9 @@ static void CheckDeviceFeatureSupport(ID3D12Device* pDevice, FDeviceCapabilities
     }
 }
 
-static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool bEnumerateSoftwareAdapters, IDXGIFactory6* pFactory)
+static std::vector<FGpuInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool bEnumerateSoftwareAdapters, IDXGIFactory6* pFactory)
 {
-    std::vector<FGPUInfo> GPUs;
+    std::vector<FGpuInfo> GPUs;
     HRESULT HResult = {};
 
     IDXGIAdapter1* pAdapter = nullptr; // Graphics Card
@@ -204,7 +205,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
         {
             DXGIFlags |= DXGI_CREATE_FACTORY_DEBUG;
         }
-        HResult = CreateDXGIFactory2(DXGIFlags, IID_PPV_ARGS(&pDXGIFactory));
+        CreateDXGIFactory2(DXGIFlags, IID_PPV_ARGS(&pDXGIFactory));
     }
 
     // Lambda function for adding adapters to GPUs
@@ -212,7 +213,7 @@ static std::vector<FGPUInfo> EnumerateDX12Adapters(bool bEnableDebugLayer, bool 
     {
         bAdapterFound = true;
 
-        FGPUInfo GPUInfo = {};
+        FGpuInfo GPUInfo = {};
         GPUInfo.DedicatedGPUMemory = Desc.DedicatedVideoMemory;
         GPUInfo.DeviceID = Desc.DeviceId;
         GPUInfo.DeviceName = StringUtils::WideToUTF8(Desc.Description);
@@ -293,26 +294,26 @@ bool FDevice::Create(const FDeviceCreateDesc& CreateDesc)
         }
         else
         {
-            LUMINA_LOG_WARNING(RHI, "FDevice::Create(): D3D12GetDebugInterface() returned != S_OK: %l", HResult);
+            LUMINA_LOG_WARNING(RHI, "FDevice::Create(): D3D12GetDebugInterface() returned != S_OK");
         }
     }
 
-    std::vector<FGPUInfo> Adapters = EnumerateDX12Adapters(CreateDesc.bEnableDebugLayer, CreateDesc.bEnableValidationLayer, CreateDesc.pFactory);
+    std::vector<FGpuInfo> Adapters = EnumerateDX12Adapters(CreateDesc.bEnableDebugLayer, CreateDesc.bEnableValidationLayer, CreateDesc.pFactory);
     assert(!Adapters.empty());
 
-    FGPUInfo& Adapter = Adapters[0];
+    FGpuInfo& Adapter = Adapters[0];
+    mpAdapter = Adapter.pAdapter;
 
-    this->mpAdapter = Adapter.pAdapter;
     // Create FDevice
     {
-        HResult = D3D12CreateDevice(this->mpAdapter.Get(), Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
+        HResult = D3D12CreateDevice(mpAdapter.Get(), Adapter.MaxSupportedFeatureLevel, IID_PPV_ARGS(&mpDevice));
         if (!SUCCEEDED(HResult))
         {
             LUMINA_LOG_ERROR(RHI, "FDevice::Create() : D3D12CreateDevice() failed");
             return false;
         }
     }
-    const bool bDeviceCreated = true;
+    constexpr bool bDeviceCreated = true;
 
     if (CreateDesc.bEnableDebugLayer)
     {
@@ -335,25 +336,47 @@ bool FDevice::Create(const FDeviceCreateDesc& CreateDesc)
     CheckDeviceFeatureSupport(this->mpDevice.Get(), this->mCapabilities);
 
     // Create D3D12MA
-    D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
-    AllocatorDesc.pDevice = mpDevice.Get();
-    AllocatorDesc.pAdapter = mpAdapter.Get();
-
-    HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
-    if (FAILED(HResult))
     {
-        LUMINA_LOG_ERROR(RHI, "FDevice::Create() : Failed to create D3D12MA Allocator");
-        return false;
+        LUMINA_TIME_LOG_SCOPE("Create D3D12MA");
+        D3D12MA::ALLOCATOR_DESC AllocatorDesc = {};
+        AllocatorDesc.pDevice = mpDevice.Get();
+        AllocatorDesc.pAdapter = mpAdapter.Get();
+        HResult = D3D12MA::CreateAllocator(&AllocatorDesc, &mpAllocator);
+        if (FAILED(HResult))
+        {
+            LUMINA_LOG_ERROR(RHI, "FDevice::Create() : Failed to create D3D12MA Allocator");
+            return false;
+        }
     }
 
-    // Create Descriptor Allocators
-    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    // Create Command Queues
     {
-        D3D12_DESCRIPTOR_HEAP_TYPE HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i);
-        UINT PageSize = (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) ? 256 : 64;
+        LUMINA_TIME_LOG_SCOPE("Create Command Queues");
 
-        mDescriptorAllocators[i] = std::make_unique<FDescriptorAllocator>(HeapType, PageSize);
-        mDescriptorAllocators[i]->Initialize(this);
+        mpGraphicsQueue->Create(this, GRAPHICS);
+        SetName(mpGraphicsQueue->GetCommandQueue(), "Rendering Graphics Command Queue");
+        mpComputeQueue->Create(this, COMPUTE);
+        SetName(mpComputeQueue->GetCommandQueue(), "Rendering Compute Command Queue");
+        mpCopyQueue->Create(this, COPY);
+        SetName(mpCopyQueue->GetCommandQueue(), "Rendering Copy Command Queue");
+    }
+
+    // Create Cpu Descriptor Allocators
+    {
+        for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+        {
+            auto HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i);
+            UINT PageSize = (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) ? 256 : 64;
+
+            mpDescriptorAllocators[i] = std::make_unique<FDescriptorAllocator>(HeapType, PageSize);
+            mpDescriptorAllocators[i]->Initialize(this);
+        }
+    }
+
+    // Create Bindless Descriptor Heap
+    {
+        LUMINA_TIME_LOG_SCOPE("Create Bindless Descriptor Heap");
+        mpBindlessHeap->Initialize(this);
     }
 
     return bDeviceCreated;
@@ -361,10 +384,17 @@ bool FDevice::Create(const FDeviceCreateDesc& CreateDesc)
 
 void FDevice::Destroy()
 {
-    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    mpGraphicsQueue.reset();
+    mpComputeQueue.reset();
+    mpCopyQueue.reset();
+
+    mpBindlessHeap.reset();
+
+    for (auto & mpDescriptorAllocator : mpDescriptorAllocators)
     {
-        mDescriptorAllocators[i].reset();
+        mpDescriptorAllocator.reset();
     }
+
     mpAllocator.Reset();
     mpDevice.Reset();
     mpAllocator.Reset();
