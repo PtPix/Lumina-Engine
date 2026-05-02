@@ -23,19 +23,11 @@ public:
     void OnRender(FCommandContext* pCommandContext) override;
     void OnRenderUI() override;
 
-    bool InitBasePassPipeline();
-
 private:
     FScene mScene = {};
     FSceneView mSceneView = {};
 
     std::vector<FMesh*> mLoadedMeshes;
-
-    PipelineState mBasePassPSO;
-    FGlobalPassData mGlobalDataCache = {};
-
-    // 对应的 GPU 资源
-    FConstantBuffer mGlobalPassBuffer;
 
     // 保持映射的指针 (优化技巧)
     void* mpMappedGlobalData = nullptr;

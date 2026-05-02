@@ -5,6 +5,7 @@
 #include "D3D12Core/Common.h"
 #include "Renderer/D3D12Core/Pipeline/RootSignature.h"
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "RenderPass/FBasePass.h"
 #include "Resources/FFrameResource.h"
 #include "Resources/FMesh.h"
 
@@ -29,11 +30,11 @@ public:
     static void InitializeSceneBuffers();
     static void DestroySceneBuffers();
 
-    static void RenderSceneView(class FCommandContext* pCommandContext, const FSceneView& View, ID3D12PipelineState* pPSO);
+    static void RenderSceneView(class FCommandContext* pCommandContext, const FSceneView& View);
 
 private:
     static void InitializeBindlessRootSignature();
-
+    static std::unique_ptr<FBasePass> mBasePass;
     static FRootSignature mBindlessRootSignature;
     static FResourceUploader mUploader;
 

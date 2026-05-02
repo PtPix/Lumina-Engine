@@ -23,6 +23,7 @@ set(D3D12CORE_SOURCES
         "src/Managers/FTextureManager.cpp"
 
         "src/Resources/FMaterial.cpp"
+        "src/RenderPass/FBasePass.cpp"
 )
 
 

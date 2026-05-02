@@ -33,12 +33,6 @@ void PBRModelTestLayer::OnAttach()
 
     uint32_t MaterialID = mScene.AddMaterial(RadioMaterial);
 
-    // uint32_t MaterialID = static_cast<uint32_t>(mSceneMaterials.size());
-    // RadioMaterial.SetMaterialID(MaterialID);
-    //
-    // mSceneMaterials.push_back(RadioMaterial);
-    // mMaterialCache.push_back(RadioMaterial.GetMaterialData());
-
     StaticModel Radio;
     Radio.LoadFromFile("Assets/Models/Radio/SM_HandRadio.fbx");
     const auto& RadioMeshes = Radio.GetMeshesData();
@@ -62,7 +56,7 @@ void PBRModelTestLayer::OnAttach()
     InitData.SunIntensity = 3.14f;
     mScene.SetGlobalData(InitData);
 
-    InitBasePassPipeline();
+    // InitBasePassPipeline();
     mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(1280) / static_cast<float>(720), 0.1f, 1000.0f);
 
     // 在窗口初始化 / Resize 时调用：
@@ -87,16 +81,12 @@ void PBRModelTestLayer::OnDetach()
 {
     D3D12Backend::FlushGPU();
 
-    // 2. 清理全局缓冲和深度缓冲
-    mGlobalPassBuffer.Destroy();
     mDepthBuffer.Destroy();
 
     for (auto& LoadedMesh : mLoadedMeshes)
     {
         LoadedMesh->Destroy();
     }
-
-    // mSceneObjects.clear();
 }
 
 void PBRModelTestLayer::OnUpdate(double DeltaTime)
@@ -146,7 +136,7 @@ void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
     pCommandContext->SetViewport(viewport);
     pCommandContext->SetScissorRect(scissorRect);
 
-    Renderer::RenderSceneView(pCommandContext, mSceneView, mBasePassPSO.Get());
+    Renderer::RenderSceneView(pCommandContext, mSceneView);
 }
 
 void PBRModelTestLayer::OnRenderUI()
@@ -154,71 +144,5 @@ void PBRModelTestLayer::OnRenderUI()
     // ImGui::Begin("PBR Test Layer");
 
     // ImGui::End();
-}
-
-bool PBRModelTestLayer::InitBasePassPipeline()
-{
-    std::string ErrorString;
-    ShaderUtils::FBlob VertexShaderBlob;
-    ShaderUtils::FBlob PixelShaderBlob;
-
-    // 1. 编译 Vertex Shader
-    FShaderStageCompileDesc VertexShaderStageDesc = {
-        L"Shaders/BasePass.hlsl", "VSMain", EShaderStage::VertexShader, EShaderModel::SM6_0
-    };
-    VertexShaderBlob = ShaderUtils::CompileFromSource(VertexShaderStageDesc, ErrorString);
-    if (VertexShaderBlob.IsNull())
-    {
-        Log::Error("BasePass VS Compile Failed: %s", ErrorString.c_str());
-        return false;
-    }
-
-    // 2. 编译 Pixel Shader
-    FShaderStageCompileDesc PixelShaderStageDesc = {
-        L"Shaders/BasePass.hlsl", "PSMain", EShaderStage::PixelShader, EShaderModel::SM6_0
-    };
-    PixelShaderBlob = ShaderUtils::CompileFromSource(PixelShaderStageDesc, ErrorString);
-    if (PixelShaderBlob.IsNull())
-    {
-        Log::Error("BasePass PS Compile Failed: %s", ErrorString.c_str());
-        return false;
-    }
-
-    // 3. 配置输入布局 (与 FStandardVertex 对应)
-    std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-    };
-
-    // 4. 构建 Graphics Pipeline State
-    GraphicsPipelineStateBuilder Builder;
-    Builder.SetRootSignature(Renderer::GetBindlessRootSignature()->Get())
-           .SetInputLayout(InputElements)
-           // BasePass 专注于 RT 的输出，这里填入你 G-Buffer 或后备缓冲的格式
-           .SetRenderTargetFormats({ DXGI_FORMAT_R8G8B8A8_UNORM })
-           .SetDepthStencilFormat(DXGI_FORMAT_D32_FLOAT);
-
-    Builder.EnableDepthTest(); // 开启深度测试以保证正确的遮挡关系
-
-    if (!VertexShaderBlob.IsNull())
-    {
-        Builder.SetVertexShader(VertexShaderBlob.GetByteCode(), VertexShaderBlob.GetByteCodeSize());
-    }
-    if (!PixelShaderBlob.IsNull())
-    {
-        Builder.SetPixelShader(PixelShaderBlob.GetByteCode(), PixelShaderBlob.GetByteCodeSize());
-    }
-
-    // 假设 mBasePassPSO 是 ID3D12PipelineState* 的封装类
-    Builder.Build(D3D12Backend::GetDevice()->GetDevice(), mBasePassPSO);
-
-    if (!mBasePassPSO.Get())
-    {
-        LUMINA_LOG_ERROR(Material, "Failed to build BasePass Pipeline State!");
-        return false;
-    }
-
-    return true;
 }
 

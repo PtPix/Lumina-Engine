@@ -10,7 +10,7 @@
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
-
+std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
 uint32_t Renderer::mCurrentFrameIndex = 0;
 
@@ -28,12 +28,19 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     InitializeBindlessRootSignature();
     InitializeSceneBuffers();
 
+    mBasePass = std::make_unique<FBasePass>();
+    mBasePass->Initialize();
+
     return true;
 }
 
 void Renderer::Shutdown()
 {
     mUploader.FlushAndSync();
+    if (mBasePass) {
+        mBasePass->Shutdown();
+        mBasePass.reset();
+    }
     TextureManager::Shutdown();
     DestroySceneBuffers();
     D3D12Backend::Shutdown();
@@ -95,8 +102,7 @@ void Renderer::DestroySceneBuffers()
     }
 }
 
-void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView& View,
-    ID3D12PipelineState* pPSO)
+void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView& View)
 {
     mCurrentFrameIndex = D3D12Backend::GetSwapChain()->GetCurrentBackBufferIndex();
     FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
@@ -116,9 +122,11 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
         CurrentFrame.MaterialBuffer.Unmap();
     }
 
-    pContext->SetPipelineState(pPSO);
+
     pContext->SetGraphicsRootSignature(GetBindlessRootSignature()->Get());
-    pContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // pContext->SetPipelineState(pPSO);
+    // pContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     ID3D12DescriptorHeap* ppHeaps[] = { D3D12Backend::GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
@@ -130,15 +138,9 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
     pContext->SetGraphicsRootConstantBufferView(2, CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
     pContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
     pContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
-
-    // ==========================================
-    // 4. 纯粹、无脑且高效的 DrawCall 发射机！
-    // ==========================================
-    for (const auto& Cmd : View.DrawCommands)
+    if (mBasePass)
     {
-        // 只需告诉 Shader，去找数组里的第几个 Instance
-        pContext->SetGraphicsRoot32BitConstants(0, 1, &Cmd.InstanceIndex, 0);
-        Cmd.pMesh->Draw(pContext);
+        mBasePass->Execute(pContext, View);
     }
 }
 
