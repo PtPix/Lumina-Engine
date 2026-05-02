@@ -8,6 +8,8 @@ set(ENGINE_SOURCES
         src/Camera.cpp
         src/LuminaApp.cpp
         src/Input.cpp
+
+        "src/World/FScene.cpp"
 )
 
 set(ASSETS_SOURCES

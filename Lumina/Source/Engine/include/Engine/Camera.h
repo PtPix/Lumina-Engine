@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 #include <windows.h>
 
-#include "Renderer/Scene/SceneView.h"
+#include "Renderer/Scene/FSceneView.h"
 
 class Camera
 {
@@ -19,7 +19,6 @@ public:
     [[nodiscard]] DirectX::XMMATRIX GetViewMatrix() const;
     [[nodiscard]] DirectX::XMMATRIX GetProjectionMatrix() const;
     [[nodiscard]] DirectX::XMFLOAT3 GetPosition() const { return mPosition; }
-    [[nodiscard]] FSceneView GetSceneView(uint32_t Width, uint32_t Height);
 
 private:
     DirectX::XMFLOAT3 mPosition;

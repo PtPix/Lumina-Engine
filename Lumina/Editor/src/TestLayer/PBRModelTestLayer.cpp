@@ -31,11 +31,13 @@ void PBRModelTestLayer::OnAttach()
     RadioMaterial.SetNormalTexture(NormalIndex);
     RadioMaterial.SetORMTexture(ORMIndex);
 
-    uint32_t MaterialID = static_cast<uint32_t>(mSceneMaterials.size());
-    RadioMaterial.SetMaterialID(MaterialID);
+    uint32_t MaterialID = mScene.AddMaterial(RadioMaterial);
 
-    mSceneMaterials.push_back(RadioMaterial);
-    mMaterialCache.push_back(RadioMaterial.GetMaterialData());
+    // uint32_t MaterialID = static_cast<uint32_t>(mSceneMaterials.size());
+    // RadioMaterial.SetMaterialID(MaterialID);
+    //
+    // mSceneMaterials.push_back(RadioMaterial);
+    // mMaterialCache.push_back(RadioMaterial.GetMaterialData());
 
     StaticModel Radio;
     Radio.LoadFromFile("Assets/Models/Radio/SM_HandRadio.fbx");
@@ -46,32 +48,19 @@ void PBRModelTestLayer::OnAttach()
         FMesh* pGpuMesh = Renderer::CreateMesh(RadioMeshes[i]);
         mLoadedMeshes.push_back(pGpuMesh);
 
-        CreateInstanceInScene(pGpuMesh, DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f), MaterialID);
+        FGameObject RadioObject;
+        RadioObject.pMesh = pGpuMesh;
+        RadioObject.Transform = DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+        RadioObject.MaterialIndex = MaterialID;
+
+        mScene.AddGameObject(RadioObject);
+
     }
-    mInstanceBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FInstanceData), 1000,
-                               D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"GlobalInstanceBuffer");
-
-    mMaterialBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FPBRMaterialData), 100,
-                           D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"GlobalMaterialBuffer");
-
-    memcpy(mMaterialBuffer.Map(), mMaterialCache.data(), sizeof(FPBRMaterialData) * mMaterialCache.size());
-    mMaterialBuffer.Unmap();
-
-    mGlobalPassBuffer.Create(
-            D3D12Backend::GetAllocator(),
-            sizeof(FGlobalPassData),
-            L"GlobalPassBuffer"
-        );
-
-    // 3. 执行持久映射
-    mpMappedGlobalData = mGlobalPassBuffer.Map();
-
-    // 填入一些初始默认数据
-    mGlobalDataCache.SunDirection = { 0.577f, -0.577f, 0.577f }; // 假设阳光从右上角照下
-    mGlobalDataCache.SunColor = { 1.0f, 0.9f, 0.8f, 1.0f };      // 暖色阳光
-    mGlobalDataCache.SunIntensity = 3.14f;
-
-    memcpy(mpMappedGlobalData, &mGlobalDataCache, sizeof(FGlobalPassData));
+    FGlobalPassData InitData;
+    InitData.SunDirection = { 0.577f, -0.577f, 0.577f };
+    InitData.SunColor = { 1.0f, 0.9f, 0.8f, 1.0f };
+    InitData.SunIntensity = 3.14f;
+    mScene.SetGlobalData(InitData);
 
     InitBasePassPipeline();
     mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(1280) / static_cast<float>(720), 0.1f, 1000.0f);
@@ -102,15 +91,12 @@ void PBRModelTestLayer::OnDetach()
     mGlobalPassBuffer.Destroy();
     mDepthBuffer.Destroy();
 
-    mInstanceBuffer.Destroy();
-    mMaterialBuffer.Destroy();
-
     for (auto& LoadedMesh : mLoadedMeshes)
     {
         LoadedMesh->Destroy();
     }
 
-    mSceneObjects.clear();
+    // mSceneObjects.clear();
 }
 
 void PBRModelTestLayer::OnUpdate(double DeltaTime)
@@ -135,26 +121,12 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
     DirectX::XMMATRIX projMat = mCamera.GetProjectionMatrix();
     DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(viewMat, projMat);
 
-    // 2. 🚨 必须转置矩阵以适配 HLSL 的列主序
-    mGlobalDataCache.ViewProjectionMatrix = DirectX::XMMatrixTranspose(viewProj);
+    FGlobalPassData GlobalData = mScene.GetGlobalPassData();
+    GlobalData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(viewProj);
+    GlobalData.CameraPosition = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+    mScene.SetGlobalData(GlobalData);
 
-    mGlobalDataCache.CameraPosition = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-
-    // 如果太阳光方向随时间变化，也可以在这里更新
-    // ...
-
-    // 3. 直接使用 memcpy 将 CPU 数据推送到 Upload 显存中
-    if (mpMappedGlobalData)
-    {
-        memcpy(mpMappedGlobalData, &mGlobalDataCache, sizeof(FGlobalPassData));
-    }
-
-    if (!mInstanceData.empty())
-    {
-        void* pMappedInstances = mInstanceBuffer.Map();
-        memcpy(pMappedInstances, mInstanceData.data(), sizeof(FInstanceData) * mInstanceData.size());
-        mInstanceBuffer.Unmap();
-    }
+    mScene.ExtractSceneView(mSceneView);
 }
 
 void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
@@ -174,25 +146,7 @@ void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
     pCommandContext->SetViewport(viewport);
     pCommandContext->SetScissorRect(scissorRect);
 
-    pCommandContext->SetGraphicsRootSignature(Renderer::GetBindlessRootSignature()->Get());
-    pCommandContext->SetPipelineState(mBasePassPSO.Get());
-    pCommandContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    // Bind Bindless Descriptor Heap
-    ID3D12DescriptorHeap* ppHeaps[] = { D3D12Backend::GetBindlessDescriptorHeap()->GetDescriptorHeap() };
-    pCommandContext->SetDescriptorHeaps(1, ppHeaps);
-
-    // Bind Bindless Descriptor Table and Global Data
-    pCommandContext->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
-    pCommandContext->SetGraphicsRootConstantBufferView(2, mGlobalPassBuffer.GetGPUVirtualAddress());
-    pCommandContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, mInstanceBuffer.GetGPUVirtualAddress());
-    pCommandContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, mMaterialBuffer.GetGPUVirtualAddress());
-    // DrawCall
-    for (auto& SceneObject : mSceneObjects)
-    {
-        pCommandContext->SetGraphicsRoot32BitConstants(0, 1, &SceneObject.InstanceIndex, 0);
-        SceneObject.pMesh->Draw(pCommandContext);
-    }
+    Renderer::RenderSceneView(pCommandContext, mSceneView, mBasePassPSO.Get());
 }
 
 void PBRModelTestLayer::OnRenderUI()
@@ -200,51 +154,6 @@ void PBRModelTestLayer::OnRenderUI()
     // ImGui::Begin("PBR Test Layer");
 
     // ImGui::End();
-}
-
-void PBRModelTestLayer::CreateInstanceInScene(FMesh* pMesh, DirectX::XMMATRIX Transform, uint32_t MaterialID)
-{
-    FSceneObject SceneObject;
-    SceneObject.pMesh = pMesh;
-    SceneObject.InstanceIndex = static_cast<uint32_t>(mInstanceData.size());
-
-    FInstanceData InstanceData;
-    InstanceData.WorldMatrix = DirectX::XMMatrixTranspose(Transform);
-    InstanceData.MaterialIndex = MaterialID;
-
-    mInstanceData.push_back(InstanceData);
-    mSceneObjects.push_back(SceneObject);
-    //
-    // FObjectData ObjectData{};
-    // ObjectData.WorldMatrix = DirectX::XMMatrixTranspose(Transform);
-    // // ObjectData.WorldMatrix = Transform;
-    // ObjectData.BaseColor = Color;
-    // ObjectData.AlbedoTexIndex = AlbedoIdx;
-    // ObjectData.NormalTexIndex = NormalIdx;
-    // ObjectData.RMATexIndex = RMAIdx;
-    // ObjectData.Padding = 0;
-    //
-    // SceneObject.ObjectDataBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FObjectData), 256,
-    //                              D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ,
-    //                              D3D12_HEAP_TYPE_UPLOAD, L"Node_ObjectData");
-    //
-    // memcpy(SceneObject.ObjectDataBuffer.Map(), &ObjectData, sizeof(FObjectData));
-    // SceneObject.ObjectDataBuffer.Unmap();
-    //
-    // SceneObject.BindlessIndex = D3D12Backend::GetBindlessDescriptorHeap()->AllocateSlot();
-    //
-    // D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    // srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-    // srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-    // srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    // srvDesc.Buffer.FirstElement = 0;
-    // srvDesc.Buffer.NumElements = 1;
-    // srvDesc.Buffer.StructureByteStride = sizeof(FObjectData);
-    //
-    // D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = D3D12Backend::GetBindlessDescriptorHeap()->GetCpuHandle(SceneObject.BindlessIndex);
-    // D3D12Backend::GetDevice()->GetDevice()->CreateShaderResourceView(SceneObject.ObjectDataBuffer.GetResource(), &srvDesc, DestHandle);
-    //
-    // mSceneObjects.push_back(std::move(SceneObject));
 }
 
 bool PBRModelTestLayer::InitBasePassPipeline()

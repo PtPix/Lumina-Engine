@@ -1,13 +1,18 @@
 ﻿#include "Renderer/Renderer.h"
 
+#include "Renderer/RenderTypes.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
 #include "Renderer/Managers/FTextureManager.h"
+#include "Renderer/Scene/FSceneView.h"
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
+
+FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
+uint32_t Renderer::mCurrentFrameIndex = 0;
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
@@ -21,6 +26,7 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     mUploader.FlushAndSync();
 
     InitializeBindlessRootSignature();
+    InitializeSceneBuffers();
 
     return true;
 }
@@ -29,6 +35,7 @@ void Renderer::Shutdown()
 {
     mUploader.FlushAndSync();
     TextureManager::Shutdown();
+    DestroySceneBuffers();
     D3D12Backend::Shutdown();
 }
 
@@ -68,6 +75,71 @@ FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
     mUploader.FlushAndSync();
 
     return pMesh;
+}
+
+void Renderer::InitializeSceneBuffers()
+{
+    for (int i = 0; i < NUM_FRAMES; ++i)
+    {
+        mFrameResources[i].Initialize(10000, 1000);
+    }
+}
+
+void Renderer::DestroySceneBuffers()
+{
+    for (int i = 0; i < NUM_FRAMES; ++i)
+    {
+        mFrameResources[i].GlobalPassBuffer.Destroy();
+        mFrameResources[i].InstanceBuffer.Destroy();
+        mFrameResources[i].MaterialBuffer.Destroy();
+    }
+}
+
+void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView& View,
+    ID3D12PipelineState* pPSO)
+{
+    mCurrentFrameIndex = D3D12Backend::GetSwapChain()->GetCurrentBackBufferIndex();
+    FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
+
+    memcpy(CurrentFrame.GlobalPassBuffer.Map(), &View.GlobalPassData, sizeof(FGlobalPassData));
+    CurrentFrame.GlobalPassBuffer.Unmap();
+
+    if (!View.InstanceData.empty())
+    {
+        memcpy(CurrentFrame.InstanceBuffer.Map(), View.InstanceData.data(), sizeof(FInstanceData) * View.InstanceData.size());
+        CurrentFrame.InstanceBuffer.Unmap();
+    }
+
+    if (!View.MaterialData.empty())
+    {
+        memcpy(CurrentFrame.MaterialBuffer.Map(), View.MaterialData.data(), sizeof(FPBRMaterialData) * View.MaterialData.size());
+        CurrentFrame.MaterialBuffer.Unmap();
+    }
+
+    pContext->SetPipelineState(pPSO);
+    pContext->SetGraphicsRootSignature(GetBindlessRootSignature()->Get());
+    pContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    ID3D12DescriptorHeap* ppHeaps[] = { D3D12Backend::GetBindlessDescriptorHeap()->GetDescriptorHeap() };
+    pContext->SetDescriptorHeaps(1, ppHeaps);
+
+    // ==========================================
+    // 3. 绑定我们刚刚上传的大 Buffer 资源 (Root Parameters)
+    // ==========================================
+    pContext->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
+    pContext->SetGraphicsRootConstantBufferView(2, CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
+
+    // ==========================================
+    // 4. 纯粹、无脑且高效的 DrawCall 发射机！
+    // ==========================================
+    for (const auto& Cmd : View.DrawCommands)
+    {
+        // 只需告诉 Shader，去找数组里的第几个 Instance
+        pContext->SetGraphicsRoot32BitConstants(0, 1, &Cmd.InstanceIndex, 0);
+        Cmd.pMesh->Draw(pContext);
+    }
 }
 
 void Renderer::InitializeBindlessRootSignature()

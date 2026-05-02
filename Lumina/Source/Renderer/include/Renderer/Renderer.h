@@ -2,10 +2,13 @@
 
 #include <windows.h>
 
+#include "D3D12Core/Common.h"
 #include "Renderer/D3D12Core/Pipeline/RootSignature.h"
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Resources/FFrameResource.h"
 #include "Resources/FMesh.h"
 
+struct FSceneView;
 class FCommandContext;
 
 class Renderer
@@ -23,9 +26,18 @@ public:
 
     static FResourceUploader* GetUploader() { return &mUploader; }
 
+    static void InitializeSceneBuffers();
+    static void DestroySceneBuffers();
+
+    static void RenderSceneView(class FCommandContext* pCommandContext, const FSceneView& View, ID3D12PipelineState* pPSO);
+
 private:
     static void InitializeBindlessRootSignature();
 
     static FRootSignature mBindlessRootSignature;
     static FResourceUploader mUploader;
+
+    static const int NUM_FRAMES = NUM_SWAPCHAIN_BACKBUFFER;
+    static FFrameResource mFrameResources[NUM_FRAMES];
+    static uint32_t mCurrentFrameIndex;
 };

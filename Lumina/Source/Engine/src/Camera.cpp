@@ -81,21 +81,3 @@ DirectX::XMMATRIX Camera::GetProjectionMatrix() const
 {
     return DirectX::XMMatrixPerspectiveFovLH(mFovY, mAspectRatio, mNearPlane, mFarPlane);
 }
-
-FSceneView Camera::GetSceneView(uint32_t Width, uint32_t Height)
-{
-    FSceneView View;
-    DirectX::XMMATRIX ViewMatrix = GetViewMatrix();
-    DirectX::XMMATRIX ProjectionMatrix = GetProjectionMatrix();
-
-    View.ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;
-    DirectX::XMVECTOR Det;
-    View.InverseViewProjectionMatrix = DirectX::XMMatrixInverse(&Det, View.ViewProjectionMatrix);
-
-    View.CameraPosition = mPosition;
-    View.ProjectionMatrix = GetProjectionMatrix();
-    View.ViewportWidth = Width;
-    View.ViewportHeight = Height;
-
-    return View;
-}
