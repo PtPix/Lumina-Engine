@@ -4,6 +4,7 @@
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Renderer/Managers/FTextureManager.h"
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
@@ -14,6 +15,11 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     mUploader.Initialize(D3D12Backend::GetDevice());
 
+    mUploader.BeginUpload();
+    TextureManager::Initialize(D3D12Backend::GetDevice(), &mUploader);
+    mUploader.EndUpLoadAndExecute();
+    mUploader.FlushAndSync();
+
     InitializeBindlessRootSignature();
 
     return true;
@@ -21,6 +27,8 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
 void Renderer::Shutdown()
 {
+    mUploader.FlushAndSync();
+    TextureManager::Shutdown();
     D3D12Backend::Shutdown();
 }
 
@@ -83,12 +91,24 @@ void Renderer::InitializeBindlessRootSignature()
     SrvRange.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
     SrvRange.OffsetInDescriptorsFromTableStart = 0;
     BindlessRanges.push_back(SrvRange);
-    Builder.AddDescriptorTable(BindlessRanges, D3D12_SHADER_VISIBILITY_ALL);
 
+
+    D3D12_DESCRIPTOR_RANGE1 BufRange = {};
+    BufRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    BufRange.NumDescriptors = UINT_MAX;
+    BufRange.BaseShaderRegister = 0;
+    BufRange.RegisterSpace = 2;
+    BufRange.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+    BufRange.OffsetInDescriptorsFromTableStart = 0;
+    BindlessRanges.push_back(BufRange);
+
+    Builder.AddDescriptorTable(BindlessRanges, D3D12_SHADER_VISIBILITY_ALL);
     // Parameter 2 : Global Static Data
     // register(b1, space0)
     // Root CBV
     Builder.AddConstantBufferView(1, 0);
+    Builder.AddShaderResourceView(0, 0);
+    Builder.AddShaderResourceView(1, 0);
 
     // Static Sampler
     // register(s0, space0)

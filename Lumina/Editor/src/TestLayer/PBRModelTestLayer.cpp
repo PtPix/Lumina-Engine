@@ -8,22 +8,55 @@
 #include "Logger/Logger.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "../../../Source/Renderer/include/Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
+#include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/Managers/FTextureManager.h"
 
 void PBRModelTestLayer::OnAttach()
 {
     LUMINA_LOG_INFO(App, "PBRModelTestLayer Attaching...");
 
-    StaticModel DamagedHelmetModel;
-    DamagedHelmetModel.LoadFromFile("Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+    // Texture Load
+    FResourceUploader* pUploader = Renderer::GetUploader();
+    pUploader->BeginUpload();
+    uint32_t AlbedoIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_BaseColor.png", pUploader, true);
+    uint32_t NormalIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_Normal.png", pUploader, false);
+    uint32_t ORMIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_ORM.png", pUploader, false);
+    pUploader->EndUpLoadAndExecute();
+    pUploader->FlushAndSync();
 
-    // TODO : Multiple Meshes support
-    const auto& CpuMeshes = DamagedHelmetModel.GetMeshesData();
-    FMesh* pGpuMesh = Renderer::CreateMesh(CpuMeshes[0]);
+    // Register a Material
+    FPBRMaterial RadioMaterial;
+    RadioMaterial.SetAlbedoTexture(AlbedoIndex);
+    RadioMaterial.SetNormalTexture(NormalIndex);
+    RadioMaterial.SetORMTexture(ORMIndex);
 
-    CreateInstanceInScene(pGpuMesh, DirectX::XMMatrixTranslation(-5.0f, 0.0f, 0.0f), DirectX::XMFLOAT4(1,0,0,1));
-    CreateInstanceInScene(pGpuMesh, DirectX::XMMatrixTranslation(5.0f, 0.0f, 0.0f),  DirectX::XMFLOAT4(0,1,0,1));
+    uint32_t MaterialID = static_cast<uint32_t>(mSceneMaterials.size());
+    RadioMaterial.SetMaterialID(MaterialID);
+
+    mSceneMaterials.push_back(RadioMaterial);
+    mMaterialCache.push_back(RadioMaterial.GetMaterialData());
+
+    StaticModel Radio;
+    Radio.LoadFromFile("Assets/Models/Radio/SM_HandRadio.fbx");
+    const auto& RadioMeshes = Radio.GetMeshesData();
+
+    for (int i = 0; i < RadioMeshes.size(); i++)
+    {
+        FMesh* pGpuMesh = Renderer::CreateMesh(RadioMeshes[i]);
+        mLoadedMeshes.push_back(pGpuMesh);
+
+        CreateInstanceInScene(pGpuMesh, DirectX::XMMatrixTranslation(0.0f, 0.0f, 0.0f), MaterialID);
+    }
+    mInstanceBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FInstanceData), 1000,
+                               D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"GlobalInstanceBuffer");
+
+    mMaterialBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FPBRMaterialData), 100,
+                           D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"GlobalMaterialBuffer");
+
+    memcpy(mMaterialBuffer.Map(), mMaterialCache.data(), sizeof(FPBRMaterialData) * mMaterialCache.size());
+    mMaterialBuffer.Unmap();
+
     mGlobalPassBuffer.Create(
             D3D12Backend::GetAllocator(),
             sizeof(FGlobalPassData),
@@ -42,8 +75,6 @@ void PBRModelTestLayer::OnAttach()
 
     InitBasePassPipeline();
     mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(1280) / static_cast<float>(720), 0.1f, 1000.0f);
-
-
 
     // 在窗口初始化 / Resize 时调用：
     D3D12_CLEAR_VALUE depthClear = {};
@@ -65,6 +96,21 @@ void PBRModelTestLayer::OnAttach()
 
 void PBRModelTestLayer::OnDetach()
 {
+    D3D12Backend::FlushGPU();
+
+    // 2. 清理全局缓冲和深度缓冲
+    mGlobalPassBuffer.Destroy();
+    mDepthBuffer.Destroy();
+
+    mInstanceBuffer.Destroy();
+    mMaterialBuffer.Destroy();
+
+    for (auto& LoadedMesh : mLoadedMeshes)
+    {
+        LoadedMesh->Destroy();
+    }
+
+    mSceneObjects.clear();
 }
 
 void PBRModelTestLayer::OnUpdate(double DeltaTime)
@@ -102,6 +148,13 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
     {
         memcpy(mpMappedGlobalData, &mGlobalDataCache, sizeof(FGlobalPassData));
     }
+
+    if (!mInstanceData.empty())
+    {
+        void* pMappedInstances = mInstanceBuffer.Map();
+        memcpy(pMappedInstances, mInstanceData.data(), sizeof(FInstanceData) * mInstanceData.size());
+        mInstanceBuffer.Unmap();
+    }
 }
 
 void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
@@ -132,11 +185,12 @@ void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
     // Bind Bindless Descriptor Table and Global Data
     pCommandContext->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
     pCommandContext->SetGraphicsRootConstantBufferView(2, mGlobalPassBuffer.GetGPUVirtualAddress());
-
+    pCommandContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, mInstanceBuffer.GetGPUVirtualAddress());
+    pCommandContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, mMaterialBuffer.GetGPUVirtualAddress());
     // DrawCall
     for (auto& SceneObject : mSceneObjects)
     {
-        pCommandContext->SetGraphicsRoot32BitConstants(0, 1, &SceneObject.BindlessIndex, 0);
+        pCommandContext->SetGraphicsRoot32BitConstants(0, 1, &SceneObject.InstanceIndex, 0);
         SceneObject.pMesh->Draw(pCommandContext);
     }
 }
@@ -148,37 +202,49 @@ void PBRModelTestLayer::OnRenderUI()
     // ImGui::End();
 }
 
-void PBRModelTestLayer::CreateInstanceInScene(FMesh* pMesh, DirectX::XMMATRIX Transform, DirectX::XMFLOAT4 Color)
+void PBRModelTestLayer::CreateInstanceInScene(FMesh* pMesh, DirectX::XMMATRIX Transform, uint32_t MaterialID)
 {
     FSceneObject SceneObject;
     SceneObject.pMesh = pMesh;
+    SceneObject.InstanceIndex = static_cast<uint32_t>(mInstanceData.size());
 
-    FObjectData ObjectData{};
-    ObjectData.WorldMatrix = DirectX::XMMatrixTranspose(Transform);
-    // ObjectData.WorldMatrix = Transform;
-    ObjectData.BaseColor = Color;
+    FInstanceData InstanceData;
+    InstanceData.WorldMatrix = DirectX::XMMatrixTranspose(Transform);
+    InstanceData.MaterialIndex = MaterialID;
 
-    SceneObject.ObjectDataBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FObjectData), 256,
-                                 D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                 D3D12_HEAP_TYPE_UPLOAD, L"Node_ObjectData");
-
-    memcpy(SceneObject.ObjectDataBuffer.Map(), &ObjectData, sizeof(FObjectData));
-    SceneObject.ObjectDataBuffer.Unmap();
-
-    SceneObject.BindlessIndex = D3D12Backend::GetBindlessDescriptorHeap()->AllocateSlot();
-
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.Buffer.FirstElement = 0;
-    srvDesc.Buffer.NumElements = 1;
-    srvDesc.Buffer.StructureByteStride = sizeof(FObjectData);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = D3D12Backend::GetBindlessDescriptorHeap()->GetCpuHandle(SceneObject.BindlessIndex);
-    D3D12Backend::GetDevice()->GetDevice()->CreateShaderResourceView(SceneObject.ObjectDataBuffer.GetResource(), &srvDesc, DestHandle);
-
-    mSceneObjects.push_back(std::move(SceneObject));
+    mInstanceData.push_back(InstanceData);
+    mSceneObjects.push_back(SceneObject);
+    //
+    // FObjectData ObjectData{};
+    // ObjectData.WorldMatrix = DirectX::XMMatrixTranspose(Transform);
+    // // ObjectData.WorldMatrix = Transform;
+    // ObjectData.BaseColor = Color;
+    // ObjectData.AlbedoTexIndex = AlbedoIdx;
+    // ObjectData.NormalTexIndex = NormalIdx;
+    // ObjectData.RMATexIndex = RMAIdx;
+    // ObjectData.Padding = 0;
+    //
+    // SceneObject.ObjectDataBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FObjectData), 256,
+    //                              D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ,
+    //                              D3D12_HEAP_TYPE_UPLOAD, L"Node_ObjectData");
+    //
+    // memcpy(SceneObject.ObjectDataBuffer.Map(), &ObjectData, sizeof(FObjectData));
+    // SceneObject.ObjectDataBuffer.Unmap();
+    //
+    // SceneObject.BindlessIndex = D3D12Backend::GetBindlessDescriptorHeap()->AllocateSlot();
+    //
+    // D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    // srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    // srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    // srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    // srvDesc.Buffer.FirstElement = 0;
+    // srvDesc.Buffer.NumElements = 1;
+    // srvDesc.Buffer.StructureByteStride = sizeof(FObjectData);
+    //
+    // D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = D3D12Backend::GetBindlessDescriptorHeap()->GetCpuHandle(SceneObject.BindlessIndex);
+    // D3D12Backend::GetDevice()->GetDevice()->CreateShaderResourceView(SceneObject.ObjectDataBuffer.GetResource(), &srvDesc, DestHandle);
+    //
+    // mSceneObjects.push_back(std::move(SceneObject));
 }
 
 bool PBRModelTestLayer::InitBasePassPipeline()

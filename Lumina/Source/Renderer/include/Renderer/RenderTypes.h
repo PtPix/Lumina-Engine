@@ -8,9 +8,11 @@ struct FObjectData
 {
     DirectX::XMMATRIX WorldMatrix;
     DirectX::XMFLOAT4 BaseColor;
-    float Metallic;
-    float Roughness;
-    DirectX::XMFLOAT2 Padding;
+
+    uint32_t AlbedoTexIndex;
+    uint32_t NormalTexIndex;
+    uint32_t RMATexIndex;
+    uint32_t Padding;
 };
 
 struct FGlobalPassData

@@ -10,7 +10,7 @@ class FMesh
 {
 public:
     FMesh() = default;
-    ~FMesh() = default;
+    ~FMesh() { Destroy(); }
 
     bool Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, FResourceUploader* pUploader);
 

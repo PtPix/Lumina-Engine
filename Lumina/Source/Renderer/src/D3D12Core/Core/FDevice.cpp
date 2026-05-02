@@ -397,7 +397,6 @@ void FDevice::Destroy()
 
     mpAllocator.Reset();
     mpDevice.Reset();
-    mpAllocator.Reset();
 }
 
 UINT FDevice::GetDeviceMemoryMax() const

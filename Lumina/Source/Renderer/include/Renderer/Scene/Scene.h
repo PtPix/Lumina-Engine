@@ -8,7 +8,5 @@ class FMesh;
 struct FSceneObject
 {
     FMesh* pMesh = nullptr;
-
-    FBuffer ObjectDataBuffer;
-    uint32_t BindlessIndex = 0xFFFFFFFF;
+    uint32_t InstanceIndex;
 };

@@ -14,13 +14,15 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/Descriptors/FDescriptorAllocation.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocatorPage.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocator.cpp"
-        # "src/D3D12Core/Descriptors/FDynamicDescriptorHeap.cpp"
 
         "src/D3D12Core/D3D12Backend.cpp"
         "src/UI/UIRenderer.cpp"
         "src/Renderer.cpp"
         "src/Resources/FMesh.cpp"
         "src/D3D12Core/Descriptors/FBindlessDescriptorHeap.cpp"
+        "src/Managers/FTextureManager.cpp"
+
+        "src/Resources/FMaterial.cpp"
 )
 
 
