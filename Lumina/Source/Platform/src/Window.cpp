@@ -198,7 +198,7 @@ void Window::Minimize()
     ::ShowWindow(mHwnd, SW_MINIMIZE);
 }
 
-void Window::ToggleWindowedFullScreen(FSwapChain* pSwapChain)
+void Window::ToggleWindowedFullScreen()
 {
 }
 

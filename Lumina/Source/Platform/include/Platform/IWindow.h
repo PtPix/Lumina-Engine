@@ -3,14 +3,17 @@
 
 #pragma once
 
-#include "../../../Renderer/include/Renderer/D3D12Core/Core/FSwapChain.h"
-
 #include <windows.h>
 
 class IWindowOwner
 {
 public:
     virtual ~IWindowOwner() = default;
+
+    virtual bool HandleWindowMessage(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, LRESULT& OutResult)
+    {
+        return false;
+    }
 
     virtual void OnWindowCreate(HWND hwnd_) = 0;
     virtual void OnWindowResize(HWND) = 0;
@@ -43,7 +46,7 @@ struct IWindow
     virtual ~IWindow() = default;
 
     virtual void Show() = 0;
-    virtual void ToggleWindowedFullScreen(FSwapChain* pSwapChain) = 0;
+    virtual void ToggleWindowedFullScreen() = 0;
     virtual void Minimize() = 0;
     virtual void SetMouseCapture(bool bCapture) = 0;
     virtual void Close() = 0;

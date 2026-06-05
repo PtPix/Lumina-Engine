@@ -1,6 +1,5 @@
 ﻿#include "Engine/LuminaEngine.h"
 #include "Logger/Logger.h"
-#include "ImGUI/imgui.h"
 #include <windowsx.h>
 
 #include "Engine/Input.h"
@@ -79,18 +78,19 @@ void LuminaEngine::OnMouseMove(HWND hwnd, long x, long y)
 void LuminaEngine::OnMouseInput(HWND hwnd, LPARAM lParam)
 {
 }
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
-    {
-        return true;
-    }
-
     auto* pWindow = reinterpret_cast<IWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
     if (!pWindow)
     {
         return DefWindowProcW(hWnd, message, wParam, lParam);
+    }
+
+    LRESULT HookResult = 0;
+    if (pWindow->pOwner && pWindow->pOwner->HandleWindowMessage(hWnd, message, wParam, lParam, HookResult))
+    {
+        return HookResult;
     }
 
     Input::ProcessMessage(message, wParam, lParam);

@@ -2,7 +2,7 @@
 project(Platform)
 
 # Cpp Files
-set(PLATFORM_SOURCES src/Window.cpp)
+set(PLATFORM_SOURCES src/Window.cpp src/InputState.cpp)
 
 # Build Library
 add_library(Platform STATIC ${PLATFORM_SOURCES})
@@ -11,5 +11,4 @@ add_library(Platform STATIC ${PLATFORM_SOURCES})
 target_include_directories(Platform PUBLIC include)
 
 # Dependency
-target_link_libraries(Platform PRIVATE Renderer)
 target_link_libraries(Platform PRIVATE LuminaCore)

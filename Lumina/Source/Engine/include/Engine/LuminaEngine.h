@@ -24,6 +24,8 @@ public:
     void Run();
     void Quit();
 
+    bool HandleWindowMessage(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, LRESULT& OutResult) override;
+
     // OS Window Events
     void OnWindowCreate(HWND hWnd) override;
     void OnWindowResize(HWND hWnd) override;

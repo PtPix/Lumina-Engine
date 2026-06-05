@@ -2,6 +2,7 @@
 
 #include "Engine/LuminaEngine.h"
 #include "Engine/Input.h"
+#include "ImGUI/imgui.h"
 #include "Logger/Logger.h"
 #include "Renderer/Renderer.h"
 
@@ -78,6 +79,17 @@ void LuminaEngine::Quit()
     mbIsRunning = false;
 }
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+bool LuminaEngine::HandleWindowMessage(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, LRESULT& OutResult)
+{
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, Message, wParam, lParam))
+    {
+        OutResult = true;
+        return true;
+    }
+
+    return false;
+}
 
 void LuminaEngine::InitializeWindows(FStartupParameters& StartupParameters)
 {
