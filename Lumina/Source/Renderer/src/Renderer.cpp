@@ -144,6 +144,11 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
     }
 }
 
+void Renderer::OnResize(uint32_t Width, uint32_t Height)
+{
+    D3D12Backend::OnResize(Width, Height);
+}
+
 void Renderer::InitializeBindlessRootSignature()
 {
     RootSignatureBuilder Builder;

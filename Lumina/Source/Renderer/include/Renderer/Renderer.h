@@ -30,7 +30,8 @@ public:
     static void InitializeSceneBuffers();
     static void DestroySceneBuffers();
 
-    static void RenderSceneView(class FCommandContext* pCommandContext, const FSceneView& View);
+    static void RenderSceneView(FCommandContext* pCommandContext, const FSceneView& View);
+    static void OnResize(uint32_t Width, uint32_t Height);
 
 private:
     static void InitializeBindlessRootSignature();

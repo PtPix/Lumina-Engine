@@ -31,7 +31,7 @@ public:
     static float GetMouseDeltaX();
     static float GetMouseDeltaY();
 
-    static void Init();
+    static bool Init();
     static void Update();
     static void ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 

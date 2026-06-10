@@ -18,6 +18,9 @@ struct FGraphicsSettings
 
 struct FWindowSettings
 {
+    HINSTANCE hExeInstance{};
+    int iCommandShow{};
+
     int Width = -1;
     int Height = -1;
     EDisplayMode DisplayMode = EDisplayMode::WINDOWED;
@@ -25,25 +28,8 @@ struct FWindowSettings
     wchar_t* Title = new wchar_t[64];
 };
 
-struct FEngineSettings
-{
-    FGraphicsSettings Graphics;
-
-    FWindowSettings WindowMain;
-};
-
-struct LogInitializeParameters
-{
-    bool bLogConsole = false;
-    bool bLogFile = false;
-    char LogFilePath[512]{};
-};
-
 struct FStartupParameters
 {
-    HINSTANCE hExeInstance{};
-    int iCommandShow{};
-    LogInitializeParameters LogInitParameters;
-
-    FEngineSettings EngineSettings;
+    FWindowSettings MainWindowSettings;
+    FGraphicsSettings Graphics;
 };

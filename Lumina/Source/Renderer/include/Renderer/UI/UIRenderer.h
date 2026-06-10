@@ -11,7 +11,7 @@ public:
     static void BeginFrame();
     static void Render(FCommandContext* pCommandContext);
     static bool IsInitialized() { return mbInitialized; };
-
+    static bool ProcessWin32Message(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam, LRESULT& OutResult);
 private:
     static bool mbInitialized;
 };

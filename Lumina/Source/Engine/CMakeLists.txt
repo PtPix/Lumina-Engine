@@ -4,7 +4,6 @@ project(Engine)
 # Cpp Files
 set(ENGINE_SOURCES
         src/LuminaEngineMain.cpp
-        src/LuminaEngineWindowEvents.cpp
         src/Camera.cpp
         src/LuminaApp.cpp
         src/Input.cpp

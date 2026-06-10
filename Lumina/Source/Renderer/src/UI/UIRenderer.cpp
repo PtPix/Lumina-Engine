@@ -12,6 +12,27 @@
 #include "Renderer/D3D12Core/D3D12Backend.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND Hwnd,
+    UINT Message,
+    WPARAM WParam,
+    LPARAM LParam
+);
+bool UIRenderer::ProcessWin32Message(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam, LRESULT& OutResult)
+{
+    if (!mbInitialized || ImGui::GetCurrentContext() == nullptr)
+    {
+        return false;
+    }
+
+    if (ImGui_ImplWin32_WndProcHandler(Hwnd, Message, WParam, LParam))
+    {
+        OutResult = 1;
+        return true;
+    }
+
+    return false;
+}
 
 bool UIRenderer::mbInitialized = false;
 

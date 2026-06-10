@@ -1,6 +1,7 @@
 #include "Platform/Window.h"
 
 #include "Logger/Logger.h"
+#include "Platform/InputState.h"
 
 static std::vector<std::string> split(const char* s, char c)
 {
@@ -68,11 +69,6 @@ static RECT CenterScreen(const RECT& screenRect, const RECT& wndRect)
     return centered;
 }
 
-// IWindow interfaces
-bool IWindow::IsClosed()     const { return IsClosedImpl(); }
-bool IWindow::IsFullscreen() const { return IsFullscreenImpl(); }
-bool IWindow::IsMouseCaptured() const { return IsMouseCapturedImpl(); }
-
 static RECT GetScreenRectOnPreferredDisplay(const RECT& PreferredRect, int PreferredDisplayIndex, bool* bMonitorFound)
 {
     struct MonitorEnumCallbackParams
@@ -126,9 +122,9 @@ static RECT GetScreenRectOnPreferredDisplay(const RECT& PreferredRect, int Prefe
 }
 
 // Window interfaces
-Window::Window(const wchar_t* Title, FWindowDesc& InitParameters)
-    : IWindow(InitParameters.pWindowOwner)
-    , mWidth(InitParameters.Width)
+FWindow::FWindow(const wchar_t* Title, FWindowDesc& InitParameters)
+    : // IWindow(InitParameters.pWindowOwner)
+    mWidth(InitParameters.Width)
     , mHeight(InitParameters.Height)
     , mIsFullscreen(InitParameters.bFullScreen)
 {
@@ -140,7 +136,11 @@ Window::Window(const wchar_t* Title, FWindowDesc& InitParameters)
 
     HWND HwndParent = nullptr;
 
-    mWindowClass.reset(new WindowClass(L"LuminaWindowClass", InitParameters.hInstance, InitParameters.pfnWindowProcedure));
+    mWindowClass = std::make_unique<WindowClass>(
+        L"LuminaWindowClass",
+        InitParameters.hInstance,
+        &FWindow::StaticWndProc
+        );
 
     bool bPreferredDisplayFound = false;
     RECT PreferredScreenRect = GetScreenRectOnPreferredDisplay(Rect, InitParameters.PreferredDisplay, &bPreferredDisplayFound);
@@ -159,16 +159,8 @@ Window::Window(const wchar_t* Title, FWindowDesc& InitParameters)
         HwndParent,
         nullptr,
         InitParameters.hInstance,
-        nullptr
+        this
         );
-
-    // if (InitParameters.pRegistrar && InitParameters.pfnRegisterWindowName)
-    // {
-    //     (InitParameters.pRegistrar->*InitParameters.pfnRegisterWindowName)(mHwnd, InitParameters.WindowName);
-    // }
-    if (InitParameters.OnRegisterWindowName) {
-        InitParameters.OnRegisterWindowName(mHwnd, InitParameters.WindowName);
-    }
 
     mWindowStyle = FlagWindowStyle;
 
@@ -182,35 +174,35 @@ Window::Window(const wchar_t* Title, FWindowDesc& InitParameters)
     }
 }
 
-HWND Window::GetHWND() const
+HWND FWindow::GetHWND() const
 {
     return mHwnd;
 }
 
-void Window::Show()
+void FWindow::Show()
 {
     ::ShowWindow(mHwnd, SW_SHOWDEFAULT);
     ::UpdateWindow(mHwnd);
 }
 
-void Window::Minimize()
+void FWindow::Minimize()
 {
     ::ShowWindow(mHwnd, SW_MINIMIZE);
 }
 
-void Window::ToggleWindowedFullScreen()
+void FWindow::ToggleWindowedFullScreen()
 {
 }
 
-void Window::Close()
+void FWindow::Close()
 {
-    LUMINA_LOG_INFO(Platform, "Window:: Closing<%x>", this->mHwnd);
+    LUMINA_LOG_INFO(Platform, "Window:: Closing<%p>", this->mHwnd);
     this->mIsClosed = true;
     ::ShowWindow(mHwnd, FALSE);
     ::DestroyWindow(this->mHwnd);
 }
 
-void Window::SetMouseCapture(bool bCapture)
+void FWindow::SetMouseCapture(bool bCapture)
 {
     mIsMouseCaptured = bCapture;
     if (bCapture)
@@ -241,6 +233,86 @@ void Window::SetMouseCapture(bool bCapture)
         ClipCursor(nullptr);
         while (ShowCursor(TRUE) <= 0);
         SetForegroundWindow(nullptr);
+    }
+}
+
+LRESULT FWindow::StaticWndProc(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam)
+{
+    FWindow* pWindow = nullptr;
+
+    if (Message == WM_NCCREATE)
+    {
+        auto* Create = reinterpret_cast<CREATESTRUCTW*>(LParam);
+        pWindow = static_cast<FWindow*>(Create->lpCreateParams);
+        SetWindowLongPtrW(Hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow));
+        pWindow->mHwnd = Hwnd;
+    }
+    else
+    {
+        pWindow = reinterpret_cast<FWindow*>(GetWindowLongPtrW(Hwnd, GWLP_USERDATA));
+    }
+
+    if (!pWindow)
+    {
+        return DefWindowProcW(Hwnd, Message, WParam, LParam);
+    }
+
+    return pWindow->HandleMessage(Hwnd, Message, WParam, LParam);
+}
+
+LRESULT FWindow::HandleMessage(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam)
+{
+    LRESULT Result = 0;
+
+    if (mCallbacks.fnNativeMessageHandler)
+    {
+        FWin32Message Msg{ Hwnd, Message, WParam, LParam };
+        if (mCallbacks.fnNativeMessageHandler(Msg, Result))
+        {
+            return Result;
+        }
+    }
+
+    Input::ProcessMessage(Message, WParam, LParam);
+
+    switch (Message)
+    {
+    case WM_SIZE:
+        if (WParam == SIZE_MINIMIZED)
+        {
+            if (mCallbacks.fnOnMinimize) mCallbacks.fnOnMinimize(*this);
+        }
+        else
+        {
+            mWidth = LOWORD(LParam);
+            mHeight = HIWORD(LParam);
+
+            if (mCallbacks.fnOnResize)
+            {
+                mCallbacks.fnOnResize(*this, mWidth, mHeight);
+            }
+        }
+        return 0;
+
+    case WM_SETFOCUS:
+        if (mCallbacks.fnOnFocus) mCallbacks.fnOnFocus(*this);
+        return 0;
+
+    case WM_KILLFOCUS:
+        if (mCallbacks.fnOnLoseFocus) mCallbacks.fnOnLoseFocus(*this);
+        return 0;
+
+    case WM_CLOSE:
+        if (mCallbacks.fnOnDestroy) mCallbacks.fnOnDestroy(*this);
+        Close();
+        return 0;
+
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+
+    default:
+        return DefWindowProcW(Hwnd, Message, WParam, LParam);
     }
 }
 

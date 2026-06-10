@@ -9,7 +9,7 @@ float Input::s_MouseLastX = 0.0f; float Input::s_MouseLastY = 0.0f;
 float Input::s_MouseDeltaX = 0.0f; float Input::s_MouseDeltaY = 0.0f;
 bool Input::s_bFirstMouse = true;
 
-void Input::Init() {}
+bool Input::Init() { return true; }
 
 void Input::Update()
 {

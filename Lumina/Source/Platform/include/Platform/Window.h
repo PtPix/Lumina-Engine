@@ -1,25 +1,41 @@
 ﻿#pragma once
 
 #include <functional>
-
-#include "IWindow.h"
-
+#include <windows.h>
 #include <memory>
 #include <string>
-using pfnWndProc_t = LRESULT(CALLBACK*)(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+struct FWin32Message
+{
+    HWND Hwnd = nullptr;
+    UINT Message = 0;
+    WPARAM WParam = 0;
+    LPARAM LParam = 0;
+};
+
+struct FWindowCallbacks
+{
+    std::function<bool(const FWin32Message&, LRESULT&)> fnNativeMessageHandler;
+
+    std::function<void(class FWindow&)> fnOnCreate;
+    std::function<void(class FWindow&)> fnOnDestroy;
+    std::function<void(class FWindow&, uint32_t Width, uint32_t Height)> fnOnResize;
+    std::function<void(class FWindow&)> fnOnMinimize;
+    std::function<void(class FWindow&)> fnOnFocus;
+    std::function<void(class FWindow&)> fnOnLoseFocus;
+};
 
 struct FWindowDesc
 {
-    int Width = -1;
-    int Height = -1;
+    int Width = 1280;
+    int Height = 720;
     HINSTANCE hInstance = nullptr;
-    pfnWndProc_t pfnWindowProcedure = nullptr;
-    IWindowOwner* pWindowOwner = nullptr;
     bool bFullScreen = false;
     int PreferredDisplay = 0;
-    int iShowCommand;
+    int iShowCommand = SW_SHOWDEFAULT;
     std::string WindowName;
-    std::function<void(HWND, const std::string&)> OnRegisterWindowName;
+    std::wstring WindowTitle = L"Lumina";
+    FWindowCallbacks Callbacks;
 };
 
 struct WindowClass final
@@ -40,18 +56,18 @@ private:
     wchar_t mName[128]{};
 };
 
-class Window : public IWindow
+class FWindow
 {
 public:
-    Window(const wchar_t* Title, FWindowDesc& InitParameters);
+    FWindow(const wchar_t* Title, FWindowDesc& InitParameters);
 
     [[nodiscard]] HWND GetHWND() const;
 
-    void Show() override;
-    void Minimize() override;
-    void ToggleWindowedFullScreen() override;
-    void Close() override;
-    void SetMouseCapture(bool bCapture) override;
+    void Show();
+    void Minimize();
+    void ToggleWindowedFullScreen();
+    void Close();
+    void SetMouseCapture(bool bCapture);
 
     inline void OnResize(int Width, int Height)
     {
@@ -64,15 +80,20 @@ public:
         mIsFullscreen = bIsFullscreen;
     }
 
-private:
+    uint32_t GetWidth() { return GetWidthImpl(); }
+    uint32_t GetHeight() { return GetHeightImpl(); }
 
-    [[nodiscard]] bool IsClosedImpl() const override { return mIsClosed; }
-    [[nodiscard]] bool IsFullscreenImpl() const override { return mIsFullscreen; }
-    [[nodiscard]] bool IsMouseCapturedImpl() const override { return mIsMouseCaptured; }
-    [[nodiscard]] int GetWidthImpl() const override { return mWidth; }
-    [[nodiscard]] int GetHeightImpl() const override { return mHeight; }
-    [[nodiscard]] int GetFullscreenWidthImpl() const override { return FSWidth; }
-    [[nodiscard]] int GetFullscreenHeightImpl() const override { return FSHeight; }
+private:
+    static LRESULT CALLBACK StaticWndProc(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam);
+    LRESULT HandleMessage(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam);
+
+    [[nodiscard]] bool IsClosedImpl() const { return mIsClosed; }
+    [[nodiscard]] bool IsFullscreenImpl() const { return mIsFullscreen; }
+    [[nodiscard]] bool IsMouseCapturedImpl() const { return mIsMouseCaptured; }
+    [[nodiscard]] int GetWidthImpl() const { return mWidth; }
+    [[nodiscard]] int GetHeightImpl() const { return mHeight; }
+    [[nodiscard]] int GetFullscreenWidthImpl() const { return FSWidth; }
+    [[nodiscard]] int GetFullscreenHeightImpl() const { return FSHeight; }
 
 private:
     std::unique_ptr<WindowClass> mWindowClass;
@@ -87,4 +108,5 @@ private:
     int FSHeight = -1;
     bool mIsMouseCaptured = false;
     bool IsOnHDRCapableDisplay = false;
+    FWindowCallbacks mCallbacks;
 };
