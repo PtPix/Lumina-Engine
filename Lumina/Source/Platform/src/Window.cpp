@@ -122,11 +122,11 @@ static RECT GetScreenRectOnPreferredDisplay(const RECT& PreferredRect, int Prefe
 }
 
 // Window interfaces
-FWindow::FWindow(const wchar_t* Title, FWindowDesc& InitParameters)
-    : // IWindow(InitParameters.pWindowOwner)
-    mWidth(InitParameters.Width)
+FWindow::FWindow(const wchar_t* Title, const FWindowDesc& InitParameters)
+    : mWidth(InitParameters.Width)
     , mHeight(InitParameters.Height)
     , mIsFullscreen(InitParameters.bFullScreen)
+    , mCallbacks(InitParameters.Callbacks)
 {
     UINT FlagWindowStyle = WS_OVERLAPPEDWINDOW;
 

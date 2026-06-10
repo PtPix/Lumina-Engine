@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Engine/LuminaApp.h"
+#include "ImGUI/imgui.h"
 #include "TestLayer/ITestLayer.h"
 
 class LuminaEditor : public LuminaApp
@@ -32,4 +33,7 @@ private:
 
     std::vector<std::unique_ptr<ITestLayer>> mTestLayers;
     int16_t mActiveLayerIndex = -1;
+
+    ImVec2 mViewportSize = ImVec2(0, 0);
+    bool mViewportHovered = false;
 };

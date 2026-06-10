@@ -59,7 +59,7 @@ private:
 class FWindow
 {
 public:
-    FWindow(const wchar_t* Title, FWindowDesc& InitParameters);
+    FWindow(const wchar_t* Title, const FWindowDesc& InitParameters);
 
     [[nodiscard]] HWND GetHWND() const;
 
@@ -80,8 +80,8 @@ public:
         mIsFullscreen = bIsFullscreen;
     }
 
-    uint32_t GetWidth() { return GetWidthImpl(); }
-    uint32_t GetHeight() { return GetHeightImpl(); }
+    uint32_t GetWidth() { return mWidth; }
+    uint32_t GetHeight() { return mHeight; }
 
 private:
     static LRESULT CALLBACK StaticWndProc(HWND Hwnd, UINT Message, WPARAM WParam, LPARAM LParam);
@@ -90,8 +90,6 @@ private:
     [[nodiscard]] bool IsClosedImpl() const { return mIsClosed; }
     [[nodiscard]] bool IsFullscreenImpl() const { return mIsFullscreen; }
     [[nodiscard]] bool IsMouseCapturedImpl() const { return mIsMouseCaptured; }
-    [[nodiscard]] int GetWidthImpl() const { return mWidth; }
-    [[nodiscard]] int GetHeightImpl() const { return mHeight; }
     [[nodiscard]] int GetFullscreenWidthImpl() const { return FSWidth; }
     [[nodiscard]] int GetFullscreenHeightImpl() const { return FSHeight; }
 
