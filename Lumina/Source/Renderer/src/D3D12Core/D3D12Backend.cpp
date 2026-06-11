@@ -1,78 +1,64 @@
-﻿#include "Renderer/D3D12Core/D3D12Backend.h"
+#include "Renderer/D3D12Core/D3D12Backend.h"
 
 #include "Renderer/D3D12Core/Common.h"
 #include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Core/FCommandQueue.h"
 #include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Core/FSwapChain.h"
-#include "Renderer/D3D12Core/Core/FCommandQueue.h"
+#include "Renderer/D3D12Core/Descriptors/FBindlessDescriptorHeap.h"
 
-std::unique_ptr<FDevice> D3D12Backend::mpDevice;
-std::unique_ptr<FSwapChain> D3D12Backend::mpSwapChain;
-
-bool D3D12Backend::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
+FD3D12Backend::~FD3D12Backend()
 {
-    // Create FDevice
-    {
-        LUMINA_TIME_LOG_SCOPE("Create FDevice & Core Infra");
-        mpDevice = std::make_unique<FDevice>();
+    Shutdown();
+}
 
-        FDeviceCreateDesc DeviceCreateDesc = {true, false, nullptr};
-        if (!mpDevice->Create(DeviceCreateDesc))
-        {
-            return false;
-        }
-    }
+bool FD3D12Backend::Initialize(const FD3D12BackendDesc& Desc)
+{
+    if (mbInitialized) return true;
 
-    // Create FSwapChain
-    {
-        LUMINA_TIME_LOG_SCOPE("Create Swap chain");
-        mpSwapChain = std::make_unique<FSwapChain>();
+    mDesc = Desc;
 
-        FSwapChainCreateDesc swapChainDesc = {};
-        swapChainDesc.pDevice = mpDevice.get();
-        swapChainDesc.pCommandQueue = mpDevice->GetGraphicsCommandQueue();
-        swapChainDesc.Hwnd = Hwnd;
-        swapChainDesc.WindowHeight = Height;
-        swapChainDesc.WindowWidth = Width;
-        swapChainDesc.bVSync = true;
-        swapChainDesc.NumBackBuffers = NUM_SWAPCHAIN_BACKBUFFER;
+    if (!CreateDevice()) { Shutdown(); return false; }
 
-        if (!mpSwapChain->Create(swapChainDesc))
-        {
-            return false;
-        }
-    }
+    if (!CreateSwapChain()) { Shutdown(); return false; }
 
+    mbInitialized = true;
     return true;
 }
 
-void D3D12Backend::Shutdown()
+void FD3D12Backend::Shutdown()
 {
-    FlushGPU();
+    if (!mpDevice && !mpSwapChain)
+    {
+        mbInitialized = false;
+        return;
+    }
 
-    mpSwapChain.reset();
+    FlushAllQueues();
+    DestroySwapChain();
     mpDevice.reset();
+    mbInitialized = false;
 }
 
-void D3D12Backend::OnResize(uint32_t Width, uint32_t Height)
+void FD3D12Backend::FlushAllQueues()
 {
-    if (mpSwapChain)
+    if (!mpDevice) return;
+
+    if (FCommandQueue* pGraphicsQueue = mpDevice->GetGraphicsCommandQueue())
     {
-        mpSwapChain->Resize(Width, Height);
+        pGraphicsQueue->Flush();
+    }
+    if (FCommandQueue* pComputeQueue = mpDevice->GetComputeCommandQueue())
+    {
+        pComputeQueue->Flush();
+    }
+    if (FCommandQueue* pCopyQueue = mpDevice->GetCopyCommandQueue())
+    {
+        pCopyQueue->Flush();
     }
 }
 
-void D3D12Backend::FlushGPU()
-{
-    if (mpDevice)
-    {
-        mpDevice->GetGraphicsCommandQueue()->Flush();
-        mpDevice->GetComputeCommandQueue()->Flush();
-        mpDevice->GetCopyCommandQueue()->Flush();
-    }
-}
-
-void D3D12Backend::BeginFrame()
+void FD3D12Backend::CollectGarbage()
 {
     if (mpDevice && mpDevice->GetBindlessDescriptorHeap())
     {
@@ -80,18 +66,157 @@ void D3D12Backend::BeginFrame()
     }
 }
 
-void D3D12Backend::EndFrameAndPresent()
+bool FD3D12Backend::ResizeSwapChain(uint32_t Width, uint32_t Height)
 {
+    if (!mpSwapChain || Width == 0 || Height == 0)
+    {
+        return false;
+    }
+
+    HRESULT HResult = mpSwapChain->Resize(static_cast<int>(Width), static_cast<int>(Height), mDesc.BackBufferFormat);
+    if (FAILED(HResult)) return false;
+
+    mDesc.Width = Width;
+    mDesc.Height = Height;
+    return true;
+}
+
+void FD3D12Backend::Present()
+{
+    if (!mpSwapChain) return;
+
     mpSwapChain->Present();
     mpSwapChain->MoveToNextFrame();
 }
 
-FCommandContext* D3D12Backend::AllocateContext()
+uint32_t FD3D12Backend::GetCurrentBackBufferIndex() const
 {
-    return mpDevice->GetGraphicsCommandQueue()->AllocateContext();
+    return mpSwapChain ? mpSwapChain->GetCurrentBackBufferIndex() : 0;
 }
 
-uint64_t D3D12Backend::ExecuteGraphicsContext(FCommandContext* pCommandContext)
+D3D12_CPU_DESCRIPTOR_HANDLE FD3D12Backend::GetCurrentBackBufferRTV() const
 {
-    return mpDevice->GetGraphicsCommandQueue()->ExecuteCommandContext(pCommandContext);
+    return mpSwapChain ? mpSwapChain->GetCurrentBackBufferRTVHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{};
+}
+
+GpuResource* FD3D12Backend::GetCurrentBackBufferResource() const
+{
+    return mpSwapChain ? mpSwapChain->GetCurrentRenderTargetResource() : nullptr;
+}
+
+ID3D12Device* FD3D12Backend::GetD3D12Device() const
+{
+    return mpDevice ? mpDevice->GetDevice() : nullptr;
+}
+
+D3D12MA::Allocator* FD3D12Backend::GetAllocator() const
+{
+    return mpDevice ? mpDevice->GetAllocator() : nullptr;
+}
+
+FCommandQueue* FD3D12Backend::GetGraphicsQueue() const
+{
+    return mpDevice ? mpDevice->GetGraphicsCommandQueue() : nullptr;
+}
+
+FCommandQueue* FD3D12Backend::GetComputeQueue() const
+{
+    return mpDevice ? mpDevice->GetComputeCommandQueue() : nullptr;
+}
+
+FCommandQueue* FD3D12Backend::GetCopyQueue() const
+{
+    return mpDevice ? mpDevice->GetCopyCommandQueue() : nullptr;
+}
+
+FCommandContext* FD3D12Backend::AllocateGraphicsContext()
+{
+    return GetGraphicsQueue() ? GetGraphicsQueue()->AllocateContext() : nullptr;
+}
+
+FCommandContext* FD3D12Backend::AllocateComputeContext()
+{
+    return GetComputeQueue() ? GetComputeQueue()->AllocateContext() : nullptr;
+}
+
+FCommandContext* FD3D12Backend::AllocateCopyContext()
+{
+    return GetCopyQueue() ? GetCopyQueue()->AllocateContext() : nullptr;
+}
+
+uint64_t FD3D12Backend::ExecuteGraphicsContext(FCommandContext* pCommandContext)
+{
+    return (GetGraphicsQueue() && pCommandContext) ? GetGraphicsQueue()->ExecuteCommandContext(pCommandContext) : 0;
+}
+
+uint64_t FD3D12Backend::ExecuteComputeContext(FCommandContext* pCommandContext)
+{
+    return (GetComputeQueue() && pCommandContext) ? GetComputeQueue()->ExecuteCommandContext(pCommandContext) : 0;
+}
+
+uint64_t FD3D12Backend::ExecuteCopyContext(FCommandContext* pCommandContext)
+{
+    return (GetCopyQueue() && pCommandContext) ? GetCopyQueue()->ExecuteCommandContext(pCommandContext) : 0;
+}
+
+FDescriptorAllocator* FD3D12Backend::GetSrvUavCbvAllocator() const
+{
+    return mpDevice ? mpDevice->GetSRVAllocator() : nullptr;
+}
+
+FDescriptorAllocator* FD3D12Backend::GetRtvAllocator() const
+{
+    return mpDevice ? mpDevice->GetRTVAllocator() : nullptr;
+}
+
+FDescriptorAllocator* FD3D12Backend::GetDsvAllocator() const
+{
+    return mpDevice ? mpDevice->GetDSVAllocator() : nullptr;
+}
+
+FBindlessDescriptorHeap* FD3D12Backend::GetBindlessDescriptorHeap() const
+{
+    return mpDevice ? mpDevice->GetBindlessDescriptorHeap() : nullptr;
+}
+
+bool FD3D12Backend::CreateDevice()
+{
+    LUMINA_TIME_LOG_SCOPE("Create FDevice & Core Infra");
+
+    mpDevice = std::make_unique<FDevice>();
+
+    FDeviceCreateDesc DeviceCreateDesc = {};
+    DeviceCreateDesc.bEnableDebugLayer = mDesc.bEnableDebugLayer;
+    DeviceCreateDesc.bEnableValidationLayer = mDesc.bEnableGpuValidation;
+    DeviceCreateDesc.pFactory = mDesc.ExternalFactory;
+
+    return mpDevice->Create(DeviceCreateDesc);
+}
+
+bool FD3D12Backend::CreateSwapChain()
+{
+    LUMINA_TIME_LOG_SCOPE("Create Swap chain");
+
+    if (!mpDevice)
+    {
+        return false;
+    }
+
+    mpSwapChain = std::make_unique<FSwapChain>();
+
+    FSwapChainCreateDesc SwapChainDesc = {};
+    SwapChainDesc.pDevice = mpDevice.get();
+    SwapChainDesc.pCommandQueue = mpDevice->GetGraphicsCommandQueue();
+    SwapChainDesc.Hwnd = mDesc.Hwnd;
+    SwapChainDesc.WindowWidth = mDesc.Width;
+    SwapChainDesc.WindowHeight = mDesc.Height;
+    SwapChainDesc.NumBackBuffers = static_cast<int>(mDesc.BackBufferCount);
+    SwapChainDesc.bVSync = mDesc.bVSync;
+
+    return mpSwapChain->Create(SwapChainDesc);
+}
+
+void FD3D12Backend::DestroySwapChain()
+{
+    mpSwapChain.reset();
 }

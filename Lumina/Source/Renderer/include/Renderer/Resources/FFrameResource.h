@@ -18,15 +18,15 @@ public:
         MaterialBuffer.Destroy();
     }
 
-    void Initialize(uint32_t MaxInstances, uint32_t MaxMaterials)
+    void Initialize(D3D12MA::Allocator* pAllocator, uint32_t MaxInstances, uint32_t MaxMaterials)
     {
-        GlobalPassBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FGlobalPassData), 1,
+        GlobalPassBuffer.Create(pAllocator, sizeof(FGlobalPassData), 1,
                                 D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"Frame_GlobalPass");
 
-        InstanceBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FInstanceData), MaxInstances,
+        InstanceBuffer.Create(pAllocator, sizeof(FInstanceData), MaxInstances,
                               D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"Frame_InstanceBuffer");
 
-        MaterialBuffer.Create(D3D12Backend::GetAllocator(), sizeof(FPBRMaterialData), MaxMaterials,
+        MaterialBuffer.Create(pAllocator, sizeof(FPBRMaterialData), MaxMaterials,
                               D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"Frame_MaterialBuffer");
     }
 

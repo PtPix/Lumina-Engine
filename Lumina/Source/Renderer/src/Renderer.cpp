@@ -7,21 +7,29 @@
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
 #include "Renderer/Managers/FTextureManager.h"
 #include "Renderer/Scene/FSceneView.h"
+#include "Renderer/D3D12Core/Core/FSwapChain.h"
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
 std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
 uint32_t Renderer::mCurrentFrameIndex = 0;
+std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
-    D3D12Backend::Initialize(Hwnd, Width, Height);
+    mpD3D12Backend = std::make_unique<FD3D12Backend>();
+    FD3D12BackendDesc D3D12BackendDesc;
+    D3D12BackendDesc.Hwnd = Hwnd;
+    D3D12BackendDesc.Width = Width;
+    D3D12BackendDesc.Height = Height;
 
-    mUploader.Initialize(D3D12Backend::GetDevice());
+    mpD3D12Backend->Initialize(D3D12BackendDesc);
+
+    mUploader.Initialize(mpD3D12Backend->GetDevice());
 
     mUploader.BeginUpload();
-    TextureManager::Initialize(D3D12Backend::GetDevice(), &mUploader);
+    TextureManager::Initialize(mpD3D12Backend->GetDevice(), &mUploader);
     mUploader.EndUpLoadAndExecute();
     mUploader.FlushAndSync();
 
@@ -29,7 +37,7 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     InitializeSceneBuffers();
 
     mBasePass = std::make_unique<FBasePass>();
-    mBasePass->Initialize();
+    mBasePass->Initialize(mpD3D12Backend->GetDevice());
 
     return true;
 }
@@ -43,18 +51,19 @@ void Renderer::Shutdown()
     }
     TextureManager::Shutdown();
     DestroySceneBuffers();
-    D3D12Backend::Shutdown();
+    mpD3D12Backend->Shutdown();
 }
 
 FCommandContext* Renderer::BeginFrame()
 {
-    D3D12Backend::BeginFrame();
+    // FD3D12Backend::BeginFrame();
+    mpD3D12Backend->CollectGarbage();
 
     mUploader.CleanUpStaleUploads();
 
-    FCommandContext* pContext = D3D12Backend::AllocateContext();
+    FCommandContext* pContext = mpD3D12Backend->AllocateGraphicsContext();// FD3D12Backend::AllocateContext();
 
-    pContext->TransitionResource(D3D12Backend::GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+    pContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
     pContext->FlushResourceBarriers();
 
     return pContext;
@@ -64,12 +73,12 @@ void Renderer::EndFrame(FCommandContext* pContext)
 {
     if (!pContext) return;
 
-    pContext->TransitionResource(D3D12Backend::GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
+    pContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
     pContext->FlushResourceBarriers();
 
-    D3D12Backend::ExecuteGraphicsContext(pContext);
+    mpD3D12Backend->ExecuteGraphicsContext(pContext);
 
-    D3D12Backend::EndFrameAndPresent();
+    mpD3D12Backend->Present();
 }
 
 FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
@@ -77,7 +86,7 @@ FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
     auto* pMesh = new FMesh();
 
     mUploader.BeginUpload();
-    pMesh->Initialize(CpuData, D3D12Backend::GetAllocator(), &mUploader);
+    pMesh->Initialize(CpuData, mpD3D12Backend->GetAllocator(), &mUploader);
     // TODO : Streaming
     mUploader.FlushAndSync();
 
@@ -88,7 +97,7 @@ void Renderer::InitializeSceneBuffers()
 {
     for (int i = 0; i < NUM_FRAMES; ++i)
     {
-        mFrameResources[i].Initialize(10000, 1000);
+        mFrameResources[i].Initialize(mpD3D12Backend->GetAllocator(), 10000, 1000);
     }
 }
 
@@ -104,7 +113,7 @@ void Renderer::DestroySceneBuffers()
 
 void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView& View)
 {
-    mCurrentFrameIndex = D3D12Backend::GetSwapChain()->GetCurrentBackBufferIndex();
+    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();// GetSwapChain()->GetCurrentBackBufferIndex();
     FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
 
     memcpy(CurrentFrame.GlobalPassBuffer.Map(), &View.GlobalPassData, sizeof(FGlobalPassData));
@@ -128,13 +137,13 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
     // pContext->SetPipelineState(pPSO);
     // pContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    ID3D12DescriptorHeap* ppHeaps[] = { D3D12Backend::GetBindlessDescriptorHeap()->GetDescriptorHeap() };
+    ID3D12DescriptorHeap* ppHeaps[] = { mpD3D12Backend->GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
 
     // ==========================================
     // 3. 绑定我们刚刚上传的大 Buffer 资源 (Root Parameters)
     // ==========================================
-    pContext->SetGraphicsRootDescriptorTable(1, D3D12Backend::GetBindlessDescriptorHeap()->GetGpuHandle(0));
+    pContext->SetGraphicsRootDescriptorTable(1, mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
     pContext->SetGraphicsRootConstantBufferView(2, CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
     pContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
     pContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
@@ -146,7 +155,10 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-    D3D12Backend::OnResize(Width, Height);
+    if (mpD3D12Backend)
+    {
+        mpD3D12Backend->ResizeSwapChain(Width, Height);
+    }
 }
 
 void Renderer::InitializeBindlessRootSignature()
@@ -195,5 +207,5 @@ void Renderer::InitializeBindlessRootSignature()
 
     Builder.AllowInputLayout();
 
-    Builder.Build(D3D12Backend::GetDevice()->GetDevice(), mBindlessRootSignature);
+    Builder.Build(mpD3D12Backend->GetDevice()->GetDevice(), mBindlessRootSignature);
 }

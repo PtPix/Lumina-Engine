@@ -14,49 +14,38 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/Descriptors/FDescriptorAllocation.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocatorPage.cpp"
         "src/D3D12Core/Descriptors/FDescriptorAllocator.cpp"
+        "src/D3D12Core/Descriptors/FBindlessDescriptorHeap.cpp"
 
+        # Pipeline
+        "src/D3D12Core/Pipeline/Shader.cpp"
+        "src/D3D12Core/Pipeline/ShaderCompiler.cpp"
+        "src/D3D12Core/Pipeline/RootSignature.cpp"
+        "src/D3D12Core/Pipeline/PipelineState.cpp"
+
+        # Resource
+        "src/D3D12Core/Resource/FBuffer.cpp"
+        "src/D3D12Core/Resource/FResourceUploader.cpp"
+        "src/D3D12Core/Resource/FTexture.cpp"
+
+        # Backend
         "src/D3D12Core/D3D12Backend.cpp"
+)
+
+
+set(RENDER_CORE_SOURCES
+
         "src/UI/UIRenderer.cpp"
         "src/Renderer.cpp"
         "src/Resources/FMesh.cpp"
-        "src/D3D12Core/Descriptors/FBindlessDescriptorHeap.cpp"
+
         "src/Managers/FTextureManager.cpp"
 
         "src/Resources/FMaterial.cpp"
         "src/RenderPass/FBasePass.cpp"
 )
 
-
-set(RENDER_CORE_SOURCES
-        "src/D3D12Core/Resource/FTexture.cpp"
-        # "src/D3D12Core/GraphicsDevice.cpp"
-        # "src/D3D12Core/Fence.cpp"
-        # "src/D3D12Core/ResourceHeaps.cpp"
-        # "src/D3D12Core/ResourceView.cpp"
-        # "src/D3D12Core/FBuffer.cpp"
-        # "src/D3D12Core/Texture.cpp"
-        # "src/RenderCore/TextureManager.cpp"
-        # "src/Rendering/SceneRenderTargets.cpp"
-        "src/D3D12Core/Pipeline/Shader.cpp"
-        "src/D3D12Core/Pipeline/ShaderCompiler.cpp"
-        "src/D3D12Core/Pipeline/RootSignature.cpp"
-        "src/D3D12Core/Pipeline/PipelineState.cpp"
-        # "src/RenderCore/Material.cpp"
-        # "src/RenderCore/BasePassMaterial.cpp"
-        # "src/RenderCore/SkyboxMaterial.cpp"
-        # "src/RenderCore/DeferredLightingMaterial.cpp"
-        "src/D3D12Core/Resource/FBuffer.cpp"
-        "src/D3D12Core/Resource/FResourceUploader.cpp"
-)
-
-set(RENDERING_SOURCES
-        # "src/Rendering/SceneRenderTargets.cpp"
-        # "src/Rendering/DeferredShadingRenderer.cpp"
-        # "src/Rendering/Mesh.cpp"
-)
-
 # Build Library
-add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_CORE_SOURCES} ${RENDERING_SOURCES})
+add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_CORE_SOURCES})
 
 # Interfaces
 target_include_directories(Renderer PUBLIC

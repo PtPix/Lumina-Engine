@@ -1,56 +1,106 @@
-﻿#pragma once
+#pragma once
 
-#include <windows.h>
 #include <cstdint>
-#include <d3d12.h>
 #include <memory>
-
-#include "Core/FDevice.h"
-#include "Core/FSwapChain.h"
+#include <windows.h>
+#include <d3d12.h>
+#include <dxgiformat.h>
 
 class FDevice;
-class FCommandQueue;
-class FDescriptorAllocator;
-class FCommandContext;
 class FSwapChain;
+class FCommandQueue;
+class FCommandContext;
+class FDescriptorAllocator;
 class FBindlessDescriptorHeap;
 class GpuResource;
+struct ID3D12Device;
+struct IDXGIFactory6;
 
 namespace D3D12MA { class Allocator; }
 
-class D3D12Backend
+struct FD3D12BackendDesc
+{
+    HWND Hwnd = nullptr;
+
+    uint32_t Width = 1280;
+    uint32_t Height = 720;
+    uint32_t BackBufferCount = 3;
+
+    DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    bool bEnableDebugLayer = true;
+    bool bEnableGpuValidation = false;
+    bool bVSync = true;
+    bool bAllowTearing = true;
+
+    IDXGIFactory6* ExternalFactory = nullptr;
+};
+
+class FD3D12Backend
 {
 public:
-    static bool Initialize(HWND Hwnd, uint32_t Width, uint32_t Height);
-    static void Shutdown();
-    static void OnResize(uint32_t Width, uint32_t Height);
-    static void FlushGPU();
+    FD3D12Backend() = default;
+    ~FD3D12Backend();
 
-    static void BeginFrame();
-    static void EndFrameAndPresent();
+    FD3D12Backend(const FD3D12Backend&) = delete;
+    FD3D12Backend& operator=(const FD3D12Backend&) = delete;
 
-    // Getters
-    static FDevice* GetDevice() { return mpDevice.get(); }
-    static FSwapChain* GetSwapChain() { return mpSwapChain.get(); }
-    static D3D12MA::Allocator* GetAllocator() { return mpDevice->GetAllocator(); }
+    FD3D12Backend(FD3D12Backend&&) = delete;
+    FD3D12Backend& operator=(FD3D12Backend&&) = delete;
 
-    static FCommandQueue* GetGraphicsQueue() { return mpDevice->GetGraphicsCommandQueue(); }
-    static FCommandQueue* GetComputeQueue() { return mpDevice->GetComputeCommandQueue(); }
-    static FCommandQueue* GetCopyQueue() { return mpDevice->GetCopyCommandQueue(); }
+    bool Initialize(const FD3D12BackendDesc& Desc);
+    void Shutdown();
 
-    static FDescriptorAllocator* GetSrvUavCbvAllocator() { return mpDevice->GetSRVAllocator(); }
-    static FDescriptorAllocator* GetRtvAllocator() { return mpDevice->GetRTVAllocator(); }
-    static FDescriptorAllocator* GetDsvAllocator() { return mpDevice->GetDSVAllocator(); }
+    void FlushAllQueues();
+    void CollectGarbage();
 
-    static FBindlessDescriptorHeap* GetBindlessDescriptorHeap() { return mpDevice->GetBindlessDescriptorHeap(); }
+    bool ResizeSwapChain(uint32_t Width, uint32_t Height);
+    void Present();
 
-    static D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() { return mpSwapChain->GetCurrentBackBufferRTVHandle(); }
-    static GpuResource* GetCurrentBackBufferResource() { return mpSwapChain->GetCurrentRenderTargetResource(); }
+    [[nodiscard]] bool IsInitialized() const { return mbInitialized; }
+    [[nodiscard]] const FD3D12BackendDesc& GetDesc() const { return mDesc; }
 
-    static FCommandContext* AllocateContext();
-    static uint64_t ExecuteGraphicsContext(FCommandContext* pCommandContext);
+    [[nodiscard]] uint32_t GetWidth() const { return mDesc.Width; }
+    [[nodiscard]] uint32_t GetHeight() const { return mDesc.Height; }
+    [[nodiscard]] uint32_t GetBackBufferCount() const { return mDesc.BackBufferCount; }
+    [[nodiscard]] DXGI_FORMAT GetBackBufferFormat() const { return mDesc.BackBufferFormat; }
+
+    [[nodiscard]] uint32_t GetCurrentBackBufferIndex() const;
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() const;
+    [[nodiscard]] GpuResource* GetCurrentBackBufferResource() const;
+
+    [[nodiscard]] FDevice* GetDevice() const { return mpDevice.get(); }
+    [[nodiscard]] ID3D12Device* GetD3D12Device() const;
+    [[nodiscard]] D3D12MA::Allocator* GetAllocator() const;
+
+    [[nodiscard]] FCommandQueue* GetGraphicsQueue() const;
+    [[nodiscard]] FCommandQueue* GetComputeQueue() const;
+    [[nodiscard]] FCommandQueue* GetCopyQueue() const;
+
+    [[nodiscard]] FCommandContext* AllocateGraphicsContext();
+    [[nodiscard]] FCommandContext* AllocateComputeContext();
+    [[nodiscard]] FCommandContext* AllocateCopyContext();
+
+    uint64_t ExecuteGraphicsContext(FCommandContext* pCommandContext);
+    uint64_t ExecuteComputeContext(FCommandContext* pCommandContext);
+    uint64_t ExecuteCopyContext(FCommandContext* pCommandContext);
+
+    [[nodiscard]] FDescriptorAllocator* GetSrvUavCbvAllocator() const;
+    [[nodiscard]] FDescriptorAllocator* GetRtvAllocator() const;
+    [[nodiscard]] FDescriptorAllocator* GetDsvAllocator() const;
+
+    [[nodiscard]] FBindlessDescriptorHeap* GetBindlessDescriptorHeap() const;
 
 private:
-    static std::unique_ptr<FDevice> mpDevice;
-    static std::unique_ptr<FSwapChain> mpSwapChain;
+    bool CreateDevice();
+    bool CreateSwapChain();
+    void DestroySwapChain();
+
+private:
+    FD3D12BackendDesc mDesc = {};
+
+    std::unique_ptr<FDevice> mpDevice;
+    std::unique_ptr<FSwapChain> mpSwapChain;
+
+    bool mbInitialized = false;
 };

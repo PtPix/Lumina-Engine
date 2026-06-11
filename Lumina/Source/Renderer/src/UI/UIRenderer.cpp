@@ -38,11 +38,11 @@ bool UIRenderer::mbInitialized = false;
 
 static Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mImGuiSrvHeap = nullptr;
 
-void UIRenderer::Initialize(HWND Hwnd)
+void UIRenderer::Initialize(HWND Hwnd, FDevice* pDevice)
 {
     if (mbInitialized) return;
 
-    ID3D12Device* pDevice = D3D12Backend::GetDevice()->GetDevice();
+    // ID3D12Device* pDevice = pDevice->GetDevice();
     assert(pDevice != nullptr);
 
     D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = {};
@@ -51,7 +51,7 @@ void UIRenderer::Initialize(HWND Hwnd)
     HeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     HeapDesc.NodeMask = 0;
 
-    HRESULT HResult = pDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&mImGuiSrvHeap));
+    HRESULT HResult = pDevice->GetDevice()->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&mImGuiSrvHeap));
     assert(SUCCEEDED(HResult));
 
     IMGUI_CHECKVERSION();
@@ -64,7 +64,7 @@ void UIRenderer::Initialize(HWND Hwnd)
     ImGui_ImplWin32_Init(Hwnd);
 
     ImGui_ImplDX12_Init(
-        pDevice,
+        pDevice->GetDevice(),
         NUM_SWAPCHAIN_BACKBUFFER,
         DXGI_FORMAT_R8G8B8A8_UNORM,
         mImGuiSrvHeap.Get(),
@@ -100,7 +100,7 @@ void UIRenderer::BeginFrame()
     ImGui::NewFrame();
 }
 
-void UIRenderer::Render(FCommandContext* pCommandContext)
+void UIRenderer::Render(FCommandContext* pCommandContext, D3D12_CPU_DESCRIPTOR_HANDLE Rtv)
 {
     if (!mbInitialized) return;
 
@@ -108,8 +108,7 @@ void UIRenderer::Render(FCommandContext* pCommandContext)
 
     ID3D12DescriptorHeap* ppHeaps[] = { mImGuiSrvHeap.Get() };
     pCommandContext->SetDescriptorHeaps(1, ppHeaps);
-    D3D12_CPU_DESCRIPTOR_HANDLE RTV = D3D12Backend::GetCurrentBackBufferRTV();
-    pCommandContext->SetRenderTargets(1, &RTV, nullptr);
+    pCommandContext->SetRenderTargets(1, &Rtv, nullptr);
 
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pCommandContext->GetCommandList());
 }

@@ -27,6 +27,8 @@ public:
 
     static FResourceUploader* GetUploader() { return &mUploader; }
 
+    static FD3D12Backend* GetD3D12Backend() { return mpD3D12Backend.get(); }
+
     static void InitializeSceneBuffers();
     static void DestroySceneBuffers();
 
@@ -42,4 +44,6 @@ private:
     static const int NUM_FRAMES = NUM_SWAPCHAIN_BACKBUFFER;
     static FFrameResource mFrameResources[NUM_FRAMES];
     static uint32_t mCurrentFrameIndex;
+
+    static std::unique_ptr<FD3D12Backend> mpD3D12Backend;
 };

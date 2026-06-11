@@ -66,8 +66,8 @@ void PBRModelTestLayer::OnAttach()
     depthClear.DepthStencil.Stencil = 0;
 
     mDepthBuffer.Create(
-        D3D12Backend::GetDevice(),
-        D3D12Backend::GetAllocator(),
+        Renderer::GetD3D12Backend()->GetDevice(),
+        Renderer::GetD3D12Backend()->GetAllocator(),
         1280, 720,                 // 屏幕宽、高
         DXGI_FORMAT_D32_FLOAT,         // 深度格式
         D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, // 🚨 核心标志：允许作为 DSV
@@ -79,7 +79,7 @@ void PBRModelTestLayer::OnAttach()
 
 void PBRModelTestLayer::OnDetach()
 {
-    D3D12Backend::FlushGPU();
+    Renderer::GetD3D12Backend()->FlushAllQueues();
 
     mDepthBuffer.Destroy();
 
@@ -121,7 +121,7 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
 
 void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = D3D12Backend::GetCurrentBackBufferRTV();
+    D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV();
     D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle = mDepthBuffer.GetDSV();
 
     pCommandContext->SetRenderTargets(1, &BackBufferRTV, &DsvHandle);

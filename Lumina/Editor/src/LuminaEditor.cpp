@@ -1,11 +1,12 @@
 ﻿#include "Editor/LuminaEditor.h"
 #include "Editor/TestLayer/PBRModelTestLayer.h"
 #include "ImGUI/imgui.h"
+#include "Renderer/Renderer.h"
 #include "Renderer/UI/UIRenderer.h"
 
 bool LuminaEditor::OnInit()
 {
-    UIRenderer::Initialize(mHwnd);
+    UIRenderer::Initialize(mHwnd, Renderer::GetD3D12Backend()->GetDevice());
 
     RegisterTestLayer<PBRModelTestLayer>();
 
@@ -53,7 +54,7 @@ void LuminaEditor::OnRenderUI(FCommandContext* pCommandContext)
         mTestLayers[mActiveLayerIndex]->OnRenderUI();
     }
 
-    UIRenderer::Render(pCommandContext);
+    UIRenderer::Render(pCommandContext, Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV());
 }
 
 void LuminaEditor::OnDestroy()

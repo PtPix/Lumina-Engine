@@ -8,7 +8,6 @@
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
 #include "Renderer/D3D12Core/Resource/FTexture.h"
 #include "Renderer/Resources/FMaterial.h"
-#include "Renderer/Scene/Scene.h"
 
 class FMesh;
 

@@ -7,10 +7,12 @@
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
 #include "Renderer/RenderPass/IRenderPass.h"
 
+class FDevice;
+
 class FBasePass : public IRenderPass
 {
 public:
-    void Initialize() override;
+    void Initialize(FDevice* pDevice) override;
     void Execute(FCommandContext* pCommandContext, const FSceneView& View) override;
     void Shutdown() override;
 

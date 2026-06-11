@@ -3,6 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../../stb_image.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Resource/FResourceUploader.h"
 
 FDevice* TextureManager::mpDevice = nullptr;
@@ -54,13 +55,13 @@ uint32_t TextureManager::CreateTextureFromData(const std::string& Name, const vo
     auto pTexture = std::make_unique<FTexture>();
 
     std::wstring wName(Name.begin(), Name.end());
-    pTexture->Create(mpDevice, D3D12Backend::GetAllocator(), Width, Height,
+    pTexture->Create(mpDevice, mpDevice->GetAllocator(), Width, Height,
         Format, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
         nullptr, wName);
 
     pUploader->UploadTexture(pTexture.get(), pData, Width, Height, 4);
 
-    FBindlessDescriptorHeap* pBindlessHeap = D3D12Backend::GetBindlessDescriptorHeap();
+    FBindlessDescriptorHeap* pBindlessHeap = mpDevice->GetBindlessDescriptorHeap();
     uint32_t BindlessIndex = pBindlessHeap->AllocateSlot();
 
     pBindlessHeap->CreateSRVFromCPUHandle(mpDevice, pTexture->GetSRV(), BindlessIndex);

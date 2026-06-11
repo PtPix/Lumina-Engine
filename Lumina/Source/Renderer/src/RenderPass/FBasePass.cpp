@@ -1,10 +1,11 @@
 ﻿#include "Renderer/RenderPass/FBasePass.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/D3D12Core/Core/FDevice.h"
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
 #include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
 
-void FBasePass::Initialize()
+void FBasePass::Initialize(FDevice* pDevice)
 {
     std::string ErrorString;
     ShaderUtils::FBlob VertexShaderBlob;
@@ -57,8 +58,7 @@ void FBasePass::Initialize()
     }
 
     mBasePassPSO = std::make_unique<PipelineState>();
-    Builder.Build(D3D12Backend::GetDevice()->GetDevice(), *mBasePassPSO);
-
+    Builder.Build(pDevice->GetDevice(), *mBasePassPSO);
 }
 
 void FBasePass::Execute(FCommandContext* pCommandContext, const FSceneView& View)
