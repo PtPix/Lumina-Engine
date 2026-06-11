@@ -31,6 +31,10 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/D3D12Backend.cpp"
 )
 
+set(RENDER_GRAPH_SOURCES
+        "src/RenderGraph/RenderGraph.cpp"
+)
+
 
 set(RENDER_CORE_SOURCES
 
@@ -45,7 +49,7 @@ set(RENDER_CORE_SOURCES
 )
 
 # Build Library
-add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_CORE_SOURCES})
+add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_GRAPH_SOURCES} ${RENDER_CORE_SOURCES})
 
 # Interfaces
 target_include_directories(Renderer PUBLIC
