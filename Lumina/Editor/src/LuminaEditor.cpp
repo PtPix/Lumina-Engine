@@ -39,9 +39,11 @@ void LuminaEditor::OnFixedUpdate(double FixedDeltaTime)
 
 void LuminaEditor::OnRender(FCommandContext* pCommandContext)
 {
+    FRenderGraph& Graph = Renderer::GetRenderGraph();
+
     if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
     {
-        mTestLayers[mActiveLayerIndex]->OnRender(pCommandContext);
+        mTestLayers[mActiveLayerIndex]->OnBuildRenderGraph(Graph);
     }
 }
 
@@ -53,8 +55,18 @@ void LuminaEditor::OnRenderUI(FCommandContext* pCommandContext)
     {
         mTestLayers[mActiveLayerIndex]->OnRenderUI();
     }
+    FRenderGraph& Graph = Renderer::GetRenderGraph();
+    FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
 
-    UIRenderer::Render(pCommandContext, Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV());
+    Graph.AddPass("EditorUI")
+        .WriteRenderTarget(BackBuffer, ERGLoadOp::Load)
+        .Execute([BackBuffer](FRenderGraphContext& Context)
+        {
+            UIRenderer::Render(
+                Context.GetCommandContext(),
+                Context.GetRTV(BackBuffer)
+            );
+        });
 }
 
 void LuminaEditor::OnDestroy()

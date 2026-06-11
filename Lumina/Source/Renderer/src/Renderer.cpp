@@ -15,6 +15,8 @@ std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
 uint32_t Renderer::mCurrentFrameIndex = 0;
 std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
+FRenderGraph Renderer::mRenderGraph;
+FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
@@ -25,6 +27,8 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     D3D12BackendDesc.Height = Height;
 
     mpD3D12Backend->Initialize(D3D12BackendDesc);
+
+    mRenderGraph.Initialize(mpD3D12Backend->GetDevice(), mpD3D12Backend->GetAllocator());
 
     mUploader.Initialize(mpD3D12Backend->GetDevice());
 
@@ -44,6 +48,7 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
 void Renderer::Shutdown()
 {
+    mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
     if (mBasePass) {
         mBasePass->Shutdown();
@@ -56,15 +61,21 @@ void Renderer::Shutdown()
 
 FCommandContext* Renderer::BeginFrame()
 {
-    // FD3D12Backend::BeginFrame();
     mpD3D12Backend->CollectGarbage();
-
     mUploader.CleanUpStaleUploads();
 
     FCommandContext* pContext = mpD3D12Backend->AllocateGraphicsContext();// FD3D12Backend::AllocateContext();
 
-    pContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-    pContext->FlushResourceBarriers();
+    mRenderGraph.Reset();
+    mBackBufferHandle = mRenderGraph.ImportBackBuffer(
+        "BackBuffer",
+        mpD3D12Backend->GetCurrentBackBufferResource(),
+        mpD3D12Backend->GetCurrentBackBufferRTV(),
+        mpD3D12Backend->GetWidth(),
+        mpD3D12Backend->GetHeight(),
+        mpD3D12Backend->GetBackBufferFormat(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
 
     return pContext;
 }
@@ -73,11 +84,13 @@ void Renderer::EndFrame(FCommandContext* pContext)
 {
     if (!pContext) return;
 
+    mRenderGraph.Compile();
+    mRenderGraph.Execute(pContext);
+
     pContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
     pContext->FlushResourceBarriers();
 
     mpD3D12Backend->ExecuteGraphicsContext(pContext);
-
     mpD3D12Backend->Present();
 }
 

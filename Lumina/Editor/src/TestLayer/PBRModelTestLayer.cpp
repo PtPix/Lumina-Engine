@@ -121,22 +121,22 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
 
 void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV();
-    D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle = mDepthBuffer.GetDSV();
-
-    pCommandContext->SetRenderTargets(1, &BackBufferRTV, &DsvHandle);
-
-    const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    pCommandContext->ClearRenderTargetView(BackBufferRTV, clearColor);
-    pCommandContext->ClearDepthStencilView(DsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
-
-    float Width = 1280; float Height = 720;
-    D3D12_VIEWPORT viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
-    D3D12_RECT scissorRect = { 0, 0, (LONG)Width, (LONG)Height };
-    pCommandContext->SetViewport(viewport);
-    pCommandContext->SetScissorRect(scissorRect);
-
-    Renderer::RenderSceneView(pCommandContext, mSceneView);
+    // D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV();
+    // D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle = mDepthBuffer.GetDSV();
+    //
+    // pCommandContext->SetRenderTargets(1, &BackBufferRTV, &DsvHandle);
+    //
+    // const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    // pCommandContext->ClearRenderTargetView(BackBufferRTV, clearColor);
+    // pCommandContext->ClearDepthStencilView(DsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
+    //
+    // float Width = 1280; float Height = 720;
+    // D3D12_VIEWPORT viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
+    // D3D12_RECT scissorRect = { 0, 0, (LONG)Width, (LONG)Height };
+    // pCommandContext->SetViewport(viewport);
+    // pCommandContext->SetScissorRect(scissorRect);
+    //
+    // Renderer::RenderSceneView(pCommandContext, mSceneView);
 }
 
 void PBRModelTestLayer::OnRenderUI()
@@ -144,5 +144,40 @@ void PBRModelTestLayer::OnRenderUI()
     // ImGui::Begin("PBR Test Layer");
 
     // ImGui::End();
+}
+
+void PBRModelTestLayer::OnBuildRenderGraph(FRenderGraph& Graph)
+{
+    FRGTextureDesc DepthDesc = {};
+    DepthDesc.Width = Renderer::GetD3D12Backend()->GetWidth();
+    DepthDesc.Height = Renderer::GetD3D12Backend()->GetHeight();
+    DepthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    DepthDesc.Usage = ERGTextureUsage::DepthStencil;
+    DepthDesc.bUseClearValue = true;
+    DepthDesc.ClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+    DepthDesc.ClearValue.DepthStencil.Depth = 1.0f;
+    DepthDesc.ClearValue.DepthStencil.Stencil = 0;
+
+    FRGTextureHandle Depth = Graph.CreateTexture("SceneDepth", DepthDesc);
+    FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
+
+    Graph.AddPass("BasePass")
+        .WriteRenderTarget(BackBuffer, ERGLoadOp::Clear)
+        .WriteDepth(Depth, ERGLoadOp::Clear)
+        .Execute([this](FRenderGraphContext& Context)
+        {
+            FCommandContext* Cmd = Context.GetCommandContext();
+
+            float Width = static_cast<float>(Renderer::GetD3D12Backend()->GetWidth());
+            float Height = static_cast<float>(Renderer::GetD3D12Backend()->GetHeight());
+
+            D3D12_VIEWPORT Viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
+            D3D12_RECT Scissor = { 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) };
+
+            Cmd->SetViewport(Viewport);
+            Cmd->SetScissorRect(Scissor);
+
+            Renderer::RenderSceneView(Cmd, mSceneView);
+        });
 }
 

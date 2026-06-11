@@ -21,6 +21,7 @@ public:
     void OnUpdate(double DeltaTime) override;
     void OnRender(FCommandContext* pCommandContext) override;
     void OnRenderUI() override;
+    void OnBuildRenderGraph(FRenderGraph& Graph) override;
 
 private:
     FScene mScene = {};

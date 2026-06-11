@@ -49,6 +49,7 @@ FRenderGraphPassBuilder& FRenderGraphPassBuilder::WriteRenderTarget(FRGTextureHa
 
 FRenderGraphPassBuilder& FRenderGraphPassBuilder::WriteDepth(FRGTextureHandle Texture, ERGLoadOp LoadOp)
 {
+    mpGraph->mPasses[mPassIndex].bHasDepth = true;
     mpGraph->mPasses[mPassIndex].Depth = { Texture, LoadOp };
     return *this;
 }

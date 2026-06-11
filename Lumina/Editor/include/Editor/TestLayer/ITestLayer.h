@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include <string>
 
-class GraphicsDevice;
 class FCommandContext;
+class FRenderGraph;
 
 class ITestLayer
 {
@@ -16,6 +16,7 @@ public:
     virtual void OnFixedUpdate(double FixedDeltaTime) {}
     virtual void OnRender(FCommandContext* pCommandContext) {}
     virtual void OnRenderUI() {}
+    virtual void OnBuildRenderGraph(FRenderGraph& Graph) {}
 
     [[nodiscard]] virtual std::string GetName() const = 0;
 };
