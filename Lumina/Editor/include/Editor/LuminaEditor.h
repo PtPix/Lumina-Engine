@@ -5,16 +5,7 @@
 
 #include "Engine/LuminaApp.h"
 #include "ImGUI/imgui.h"
-#include "Renderer/RenderGraph/RenderGraph.h"
 #include "TestLayer/ITestLayer.h"
-
-struct FViewportRenderTarget
-{
-    FRGTextureHandle Color;
-    FRGTextureHandle Depth;
-    uint32_t Width = 1;
-    uint32_t Height = 1;
-};
 
 class LuminaEditor : public LuminaApp
 {
@@ -36,6 +27,8 @@ protected:
     void OnRender(FRenderGraph& RenderGraph) override;
     void OnRenderUI(FRenderGraph& RenderGraph) override;
     void OnDestroy() override;
+
+    void SetActiveLayer(int16_t ActiveLayer);
 
 private:
     void RenderEditorUI(FRenderGraph& RenderGraph);

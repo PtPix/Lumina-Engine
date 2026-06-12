@@ -39,7 +39,6 @@ void LuminaEditor::OnFixedUpdate(double FixedDeltaTime)
 
 void LuminaEditor::OnRender(FRenderGraph& RenderGraph)
 {
-    FViewportRenderTarget ViewportTarget;
     FRGTextureDesc ColorDesc = {};
     ColorDesc.Width = 1280;
     ColorDesc.Height = 720;
@@ -52,17 +51,8 @@ void LuminaEditor::OnRender(FRenderGraph& RenderGraph)
     ColorDesc.ClearValue.Color[2] = 0.05f;
     ColorDesc.ClearValue.Color[3] = 1.0f;
 
-    ViewportTarget.Color = RenderGraph.CreateTexture("EditorViewport.SceneColor", ColorDesc);
-    FRGTextureDesc DepthDesc = {};
-    DepthDesc.Width = 1280;
-    DepthDesc.Height = 720;
-    DepthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    DepthDesc.Usage = ERGTextureUsage::DepthStencil;
-    DepthDesc.bUseClearValue = true;
-    DepthDesc.ClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-    DepthDesc.ClearValue.DepthStencil.Depth = 1.0f;
+    RenderGraph.CreateTexture("EditorViewport.SceneColor", ColorDesc);
 
-    ViewportTarget.Depth = RenderGraph.CreateTexture("EditorViewport.SceneDepth", DepthDesc);
     if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
     {
         mTestLayers[mActiveLayerIndex]->OnRender(RenderGraph);
@@ -77,17 +67,10 @@ void LuminaEditor::OnRenderUI(FRenderGraph& RenderGraph)
     {
         mTestLayers[mActiveLayerIndex]->OnRenderUI();
     }
+
     FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
     FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
-    // RenderGraph.AddPass("EditorUI")
-    //     .WriteRenderTarget(BackBuffer, ERGLoadOp::Load)
-    //     .Execute([BackBuffer](FRenderGraphContext& Context)
-    //     {
-    //         UIRenderer::Render(
-    //             Context.GetCommandContext(),
-    //             Context.GetRTV(BackBuffer)
-    //         );
-    //     });
+
     auto UIPass = RenderGraph.AddPass("EditorUI");
 
     if (SceneColor.IsValid())
@@ -125,9 +108,73 @@ void LuminaEditor::OnDestroy()
     mTestLayers.clear();
 }
 
+void LuminaEditor::SetActiveLayer(int16_t ActiveLayer)
+{
+    assert(ActiveLayer >= 0 && ActiveLayer < mTestLayers.size());
+    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+    {
+        mTestLayers[mActiveLayerIndex]->OnDetach();
+    }
+    mTestLayers[ActiveLayer]->OnAttach();
+    mActiveLayerIndex = ActiveLayer;
+}
+
 void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
 {
-        ImGuiViewport* Viewport = ImGui::GetMainViewport();
+    ImGuiViewport* Viewport = ImGui::GetMainViewport();
+    if (!Viewport)
+    {
+        return;
+    }
+
+    const ImVec4 Background = ImVec4(0.045f, 0.052f, 0.062f, 1.0f);
+    const ImVec4 Panel = ImVec4(0.075f, 0.086f, 0.102f, 1.0f);
+    const ImVec4 PanelSoft = ImVec4(0.095f, 0.108f, 0.128f, 1.0f);
+    const ImVec4 PanelHover = ImVec4(0.130f, 0.150f, 0.178f, 1.0f);
+    const ImVec4 Accent = ImVec4(0.290f, 0.590f, 0.980f, 1.0f);
+    const ImVec4 AccentSoft = ImVec4(0.180f, 0.360f, 0.620f, 1.0f);
+    const ImVec4 Text = ImVec4(0.880f, 0.910f, 0.950f, 1.0f);
+    const ImVec4 TextMuted = ImVec4(0.520f, 0.570f, 0.640f, 1.0f);
+    const ImVec4 Border = ImVec4(0.160f, 0.180f, 0.215f, 1.0f);
+    const ImVec4 Success = ImVec4(0.360f, 0.820f, 0.540f, 1.0f);
+
+    int StyleVarCount = 0;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f)); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(9.0f, 5.0f)); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 7.0f)); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f); ++StyleVarCount;
+    ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 4.0f); ++StyleVarCount;
+
+    int ColorCount = 0;
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, Background); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, Panel); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, Panel); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_Border, Border); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, PanelSoft); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, PanelHover); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, AccentSoft); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.060f, 0.070f, 0.083f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.105f, 0.125f, 0.150f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.155f, 0.190f, 0.230f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, AccentSoft); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.105f, 0.125f, 0.150f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.150f, 0.185f, 0.230f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, AccentSoft); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_Text, Text); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_TextDisabled, TextMuted); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_Separator, Border); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, Panel); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.190f, 0.220f, 0.260f, 1.0f)); ++ColorCount;
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.260f, 0.300f, 0.360f, 1.0f)); ++ColorCount;
+
+    auto DrawSectionHeader = [&](const char* Label)
+    {
+        ImGui::Spacing();
+        ImGui::TextColored(Accent, "%s", Label);
+        ImGui::Separator();
+    };
 
     ImGui::SetNextWindowPos(Viewport->WorkPos);
     ImGui::SetNextWindowSize(Viewport->WorkSize);
@@ -141,70 +188,228 @@ void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoNavFocus |
         ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_MenuBar;
 
-    ImGui::Begin("LuminaEditorRoot", nullptr, RootFlags);
-
-    if (ImGui::BeginMenuBar())
+    if (ImGui::Begin("LuminaEditorRoot", nullptr, RootFlags))
     {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::BeginMenuBar())
         {
-            if (ImGui::MenuItem("Exit"))
+            if (ImGui::BeginMenu("File"))
             {
-                PostQuitMessage(0);
+                if (ImGui::MenuItem("Exit"))
+                {
+                    PostQuitMessage(0);
+                }
+                ImGui::EndMenu();
             }
-            ImGui::EndMenu();
+            if (ImGui::BeginMenu("View"))
+            {
+                ImGui::MenuItem("Scene", nullptr, true, false);
+                ImGui::MenuItem("Viewport", nullptr, true, false);
+                ImGui::MenuItem("Inspector", nullptr, true, false);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Tools"))
+            {
+                ImGui::MenuItem("Render Graph", nullptr, false, false);
+                ImGui::MenuItem("GPU Profiler", nullptr, false, false);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
         }
 
-        ImGui::EndMenuBar();
-    }
-
-    const float RightPanelWidth = 320.0f;
-    const float Spacing = ImGui::GetStyle().ItemSpacing.x;
-
-    ImVec2 ContentSize = ImGui::GetContentRegionAvail();
-    ImVec2 ViewportSize = ImVec2(ContentSize.x - RightPanelWidth - Spacing, ContentSize.y);
-
-    ImGui::BeginChild("ViewportRegion", ViewportSize, true, ImGuiWindowFlags_NoScrollbar);
-    {
-        ImGui::TextUnformatted("Viewport");
-
-        ImVec2 Available = ImGui::GetContentRegionAvail();
-
-        // 第一阶段可以先只保留区域。
-        // 真正的场景贴图显示，需要后续把 Scene 渲染到 RenderTarget，再 ImGui::Image。
-        ImGui::Image(
-        UIRenderer::GetTextureID(UIRenderer::ViewportTextureSlot),
-            Available,
-            ImVec2(0, 0),
-            ImVec2(1, 1)
-        );
-        ImGui::InvisibleButton("ViewportCanvas", Available);
-
-        mViewportHovered = ImGui::IsItemHovered();
-        mViewportSize = Available;
-    }
-    ImGui::EndChild();
-
-    ImGui::SameLine();
-
-    ImGui::BeginChild("InspectorRegion", ImVec2(RightPanelWidth, ContentSize.y), true);
-    {
-        ImGui::TextUnformatted("Inspector");
-        ImGui::Separator();
-
-        if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+        ImGui::BeginChild("TopToolbar", ImVec2(0.0f, 46.0f), false, ImGuiWindowFlags_NoScrollbar);
         {
-            ImGui::Text("Layer: %s", mTestLayers[mActiveLayerIndex]->GetName().c_str());
-            ImGui::Separator();
+            ImGui::SetCursorPos(ImVec2(16.0f, 12.0f));
+            ImGui::TextColored(Accent, "Lumina");
+            ImGui::SameLine();
+            ImGui::TextDisabled("DX12 RenderGraph");
 
-            mTestLayers[mActiveLayerIndex]->OnRenderUI();
+            ImGui::SameLine(210.0f);
+            ImGui::Button("Select", ImVec2(70.0f, 26.0f));
+            ImGui::SameLine();
+            ImGui::Button("Move", ImVec2(64.0f, 26.0f));
+            ImGui::SameLine();
+            ImGui::Button("Rotate", ImVec2(70.0f, 26.0f));
+            ImGui::SameLine();
+            ImGui::Button("Scale", ImVec2(64.0f, 26.0f));
+
+            const float RightGroupWidth = 220.0f;
+            float RightStart = ImGui::GetWindowWidth() - RightGroupWidth;
+            if (RightStart > ImGui::GetCursorPosX())
+            {
+                ImGui::SameLine(RightStart);
+            }
+            ImGui::TextColored(Success, "Ready");
+            ImGui::SameLine();
+            ImGui::TextDisabled("| %.1f FPS", ImGui::GetIO().Framerate);
+        }
+        ImGui::EndChild();
+
+        const float StatusBarHeight = 28.0f;
+        const float Gutter = 8.0f;
+        const float LeftPanelWidth = 250.0f;
+        const float RightPanelWidth = 330.0f;
+
+        ImVec2 ContentSize = ImGui::GetContentRegionAvail();
+        ImVec2 MainSize = ImVec2(ContentSize.x, ContentSize.y - StatusBarHeight - Gutter);
+        if (MainSize.y < 120.0f)
+        {
+            MainSize.y = 120.0f;
         }
 
-        ImGui::Separator();
-        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    }
-    ImGui::EndChild();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + Gutter);
+        ImGui::BeginChild("MainWorkspace", ImVec2(ContentSize.x - Gutter * 2.0f, MainSize.y), false, ImGuiWindowFlags_NoScrollbar);
+        {
+            float CenterPanelWidth = ImGui::GetContentRegionAvail().x - LeftPanelWidth - RightPanelWidth - Gutter * 2.0f;
+            if (CenterPanelWidth < 320.0f)
+            {
+                CenterPanelWidth = 320.0f;
+            }
 
+            ImGui::BeginChild("ScenePanel", ImVec2(LeftPanelWidth, 0.0f), true);
+            {
+                DrawSectionHeader("Scene");
+
+                if (ImGui::TreeNodeEx("World", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth))
+                {
+                    ImGui::TextDisabled("Camera");
+                    ImGui::TextDisabled("Directional Light");
+                    ImGui::TextDisabled("Environment");
+                    ImGui::TreePop();
+                }
+
+                DrawSectionHeader("Layers");
+                for (int Index = 0; Index < static_cast<int>(mTestLayers.size()); ++Index)
+                {
+                    const bool bSelected = Index == mActiveLayerIndex;
+                    ImGui::PushID(Index);
+                    if (ImGui::Selectable(mTestLayers[Index]->GetName().c_str(), bSelected))
+                    {
+                        mActiveLayerIndex = static_cast<int16_t>(Index);
+                    }
+                    ImGui::PopID();
+                }
+
+                DrawSectionHeader("Assets");
+                ImGui::TextDisabled("Materials");
+                ImGui::TextDisabled("Meshes");
+                ImGui::TextDisabled("Textures");
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine(0.0f, Gutter);
+
+            ImGui::BeginChild("ViewportPanel", ImVec2(CenterPanelWidth, 0.0f), true, ImGuiWindowFlags_NoScrollbar);
+            {
+                ImGui::TextColored(Accent, "Viewport");
+                ImGui::SameLine();
+                ImGui::TextDisabled("%.0f x %.0f", mViewportSize.x, mViewportSize.y);
+                ImGui::SameLine();
+                ImGui::TextDisabled("| SceneColor: %s",
+                    RenderGraph.GetTexture("EditorViewport.SceneColor").IsValid() ? "Valid" : "Missing");
+                ImGui::Separator();
+
+                ImVec2 Available = ImGui::GetContentRegionAvail();
+                if (Available.x < 1.0f)
+                {
+                    Available.x = 1.0f;
+                }
+                if (Available.y < 1.0f)
+                {
+                    Available.y = 1.0f;
+                }
+
+                ImVec2 ImageMin = ImGui::GetCursorScreenPos();
+                ImGui::Image(
+                    UIRenderer::GetTextureID(UIRenderer::ViewportTextureSlot),
+                    Available,
+                    ImVec2(0.0f, 0.0f),
+                    ImVec2(1.0f, 1.0f)
+                );
+                ImVec2 ImageMax = ImVec2(ImageMin.x + Available.x, ImageMin.y + Available.y);
+
+                mViewportHovered = ImGui::IsItemHovered();
+                mViewportSize = Available;
+
+                ImDrawList* DrawList = ImGui::GetWindowDrawList();
+                DrawList->AddRect(ImageMin, ImageMax,
+                    ImGui::GetColorU32(mViewportHovered ? Accent : Border), 4.0f, 0, mViewportHovered ? 2.0f : 1.0f);
+
+                const char* OverlayText = mViewportHovered ? "Viewport focused" : "Scene preview";
+                ImVec2 OverlayPos = ImVec2(ImageMin.x + 12.0f, ImageMin.y + 12.0f);
+                DrawList->AddRectFilled(
+                    ImVec2(OverlayPos.x - 8.0f, OverlayPos.y - 5.0f),
+                    ImVec2(OverlayPos.x + 126.0f, OverlayPos.y + 20.0f),
+                    ImGui::GetColorU32(ImVec4(0.030f, 0.036f, 0.045f, 0.780f)),
+                    4.0f
+                );
+                DrawList->AddText(OverlayPos, ImGui::GetColorU32(Text), OverlayText);
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine(0.0f, Gutter);
+
+            ImGui::BeginChild("InspectorPanel", ImVec2(RightPanelWidth, 0.0f), true);
+            {
+                DrawSectionHeader("Inspector");
+
+                if (mActiveLayerIndex >= 0 && mActiveLayerIndex < static_cast<int16_t>(mTestLayers.size()))
+                {
+                    ImGui::TextDisabled("Active Layer");
+                    ImGui::TextUnformatted(mTestLayers[mActiveLayerIndex]->GetName().c_str());
+                }
+                else
+                {
+                    ImGui::TextDisabled("No active layer");
+                }
+
+                DrawSectionHeader("Viewport");
+                ImGui::TextDisabled("Size");
+                ImGui::SameLine(120.0f);
+                ImGui::Text("%.0f x %.0f", mViewportSize.x, mViewportSize.y);
+
+                ImGui::TextDisabled("Hovered");
+                ImGui::SameLine(120.0f);
+                ImGui::TextColored(mViewportHovered ? Success : TextMuted, "%s", mViewportHovered ? "Yes" : "No");
+
+                DrawSectionHeader("Renderer");
+                ImGui::TextDisabled("Backend");
+                ImGui::SameLine(120.0f);
+                ImGui::TextUnformatted("DirectX 12");
+
+                ImGui::TextDisabled("Frame");
+                ImGui::SameLine(120.0f);
+                ImGui::Text("%.3f ms", 1000.0f / (ImGui::GetIO().Framerate > 0.0f ? ImGui::GetIO().Framerate : 1.0f));
+
+                DrawSectionHeader("Selection");
+                ImGui::TextDisabled("Nothing selected");
+            }
+            ImGui::EndChild();
+        }
+        ImGui::EndChild();
+
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + Gutter);
+        ImGui::BeginChild("StatusBar", ImVec2(ContentSize.x - Gutter * 2.0f, StatusBarHeight), false, ImGuiWindowFlags_NoScrollbar);
+        {
+            ImGui::TextColored(Success, "Ready");
+            ImGui::SameLine();
+            ImGui::TextDisabled("| DX12 | RenderGraph | Viewport %.0f x %.0f", mViewportSize.x, mViewportSize.y);
+
+            const char* RightText = "Lumina Editor";
+            float TextWidth = ImGui::CalcTextSize(RightText).x;
+            float RightX = ImGui::GetWindowWidth() - TextWidth - 8.0f;
+            if (RightX > ImGui::GetCursorPosX())
+            {
+                ImGui::SameLine(RightX);
+                ImGui::TextDisabled("%s", RightText);
+            }
+        }
+        ImGui::EndChild();
+    }
     ImGui::End();
+
+    ImGui::PopStyleColor(ColorCount);
+    ImGui::PopStyleVar(StyleVarCount);
 }

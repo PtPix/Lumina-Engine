@@ -113,8 +113,6 @@ void PBRModelTestLayer::OnRender(FRenderGraph& RenderGraph)
 
     FRGTextureHandle Depth = RenderGraph.CreateTexture("SceneDepth", DepthDesc);
     FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
-    FRGTextureHandle SceneDepth = RenderGraph.GetTexture("EditorViewport.SceneDepth");
-    FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
 
     RenderGraph.AddPass("BasePass")
         .WriteRenderTarget(SceneColor, ERGLoadOp::Clear)
@@ -138,8 +136,5 @@ void PBRModelTestLayer::OnRender(FRenderGraph& RenderGraph)
 
 void PBRModelTestLayer::OnRenderUI()
 {
-    // ImGui::Begin("PBR Test Layer");
-
-    // ImGui::End();
 }
 
