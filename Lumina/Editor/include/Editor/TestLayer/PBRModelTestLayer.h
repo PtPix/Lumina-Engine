@@ -19,9 +19,8 @@ public:
     void OnAttach() override;
     void OnDetach() override;
     void OnUpdate(double DeltaTime) override;
-    void OnRender(FCommandContext* pCommandContext) override;
+    void OnRender(FRenderGraph& RenderGraph) override;
     void OnRenderUI() override;
-    void OnBuildRenderGraph(FRenderGraph& Graph) override;
 
 private:
     FScene mScene = {};
@@ -29,9 +28,5 @@ private:
 
     std::vector<FMesh*> mLoadedMeshes;
 
-    // 保持映射的指针 (优化技巧)
-    void* mpMappedGlobalData = nullptr;
-
     Camera mCamera;
-    FTexture mDepthBuffer = {};
 };

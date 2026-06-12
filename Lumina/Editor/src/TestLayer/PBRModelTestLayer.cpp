@@ -56,32 +56,12 @@ void PBRModelTestLayer::OnAttach()
     InitData.SunIntensity = 3.14f;
     mScene.SetGlobalData(InitData);
 
-    // InitBasePassPipeline();
     mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(1280) / static_cast<float>(720), 0.1f, 1000.0f);
-
-    // 在窗口初始化 / Resize 时调用：
-    D3D12_CLEAR_VALUE depthClear = {};
-    depthClear.Format = DXGI_FORMAT_D32_FLOAT;
-    depthClear.DepthStencil.Depth = 1.0f;
-    depthClear.DepthStencil.Stencil = 0;
-
-    mDepthBuffer.Create(
-        Renderer::GetD3D12Backend()->GetDevice(),
-        Renderer::GetD3D12Backend()->GetAllocator(),
-        1280, 720,                 // 屏幕宽、高
-        DXGI_FORMAT_D32_FLOAT,         // 深度格式
-        D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, // 🚨 核心标志：允许作为 DSV
-        D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        &depthClear,
-        L"MainDepthBuffer"
-    );
 }
 
 void PBRModelTestLayer::OnDetach()
 {
     Renderer::GetD3D12Backend()->FlushAllQueues();
-
-    mDepthBuffer.Destroy();
 
     for (auto& LoadedMesh : mLoadedMeshes)
     {
@@ -119,34 +99,7 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
     mScene.ExtractSceneView(mSceneView);
 }
 
-void PBRModelTestLayer::OnRender(FCommandContext* pCommandContext)
-{
-    // D3D12_CPU_DESCRIPTOR_HANDLE BackBufferRTV = Renderer::GetD3D12Backend()->GetCurrentBackBufferRTV();
-    // D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle = mDepthBuffer.GetDSV();
-    //
-    // pCommandContext->SetRenderTargets(1, &BackBufferRTV, &DsvHandle);
-    //
-    // const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    // pCommandContext->ClearRenderTargetView(BackBufferRTV, clearColor);
-    // pCommandContext->ClearDepthStencilView(DsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0);
-    //
-    // float Width = 1280; float Height = 720;
-    // D3D12_VIEWPORT viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
-    // D3D12_RECT scissorRect = { 0, 0, (LONG)Width, (LONG)Height };
-    // pCommandContext->SetViewport(viewport);
-    // pCommandContext->SetScissorRect(scissorRect);
-    //
-    // Renderer::RenderSceneView(pCommandContext, mSceneView);
-}
-
-void PBRModelTestLayer::OnRenderUI()
-{
-    // ImGui::Begin("PBR Test Layer");
-
-    // ImGui::End();
-}
-
-void PBRModelTestLayer::OnBuildRenderGraph(FRenderGraph& Graph)
+void PBRModelTestLayer::OnRender(FRenderGraph& RenderGraph)
 {
     FRGTextureDesc DepthDesc = {};
     DepthDesc.Width = Renderer::GetD3D12Backend()->GetWidth();
@@ -158,11 +111,13 @@ void PBRModelTestLayer::OnBuildRenderGraph(FRenderGraph& Graph)
     DepthDesc.ClearValue.DepthStencil.Depth = 1.0f;
     DepthDesc.ClearValue.DepthStencil.Stencil = 0;
 
-    FRGTextureHandle Depth = Graph.CreateTexture("SceneDepth", DepthDesc);
+    FRGTextureHandle Depth = RenderGraph.CreateTexture("SceneDepth", DepthDesc);
+    FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
+    FRGTextureHandle SceneDepth = RenderGraph.GetTexture("EditorViewport.SceneDepth");
     FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
 
-    Graph.AddPass("BasePass")
-        .WriteRenderTarget(BackBuffer, ERGLoadOp::Clear)
+    RenderGraph.AddPass("BasePass")
+        .WriteRenderTarget(SceneColor, ERGLoadOp::Clear)
         .WriteDepth(Depth, ERGLoadOp::Clear)
         .Execute([this](FRenderGraphContext& Context)
         {
@@ -179,5 +134,12 @@ void PBRModelTestLayer::OnBuildRenderGraph(FRenderGraph& Graph)
 
             Renderer::RenderSceneView(Cmd, mSceneView);
         });
+}
+
+void PBRModelTestLayer::OnRenderUI()
+{
+    // ImGui::Begin("PBR Test Layer");
+
+    // ImGui::End();
 }
 

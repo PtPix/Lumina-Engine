@@ -5,7 +5,16 @@
 
 #include "Engine/LuminaApp.h"
 #include "ImGUI/imgui.h"
+#include "Renderer/RenderGraph/RenderGraph.h"
 #include "TestLayer/ITestLayer.h"
+
+struct FViewportRenderTarget
+{
+    FRGTextureHandle Color;
+    FRGTextureHandle Depth;
+    uint32_t Width = 1;
+    uint32_t Height = 1;
+};
 
 class LuminaEditor : public LuminaApp
 {
@@ -24,12 +33,12 @@ protected:
     bool OnInit() override;
     void OnUpdate(double DeltaTime) override;
     void OnFixedUpdate(double FixedDeltaTime) override;
-    void OnRender(FCommandContext* pCommandContext) override;
-    void OnRenderUI(FCommandContext* pCommandContext) override;
+    void OnRender(FRenderGraph& RenderGraph) override;
+    void OnRenderUI(FRenderGraph& RenderGraph) override;
     void OnDestroy() override;
 
 private:
-    void RenderEditorUI();
+    void RenderEditorUI(FRenderGraph& RenderGraph);
 
     std::vector<std::unique_ptr<ITestLayer>> mTestLayers;
     int16_t mActiveLayerIndex = -1;

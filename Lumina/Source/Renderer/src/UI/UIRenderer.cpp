@@ -37,6 +37,31 @@ bool UIRenderer::ProcessWin32Message(HWND Hwnd, UINT Message, WPARAM WParam, LPA
 bool UIRenderer::mbInitialized = false;
 
 static Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mImGuiSrvHeap = nullptr;
+static UINT mImGuiSrvDescriptorSize = 0;
+ImTextureID UIRenderer::GetTextureID(uint32_t Slot)
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle =
+        mImGuiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+
+    GpuHandle.ptr += static_cast<SIZE_T>(Slot) * mImGuiSrvDescriptorSize;
+
+    return static_cast<ImTextureID>(GpuHandle.ptr);
+}
+
+void UIRenderer::CopySRVToSlot(FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcSRV, uint32_t Slot)
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE DstCPU =
+        mImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+
+    DstCPU.ptr += static_cast<SIZE_T>(Slot) * mImGuiSrvDescriptorSize;
+
+    pDevice->GetDevice()->CopyDescriptorsSimple(
+        1,
+        DstCPU,
+        SrcSRV,
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+    );
+}
 
 void UIRenderer::Initialize(HWND Hwnd, FDevice* pDevice)
 {
@@ -76,6 +101,8 @@ void UIRenderer::Initialize(HWND Hwnd, FDevice* pDevice)
     int tWidth, tHeight;
     ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&Pixels, &tWidth, &tHeight);
 
+    mImGuiSrvDescriptorSize =
+    pDevice->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     mbInitialized = true;
 }
 

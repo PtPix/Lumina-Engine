@@ -132,7 +132,7 @@ void FLuminaEngine::Tick()
     mCurrentApp->UpdateApp(DeltaTime);
 
     FCommandContext* MainContext = Renderer::BeginFrame();
-    mCurrentApp->RenderApp(MainContext);
+    mCurrentApp->RenderApp(Renderer::GetRenderGraph());
     Renderer::EndFrame(MainContext);
 
     Input::Update();

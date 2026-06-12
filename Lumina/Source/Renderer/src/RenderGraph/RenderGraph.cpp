@@ -134,9 +134,31 @@ FRGTextureHandle FRenderGraph::CreateTexture(const char* Name, const FRGTextureD
     return { Index };
 }
 
+FRGTextureHandle FRenderGraph::GetTexture(const char* Name)
+{
+    assert(Name != nullptr);
+    assert(mpAllocator != nullptr);
+    assert(mpDevice != nullptr);
+
+    auto It = mResourceNameToIndex.find(Name);
+    if (It != mResourceNameToIndex.end())
+    {
+        return { It->second };
+    }
+
+    return { UINT32_MAX };
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE FRenderGraph::GetSrv(const char* Name)
+{
+    FRGTextureHandle TextureHandle = GetTexture(Name);
+    FTexture* Texture = &mResources[TextureHandle.Index].Texture;
+    return {Texture->GetResource()->GetGPUVirtualAddress()};
+}
+
 FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, GpuResource* pResource,
-    D3D12_CPU_DESCRIPTOR_HANDLE Rtv, uint32_t Width, uint32_t Height, DXGI_FORMAT Format,
-    D3D12_RESOURCE_STATES InitialState)
+                                                D3D12_CPU_DESCRIPTOR_HANDLE Rtv, uint32_t Width, uint32_t Height, DXGI_FORMAT Format,
+                                                D3D12_RESOURCE_STATES InitialState)
 {
     assert(Name != nullptr);
     assert(pResource != nullptr);

@@ -11,9 +11,6 @@ bool LuminaApp::InitializeApp(HWND Hwnd, uint32_t Width, uint32_t Height)
 
 void LuminaApp::UpdateApp(double DeltaTime)
 {
-    // // Camera Update
-    // mCamera.Update(DeltaTime);
-
     OnUpdate(DeltaTime);
 }
 
@@ -22,10 +19,10 @@ void LuminaApp::FixedUpdateApp(double FixedDeltaTime)
     OnFixedUpdate(FixedDeltaTime);
 }
 
-void LuminaApp::RenderApp(FCommandContext* pCommandContext)
+void LuminaApp::RenderApp(FRenderGraph& RenderGraph)
 {
-    OnRender(pCommandContext);
-    OnRenderUI(pCommandContext);
+    OnRender(RenderGraph);
+    OnRenderUI(RenderGraph);
 }
 
 void LuminaApp::DestroyApp()

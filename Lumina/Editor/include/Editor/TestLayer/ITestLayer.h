@@ -14,9 +14,8 @@ public:
 
     virtual void OnUpdate(double DeltaTime) {}
     virtual void OnFixedUpdate(double FixedDeltaTime) {}
-    virtual void OnRender(FCommandContext* pCommandContext) {}
+    virtual void OnRender(FRenderGraph& RenderGraph) {}
     virtual void OnRenderUI() {}
-    virtual void OnBuildRenderGraph(FRenderGraph& Graph) {}
 
     [[nodiscard]] virtual std::string GetName() const = 0;
 };

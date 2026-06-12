@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <cstdint>
 
-class FCommandContext;
+class FRenderGraph;
 
 class LuminaApp
 {
@@ -13,7 +13,7 @@ public:
     bool InitializeApp(HWND Hwnd, uint32_t Width, uint32_t Height);
     void UpdateApp(double DeltaTime);
     void FixedUpdateApp(double FixedDeltaTime);
-    void RenderApp(FCommandContext* pCommandContext);
+    void RenderApp(FRenderGraph& RenderGraph);
     void DestroyApp();
 
 protected:
@@ -21,8 +21,8 @@ protected:
     virtual bool OnInit() = 0;
     virtual void OnUpdate(double DeltaTime) = 0;
     virtual void OnFixedUpdate(double FixedDeltaTime) {}
-    virtual void OnRender(FCommandContext* pCommandContext) = 0;
-    virtual void OnRenderUI(FCommandContext* pCommandContext) {}
+    virtual void OnRender(FRenderGraph& RenderGraph) = 0;
+    virtual void OnRenderUI(FRenderGraph& RenderGraph) {}
     virtual void OnDestroy() = 0;
 
     HWND mHwnd = nullptr;
