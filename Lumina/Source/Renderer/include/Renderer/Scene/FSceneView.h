@@ -1,9 +1,11 @@
 ﻿#pragma once
 
-#include <DirectXMath.h>
-
 #include "Renderer/RenderTypes.h"
 #include "Renderer/Resources/FMaterial.h"
+
+#include <DirectXMath.h>
+#include <vector>
+#include <string>
 
 // Per Instance Data
 struct alignas(16) FInstanceData

@@ -12,8 +12,16 @@ void FCommandQueue::Create(FDevice* pDevice, ECommandQueueType Type, ECommandQue
         return;
     }
 
+    static constexpr D3D12_COMMAND_LIST_TYPE Types[] =
+    {
+        D3D12_COMMAND_LIST_TYPE_DIRECT,
+        D3D12_COMMAND_LIST_TYPE_COMPUTE,
+        D3D12_COMMAND_LIST_TYPE_COPY
+    };
+
     mpDevice = pDevice;
     mType = Type;
+    mD3D12CommandListType = Types[mType];
 
     D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = CreateCommandQueueDesc(Type, Priority);
     HRESULT HResult = pDevice->GetDevice()->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&this->mpCommandQueue));

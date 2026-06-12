@@ -149,13 +149,6 @@ FRGTextureHandle FRenderGraph::GetTexture(const char* Name)
     return { UINT32_MAX };
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE FRenderGraph::GetSrv(const char* Name)
-{
-    FRGTextureHandle TextureHandle = GetTexture(Name);
-    FTexture* Texture = &mResources[TextureHandle.Index].Texture;
-    return {Texture->GetResource()->GetGPUVirtualAddress()};
-}
-
 FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, GpuResource* pResource,
                                                 D3D12_CPU_DESCRIPTOR_HANDLE Rtv, uint32_t Width, uint32_t Height, DXGI_FORMAT Format,
                                                 D3D12_RESOURCE_STATES InitialState)

@@ -146,10 +146,6 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
 
 
     pContext->SetGraphicsRootSignature(GetBindlessRootSignature()->Get());
-
-    // pContext->SetPipelineState(pPSO);
-    // pContext->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
     ID3D12DescriptorHeap* ppHeaps[] = { mpD3D12Backend->GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
 

@@ -1,19 +1,6 @@
 ﻿#pragma once
 
 #include <DirectXMath.h>
-#include <vector>
-#include <cstdint>
-
-struct FObjectData
-{
-    DirectX::XMMATRIX WorldMatrix;
-    DirectX::XMFLOAT4 BaseColor;
-
-    uint32_t AlbedoTexIndex;
-    uint32_t NormalTexIndex;
-    uint32_t RMATexIndex;
-    uint32_t Padding;
-};
 
 struct FGlobalPassData
 {

@@ -103,7 +103,6 @@ public:
 
     FRGTextureHandle CreateTexture(const char* Name, const FRGTextureDesc& Desc);
     FRGTextureHandle GetTexture(const char* Name);
-    D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(const char* Name);
 
     FRGTextureHandle ImportBackBuffer(const char* Name, GpuResource* pResource, D3D12_CPU_DESCRIPTOR_HANDLE Rtv,
         uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_RESOURCE_STATES InitialState);
