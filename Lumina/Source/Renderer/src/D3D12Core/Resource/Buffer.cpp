@@ -1,8 +1,9 @@
-﻿#include <cassert>
-
-#include "Renderer/D3D12Core/Resource/FBuffer.h"
+﻿#include "Renderer/D3D12Core/Resource/Buffer.h"
 #include "Renderer/D3D12Core/Common.h"
-#include "Logger/Logger.h"
+
+#include <cassert>
+#include <utility>
+
 
 FBuffer::FBuffer(FBuffer&& Other) noexcept
 {
@@ -17,10 +18,10 @@ FBuffer& FBuffer::operator=(FBuffer&& Other) noexcept
 
         mpAllocation = Other.mpAllocation;
         mBufferSize = Other.mBufferSize;
-        Other.mpAllocation = nullptr;
-
         mpResource = std::move(Other.mpResource);
         mUsageState = Other.mUsageState;
+
+        Other.mpAllocation = nullptr;
     }
     return *this;
 }
@@ -74,7 +75,11 @@ bool FBuffer::Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t 
 
 void FBuffer::Destroy()
 {
-    mpAllocation.Reset();
+    if (mpAllocation)
+    {
+        mpAllocation.Reset();
+    }
+
     mpResource.Reset();
     mBufferSize = 0;
 }

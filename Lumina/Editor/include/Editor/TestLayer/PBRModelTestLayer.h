@@ -6,7 +6,7 @@
 #include "Engine/Camera.h"
 #include "Engine/World/FScene.h"
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
-#include "Renderer/D3D12Core/Resource/FTexture.h"
+#include "Renderer/D3D12Core/Resource/Texture.h"
 #include "Renderer/Resources/FMaterial.h"
 
 class FMesh;

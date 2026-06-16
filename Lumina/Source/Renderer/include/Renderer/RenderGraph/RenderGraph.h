@@ -4,7 +4,7 @@
 #include <d3d12.h>
 #include <functional>
 
-#include "Renderer/D3D12Core/Resource/FTexture.h"
+#include "Renderer/D3D12Core/Resource/Texture.h"
 
 class FCommandContext;
 class GpuResource;

@@ -1,13 +1,18 @@
 ﻿#include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
-#include "dxcapi.h"
+#include "Renderer/D3D12Core/Common.h"
+
+#include <dxcapi.h>
+#include <d3dcompiler.h>
+
 #include <algorithm>
 #include <cassert>
-#include <d3dcompiler.h>
 #include <unordered_map>
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+
 const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_DEBUG_NAME_FOR_BINARY;
+
 static const std::unordered_map<UINT, LPCWSTR> D3DCompilerFlagCompatibilityLookup =
 {
     { D3DCOMPILE_DEBUG                         , DXC_ARG_DEBUG }
@@ -30,75 +35,6 @@ static const std::unordered_map<UINT, LPCWSTR> D3DCompilerFlagCompatibilityLooku
     ,{ D3DCOMPILE_DEBUG_NAME_FOR_SOURCE         , DXC_ARG_DEBUG_NAME_FOR_SOURCE }
     ,{ D3DCOMPILE_DEBUG_NAME_FOR_BINARY         , DXC_ARG_DEBUG_NAME_FOR_BINARY }
 };
-
-template<unsigned STR_SIZE>
-std::string UnicodeToASCII(const WCHAR wchars[STR_SIZE])
-{
-    char ascii[STR_SIZE];
-    size_t numCharsConverted = 0;
-    wcstombs_s(&numCharsConverted, ascii, wchars, STR_SIZE);
-    return std::string(ascii);
-}
-std::vector<std::string> split(const char* s, char c)
-{
-    std::vector<std::string> result;
-    do
-    {
-        const char* begin = s;
-
-        if (*begin == c || *begin == '\0')
-            continue;	// skip delimiter character
-
-        while (*s != c && *s)
-            s++;	// iterate until delimiter is found
-
-        result.push_back(std::string(begin, s));
-
-    } while (*s++);
-    return result;
-}
-
-std::vector<std::string> split(const std::string& str, char c)
-{
-    return split(str.c_str(), c);
-}
-
-std::vector<std::string> split(std::string_view s, const std::vector<char>& delimiters)
-{
-    std::vector<std::string> result;
-    const char* ps = s.data();
-    auto IsDelimiter = [&delimiters](const char c)
-    {
-        return std::find(delimiters.begin(), delimiters.end(), c) != delimiters.end();
-    };
-
-    do
-    {
-        const char* begin = ps;
-
-        if (IsDelimiter(*begin) || (*begin == '\0'))
-            continue;	// skip delimiter characters
-
-        while (!IsDelimiter(*ps) && *ps)
-            ps++;	// iterate until delimiter is found or string has ended
-
-        result.push_back(std::string(begin, ps));
-
-    } while (*ps++);
-    return result;
-}
-std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
-std::wstring ASCIIToUnicode(const char* str) { return std::wstring(str, str + strlen(str)); }
-std::string GetFolderPath(const std::string & pathToFile)
-{
-    const auto tokens = split(pathToFile, { '/', '\\' });
-    std::string path = "";
-    if (!tokens.empty())
-        for (int i = 0; i < tokens.size() - 1; ++i)
-            path += tokens[i] + "/";
-    return path;
-}
-
 
 bool ShaderUtils::FBlob::IsNull() const
 {
@@ -125,15 +61,51 @@ size_t ShaderUtils::FBlob::GetByteCodeSize() const
     return 0;
 }
 
-ShaderUtils::FBlob::FBlob() = default;
-ShaderUtils::FBlob::~FBlob() = default;
-ShaderUtils::FBlob::FBlob(FBlob&& Other) noexcept = default;
-ShaderUtils::FBlob& ShaderUtils::FBlob::operator=(FBlob&& Other) noexcept = default;
+const char* ShaderUtils::GetShaderModel_cstr(const EShaderModel& ShaderModel, const EShaderStage ShaderStage)
+{
+    static const char* ShaderModelStrings[][EShaderStage::NUM_SHADER_STAGES] = {
+        { "vs_5_0", "gs_5_0", "ds_5_0", "hs_5_0", "ps_5_0", "cs_5_0" },
+        { "vs_6_0", "gs_6_0", "ds_6_0", "hs_6_0", "ps_6_0", "cs_6_0" },
+        { "vs_6_1", "gs_6_1", "ds_6_1", "hs_6_1", "ps_6_1", "cs_6_1" },
+        { "vs_6_2", "gs_6_2", "ds_6_2", "hs_6_2", "ps_6_2", "cs_6_2" },
+        { "vs_6_3", "gs_6_3", "ds_6_3", "hs_6_3", "ps_6_3", "cs_6_3" },
+        { "vs_6_4", "gs_6_4", "ds_6_4", "hs_6_4", "ps_6_4", "cs_6_4" },
+        { "vs_6_5", "gs_6_5", "ds_6_5", "hs_6_5", "ps_6_5", "cs_6_5" },
+        { "vs_6_6", "gs_6_6", "ds_6_6", "hs_6_6", "ps_6_6", "cs_6_6" },
+        { "vs_6_7", "gs_6_7", "ds_6_7", "hs_6_7", "ps_6_7", "cs_6_7" },
+        { "vs_6_8", "gs_6_8", "ds_6_8", "hs_6_8", "ps_6_8", "cs_6_8" },
+    };
+    if (ShaderStage < EShaderStage::NUM_SHADER_STAGES && ShaderModel < EShaderModel::NUM_SHADER_MODELS)
+    {
+        return ShaderModelStrings[ShaderModel][ShaderStage];
+    }
+    return nullptr;
+}
+
+const wchar_t* ShaderUtils::GetShaderModel_wcstr(const EShaderModel& ShaderModel, const EShaderStage ShaderStage)
+{
+    static const wchar_t* ShaderModelStrings[][EShaderStage::NUM_SHADER_STAGES] = {
+        { L"vs_5_0", L"gs_5_0", L"ds_5_0", L"hs_5_0", L"ps_5_0", L"cs_5_0" },
+        { L"vs_6_0", L"gs_6_0", L"ds_6_0", L"hs_6_0", L"ps_6_0", L"cs_6_0" },
+        { L"vs_6_1", L"gs_6_1", L"ds_6_1", L"hs_6_1", L"ps_6_1", L"cs_6_1" },
+        { L"vs_6_2", L"gs_6_2", L"ds_6_2", L"hs_6_2", L"ps_6_2", L"cs_6_2" },
+        { L"vs_6_3", L"gs_6_3", L"ds_6_3", L"hs_6_3", L"ps_6_3", L"cs_6_3" },
+        { L"vs_6_4", L"gs_6_4", L"ds_6_4", L"hs_6_4", L"ps_6_4", L"cs_6_4" },
+        { L"vs_6_5", L"gs_6_5", L"ds_6_5", L"hs_6_5", L"ps_6_5", L"cs_6_5" },
+        { L"vs_6_6", L"gs_6_6", L"ds_6_6", L"hs_6_6", L"ps_6_6", L"cs_6_6" },
+        { L"vs_6_7", L"gs_6_7", L"ds_6_7", L"hs_6_7", L"ps_6_7", L"cs_6_7" },
+        { L"vs_6_8", L"gs_6_8", L"ds_6_8", L"hs_6_8", L"ps_6_8", L"cs_6_8" },
+    };
+    if (ShaderStage < EShaderStage::NUM_SHADER_STAGES && ShaderModel < EShaderModel::NUM_SHADER_MODELS)
+    {
+        return ShaderModelStrings[ShaderModel][ShaderStage];
+    }
+    return nullptr;
+}
 
 ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc& ShaderStageCompileDesc,
                                                   std::string& OutErrorString)
 {
-    const WCHAR* StringPath = ShaderStageCompileDesc.FilePath.data();
     const bool bIsShaderModel5 = ShaderStageCompileDesc.ShaderModel == EShaderModel::SM5_0;
 
     LUMINA_LOG_INFO(Shader, "Compiling Shader Source: [%s @ %s()]"
@@ -147,148 +119,131 @@ ShaderUtils::FBlob ShaderUtils::CompileFromSource(const FShaderStageCompileDesc&
     if (bIsShaderModel5)
     {
         LUMINA_LOG_ERROR(Shader, "We don't support SM5.0 for now");
+        return Blob;
     }
-    // SM6
-    else
+
+    // Setup File Paths using std::filesystem
+    std::filesystem::path AbsolutePath = std::filesystem::absolute(ShaderStageCompileDesc.FilePath);
+    std::wstring widePath              = AbsolutePath.wstring();
+    std::wstring wideParentPath        = AbsolutePath.parent_path().wstring();
+
+    // Prepare Compiler Arguments
+    std::vector<LPCWSTR> ppArgs = {};
+
+    const std::wstring StringEntryPoint = StringUtils::ASCIIToUnicode(ShaderStageCompileDesc.EntryPoint);
+    std::vector<std::wstring> UnicodeDefineArgs;
+
+    for (const FShaderMacro& Macro : ShaderStageCompileDesc.Macros)
     {
-        const std::wstring StringEntryPoint = ASCIIToUnicode(ShaderStageCompileDesc.EntryPoint);
-        const std::wstring StringParentFolder = ASCIIToUnicode(GetFolderPath(UnicodeToASCII<260>(StringPath)));
-        std::vector<std::wstring> UnicodeDefineArgs;
-        for (const FShaderMacro& Marco : ShaderStageCompileDesc.Macros)
+        UnicodeDefineArgs.push_back(StringUtils::ASCIIToUnicode(Macro.Name) + L"=" + StringUtils::ASCIIToUnicode(Macro.Value));
+    }
+
+    // Initialize DXC Compiler
+    // TODO: Creating DXC Instances per-compile is extremely slow. Consider caching IDxcCompiler3 and IDxcUtils.
+    Microsoft::WRL::ComPtr<IDxcCompiler3> DxcCompiler3;
+    Microsoft::WRL::ComPtr<IDxcUtils>     DxcUtils;
+
+    HRESULT HResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler3));
+    assert(SUCCEEDED(HResult) && "Couldn't initialize DirectXCompiler");
+
+    HResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&DxcUtils));
+    assert(SUCCEEDED(HResult) && "Couldn't initialize DirectXCompiler Utils");
+
+    // Read Shader Source File
+    std::ifstream shaderFile(widePath, std::ios::binary | std::ios::ate);
+    if (!shaderFile.is_open())
+    {
+        LUMINA_LOG_ERROR(Shader, "Failed to open shader file.");
+        return Blob;
+    }
+
+    std::streamsize size = shaderFile.tellg();
+    shaderFile.seekg(0, std::ios::beg);
+
+    std::vector<char> shaderSource(size);
+    if (!shaderFile.read(shaderSource.data(), size)) return Blob;
+
+    Microsoft::WRL::ComPtr<IDxcBlobEncoding> SourceBlob;
+    HResult = DxcUtils->CreateBlobFromPinned(shaderSource.data(), static_cast<uint32_t>(shaderSource.size()), CP_UTF8, &SourceBlob);
+    assert(SUCCEEDED(HResult) && "Couldn't create SourceBlob");
+
+    DxcBuffer SourceBuffer = {};
+    SourceBuffer.Ptr      = SourceBlob->GetBufferPointer();
+    SourceBuffer.Size     = SourceBlob->GetBufferSize();
+    SourceBuffer.Encoding = DXC_CP_ACP;
+
+    // Apply D3DCompile Equivalent Flags
+    for (const auto& prFlag : D3DCompilerFlagCompatibilityLookup)
+    {
+        if (SHADER_COMPILE_FLAGS & prFlag.first)
         {
-            UnicodeDefineArgs.push_back(ASCIIToUnicode(Marco.Name) + L"=" + ASCIIToUnicode(Marco.Value));
-        }
-        std::vector<LPCWSTR> ppArgs = {};
-
-        Microsoft::WRL::ComPtr<IDxcCompiler3> DxcCompiler3;
-        Microsoft::WRL::ComPtr<IDxcUtils> DxcUtils;
-
-        HRESULT HResult = {};
-        HResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler3));
-        if (FAILED(HResult))
-        {
-            LUMINA_LOG_ERROR(Shader, "Couldn't initialize DirectXCompiler Compiler");
-            assert(false);
-        }
-        HResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&DxcUtils));
-        if (FAILED(HResult))
-        {
-            LUMINA_LOG_ERROR(Shader, "Couldn't initialize DirectXCompiler Utils");
-            assert(false);
-        }
-
-        std::filesystem::path FilePathFS(ShaderStageCompileDesc.FilePath);
-        std::filesystem::path AbsolutePath = std::filesystem::absolute(FilePathFS);
-
-        std::wstring widePath = AbsolutePath.wstring();
-        std::wstring wideParentPath = AbsolutePath.parent_path().wstring();
-        // Load Source file
-        uint32_t CodePage = CP_UTF8;
-        Microsoft::WRL::ComPtr<IDxcBlobEncoding> SourceBlob;
-        std::ifstream shaderFile(widePath, std::ios::binary | std::ios::ate);
-        if (!shaderFile.is_open()) return {};
-
-        std::streamsize size = shaderFile.tellg();
-        shaderFile.seekg(0, std::ios::beg);
-
-        std::vector<char> shaderSource(size);
-        if (!shaderFile.read(shaderSource.data(), size)) return {};
-        Log::Info("Trying to load shader from absolute path: %s", AbsolutePath.string().c_str());
-        HResult = DxcUtils->CreateBlobFromPinned(shaderSource.data(), (uint32_t)shaderSource.size(), CP_UTF8, &SourceBlob);
-        if (FAILED(HResult))
-        {
-            LUMINA_LOG_ERROR(Shader, "Couldn't create SourceBlob");
-            assert(false);
-        }
-        DxcBuffer SourceBuffer{};
-        SourceBuffer.Ptr = SourceBlob->GetBufferPointer();
-        SourceBuffer.Size = SourceBlob->GetBufferSize();
-        SourceBuffer.Encoding = DXC_CP_ACP;
-
-        // Build Args : Support Compile Flag from D3DCompile
-        for (const auto& prFlag : D3DCompilerFlagCompatibilityLookup)
-        {
-            if (SHADER_COMPILE_FLAGS & prFlag.first)
+            ppArgs.push_back(prFlag.second);
+            if (prFlag.first == D3DCOMPILE_DEBUG)
             {
-                ppArgs.push_back(prFlag.second);
-                if (prFlag.first == D3DCOMPILE_DEBUG)
-                {
-                    ppArgs.push_back(L"-Qembed_debug");
-                    ppArgs.push_back(L"-Zi");
-                }
+                ppArgs.push_back(L"-Qembed_debug");
+                ppArgs.push_back(L"-Zi");
             }
-        }
-
-        // Add NativeFP16
-        if (ShaderStageCompileDesc.bUseNative16bit)
-        {
-            ppArgs.push_back(L"-enable-16bit-types");
-        }
-
-        // User-provided compiler flags
-        for (const std::wstring& Flag : ShaderStageCompileDesc.DXCompilerFlags)
-        {
-            ppArgs.push_back(Flag.c_str());
-        }
-
-        // Defines
-        for (const std::wstring& UnicodeDefineArg : UnicodeDefineArgs)
-        {
-            ppArgs.push_back(L"-D");
-            ppArgs.push_back(UnicodeDefineArg.c_str());
-        }
-
-        // Enrty Point
-        ppArgs.push_back(L"-E");
-        ppArgs.push_back(StringEntryPoint.c_str());
-
-        // Shader Model
-        ppArgs.push_back(L"-T");
-        ppArgs.push_back(GetShaderModel_wcstr(ShaderStageCompileDesc.ShaderModel, ShaderStageCompileDesc.ShaderStage));
-
-        // Include Path
-        ppArgs.push_back(L"-I");
-        ppArgs.push_back(StringParentFolder.c_str());
-
-        ppArgs.push_back(widePath.c_str());
-
-        // Include Handler
-        Microsoft::WRL::ComPtr<IDxcIncludeHandler> pIncludeHandler;
-        HResult = DxcUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
-
-        // Compile
-        Microsoft::WRL::ComPtr<IDxcResult> pResult;
-        HResult = DxcCompiler3->Compile(&SourceBuffer, ppArgs.data(), (UINT32)ppArgs.size(),
-            pIncludeHandler.Get(), IID_PPV_ARGS(&pResult));
-        pResult->GetStatus(&HResult);
-
-        Microsoft::WRL::ComPtr<IDxcBlobUtf8> pErrors = nullptr;
-        HResult = pResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
-        if (pErrors != nullptr && pErrors->GetStringLength() != 0)
-        {
-            OutErrorString = pErrors->GetStringPointer();
-            if (FAILED(HResult))
-            {
-                LUMINA_LOG_ERROR(Shader, OutErrorString.c_str());
-            }
-            else
-            {
-                LUMINA_LOG_WARNING(Shader, OutErrorString.c_str());
-            }
-        }
-
-        if (FAILED(HResult))
-        {
-            return {};
-        }
-
-        Microsoft::WRL::ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
-        HResult = pResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&Blob.pDxcBlob), nullptr);
-        if (FAILED(HResult))
-        {
-            return {};
         }
     }
+
+    if (ShaderStageCompileDesc.bUseNative16bit)
+    {
+        ppArgs.push_back(L"-enable-16bit-types");
+    }
+
+    // Append custom user compiler flags
+    for (const std::wstring& Flag : ShaderStageCompileDesc.DXCompilerFlags)
+    {
+        ppArgs.push_back(Flag.c_str());
+    }
+
+    // Append Macros/Defines
+    for (const std::wstring& UnicodeDefineArg : UnicodeDefineArgs)
+    {
+        ppArgs.push_back(L"-D");
+        ppArgs.push_back(UnicodeDefineArg.c_str());
+    }
+
+    // Entry Point & Shader Model & Path
+    ppArgs.push_back(L"-E"); ppArgs.push_back(StringEntryPoint.c_str());
+    ppArgs.push_back(L"-T"); ppArgs.push_back(GetShaderModel_wcstr(ShaderStageCompileDesc.ShaderModel, ShaderStageCompileDesc.ShaderStage));
+    ppArgs.push_back(L"-I"); ppArgs.push_back(wideParentPath.c_str()); // Include paths
+    ppArgs.push_back(widePath.c_str());
+
+    // Setup Include Handler
+    Microsoft::WRL::ComPtr<IDxcIncludeHandler> pIncludeHandler;
+    DxcUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
+
+    // Execute DXC Compilation
+    Microsoft::WRL::ComPtr<IDxcResult> pResult;
+    HResult = DxcCompiler3->Compile(&SourceBuffer, ppArgs.data(), static_cast<UINT32>(ppArgs.size()), pIncludeHandler.Get(), IID_PPV_ARGS(&pResult));
+
+    if (SUCCEEDED(HResult))
+    {
+        pResult->GetStatus(&HResult);
+    }
+
+    // Handle Errors and Warnings
+    Microsoft::WRL::ComPtr<IDxcBlobUtf8> pErrors = nullptr;
+    if (SUCCEEDED(pResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr)) && pErrors && pErrors->GetStringLength() > 0)
+    {
+        OutErrorString = pErrors->GetStringPointer();
+        if (FAILED(HResult))
+        {
+            LUMINA_LOG_ERROR(Shader, "Shader Compilation Error:\n%s", OutErrorString.c_str());
+        }
+        else
+        {
+            LUMINA_LOG_WARNING(Shader, "Shader Compilation Warning:\n%s", OutErrorString.c_str());
+        }
+    }
+
+    // Return empty blob on failure
+    if (FAILED(HResult)) return Blob;
+
+    // Retrieve Compiled DXIL Object
+    HResult = pResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&Blob.pDxcBlob), nullptr);
+
     return Blob;
 }
 

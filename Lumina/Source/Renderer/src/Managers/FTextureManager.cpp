@@ -3,8 +3,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../../stb_image.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
-#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 
 FDevice* TextureManager::mpDevice = nullptr;
 std::unordered_map<std::string, FTextureData> TextureManager::mTextureMap;

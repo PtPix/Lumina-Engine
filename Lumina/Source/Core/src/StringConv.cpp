@@ -55,3 +55,13 @@ std::wstring StringUtils::UTF8ToWide(std::string_view utf8Str)
 
     return wideStr;
 }
+
+std::wstring StringUtils::ASCIIToUnicode(const std::string& str)
+{
+    return std::wstring(str.begin(), str.end());
+}
+
+std::wstring StringUtils::ASCIIToUnicode(const char* str)
+{
+    return std::wstring(str, str + strlen(str));
+}

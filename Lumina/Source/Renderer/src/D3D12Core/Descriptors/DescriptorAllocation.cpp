@@ -1,9 +1,8 @@
-﻿#include "Renderer/D3D12Core/Descriptors/FDescriptorAllocation.h"
+﻿#include "Renderer/D3D12Core/Descriptors/DescriptorAllocation.h"
+#include "Renderer/D3D12Core/Descriptors/DescriptorAllocatorPage.h"
 
 #include <cassert>
 #include <utility>
-
-#include "Renderer/D3D12Core/Descriptors/FDescriptorAllocatorPage.h"
 
 FDescriptorAllocation::FDescriptorAllocation(D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, UINT NumHandles,
                                              UINT DescriptorSize, std::shared_ptr<FDescriptorAllocatorPage> pPage,
@@ -27,13 +26,17 @@ FDescriptorAllocation& FDescriptorAllocation::operator=(FDescriptorAllocation&& 
     if (this != &Other)
     {
         Free();
+
         mCpuHandle = Other.mCpuHandle;
         mNumHandles = Other.mNumHandles;
         mDescriptorSize = Other.mDescriptorSize;
+        mOffset = Other.mOffset;
         mpPage = std::move(Other.mpPage);
 
         Other.mCpuHandle.ptr = 0;
         Other.mNumHandles = 0;
+        Other.mOffset = 0;
+        Other.mpPage.reset();
     }
     return *this;
 }
@@ -52,6 +55,7 @@ void FDescriptorAllocation::Free()
 
         mCpuHandle.ptr = 0;
         mNumHandles = 0;
+        mOffset = 0;
         mpPage.reset();
     }
 }

@@ -2,12 +2,12 @@
 
 #include "Renderer/RenderTypes.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
-#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 #include "Renderer/Managers/FTextureManager.h"
 #include "Renderer/Scene/FSceneView.h"
-#include "Renderer/D3D12Core/Core/FSwapChain.h"
+#include "Renderer/D3D12Core/Core/SwapChain.h"
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
@@ -74,7 +74,7 @@ FCommandContext* Renderer::BeginFrame()
         mpD3D12Backend->GetWidth(),
         mpD3D12Backend->GetHeight(),
         mpD3D12Backend->GetBackBufferFormat(),
-        D3D12_RESOURCE_STATE_RENDER_TARGET
+        D3D12_RESOURCE_STATE_PRESENT
     );
 
     return pContext;
@@ -172,7 +172,7 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 
 void Renderer::InitializeBindlessRootSignature()
 {
-    RootSignatureBuilder Builder;
+    FRootSignatureBuilder Builder;
 
     // Parameter 0 : Per Object Bindless Index
     // register(b0, space0)

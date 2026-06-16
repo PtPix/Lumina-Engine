@@ -1,42 +1,64 @@
-﻿#pragma once
+﻿/**
+ * @file PipelineState.h
+ * @brief DirectX 12 Graphics Pipeline State Object (PSO) Wrapper and Builder.
+ *
+ * Encapsulates ID3D12PipelineState. Provides a builder pattern (GraphicsPipelineStateBuilder)
+ * to configure and construct PSOs cleanly without manually filling large D3D12 structs.
+ */
+
+#pragma once
 
 #include <d3d12.h>
+#include <wrl/client.h>
 #include <vector>
 
-class PipelineState
+class FPipelineState
 {
 public:
-    PipelineState() = default;
-    ~PipelineState();
+    FPipelineState() = default;
+    ~FPipelineState() { Destroy(); }
+
+    FPipelineState(const FPipelineState&) = delete;
+    FPipelineState& operator=(const FPipelineState&) = delete;
+
+    FPipelineState(FPipelineState&&) noexcept = default;
+    FPipelineState& operator=(FPipelineState&&) noexcept = default;
 
     void Destroy();
-    [[nodiscard]] ID3D12PipelineState* Get() const { return mPipelineState; }
+
+    [[nodiscard]] ID3D12PipelineState* Get() const { return mPipelineState.Get(); }
 
 private:
-    friend class GraphicsPipelineStateBuilder;
-    ID3D12PipelineState* mPipelineState = nullptr;
+    friend class FGraphicsPipelineStateBuilder;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> mPipelineState;
 };
 
-class GraphicsPipelineStateBuilder
+class FGraphicsPipelineStateBuilder
 {
 public:
-    GraphicsPipelineStateBuilder();
+    FGraphicsPipelineStateBuilder();
 
-    GraphicsPipelineStateBuilder& SetRootSignature(ID3D12RootSignature* RootSignature);
-    GraphicsPipelineStateBuilder& SetVertexShader(const void* ByteCode, size_t ByteCodeLength);
-    GraphicsPipelineStateBuilder& SetPixelShader(const void* ByteCode, size_t ByteCodeLength);
-    GraphicsPipelineStateBuilder& SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& InputLayout);
-    GraphicsPipelineStateBuilder& SetRenderTargetFormats(const std::vector<DXGI_FORMAT>& RtvFormats, DXGI_FORMAT DsvFormat = DXGI_FORMAT_UNKNOWN);
-    GraphicsPipelineStateBuilder& SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE TopologyType);
+    // ------------------------------------------------------------------------
+    // Pipeline Configuration Methods
+    // ------------------------------------------------------------------------
+    FGraphicsPipelineStateBuilder& SetRootSignature(ID3D12RootSignature* RootSignature);
+    FGraphicsPipelineStateBuilder& SetVertexShader(const void* ByteCode, size_t ByteCodeLength);
+    FGraphicsPipelineStateBuilder& SetPixelShader(const void* ByteCode, size_t ByteCodeLength);
+    FGraphicsPipelineStateBuilder& SetInputLayout(const std::vector<D3D12_INPUT_ELEMENT_DESC>& InputLayout);
+    FGraphicsPipelineStateBuilder& SetRenderTargetFormats(const std::vector<DXGI_FORMAT>& RtvFormats, DXGI_FORMAT DsvFormat = DXGI_FORMAT_UNKNOWN);
+    FGraphicsPipelineStateBuilder& SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE TopologyType);
 
-    GraphicsPipelineStateBuilder& EnableDepthTest();
-    GraphicsPipelineStateBuilder& SetDepthStencilFormat(DXGI_FORMAT Format);
+    FGraphicsPipelineStateBuilder& EnableDepthTest();
+    FGraphicsPipelineStateBuilder& SetDepthStencilFormat(DXGI_FORMAT Format);
 
-    GraphicsPipelineStateBuilder& SetBlendState(const D3D12_BLEND_DESC& BlendDesc);
-    GraphicsPipelineStateBuilder& SetRasterizeState(const D3D12_RASTERIZER_DESC& RasterDesc);
-    GraphicsPipelineStateBuilder& SetDepthStencilState(const D3D12_DEPTH_STENCIL_DESC& DepthStencilDesc);
+    FGraphicsPipelineStateBuilder& SetBlendState(const D3D12_BLEND_DESC& BlendDesc);
+    FGraphicsPipelineStateBuilder& SetRasterizeState(const D3D12_RASTERIZER_DESC& RasterDesc);
+    FGraphicsPipelineStateBuilder& SetDepthStencilState(const D3D12_DEPTH_STENCIL_DESC& DepthStencilDesc);
 
-    bool Build(ID3D12Device* Device, PipelineState& OutPipelineState);
+    // ------------------------------------------------------------------------
+    // Build Output
+    // ------------------------------------------------------------------------
+    bool Build(ID3D12Device* Device, FPipelineState& OutPipelineState);
 
 private:
     D3D12_GRAPHICS_PIPELINE_STATE_DESC mPipelineStateDesc;

@@ -1,7 +1,9 @@
-﻿#include <cassert>
+﻿#include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Common.h"
 
-#include "Renderer/D3D12Core/Descriptors/FBindlessDescriptorHeap.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include <cassert>
 
 FBindlessDescriptorHeap::~FBindlessDescriptorHeap()
 {
@@ -45,6 +47,7 @@ uint32_t FBindlessDescriptorHeap::AllocateSlot()
     }
 
     assert(mCurrentWaterMark < mMaxDescriptors && "Bindless Descriptor Heap is Full!");
+
     uint32_t Index = mCurrentWaterMark;
     mCurrentWaterMark++;
 

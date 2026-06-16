@@ -1,27 +1,19 @@
-﻿#include "../../../include/Renderer/D3D12Core/Pipeline/RootSignature.h"
-
-FRootSignature::~FRootSignature()
-{
-    Destroy();
-}
+﻿#include "Renderer/D3D12Core/Pipeline/RootSignature.h"
+#include "Renderer/D3D12Core/Common.h"
 
 void FRootSignature::Destroy()
 {
-    if (mRootSignature)
-    {
-        mRootSignature->Release();
-        mRootSignature = nullptr;
-    }
+    mRootSignature.Reset();
 }
 
-RootSignatureBuilder::RootSignatureBuilder()
+FRootSignatureBuilder::FRootSignatureBuilder()
 {
     mRootParameters.reserve(16);
     mStaticSamplers.reserve(16);
     mDescriptorRangesArray.reserve(16);
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddRootConstants(UINT ShaderRegister, UINT RegisterSpace, UINT NumValues)
+FRootSignatureBuilder& FRootSignatureBuilder::AddRootConstants(UINT ShaderRegister, UINT RegisterSpace, UINT NumValues)
 {
     D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -33,7 +25,7 @@ RootSignatureBuilder& RootSignatureBuilder::AddRootConstants(UINT ShaderRegister
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace)
+FRootSignatureBuilder& FRootSignatureBuilder::AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace)
 {
     D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -45,7 +37,7 @@ RootSignatureBuilder& RootSignatureBuilder::AddConstantBufferView(UINT ShaderReg
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace)
+FRootSignatureBuilder& FRootSignatureBuilder::AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace)
 {
     D3D12_ROOT_PARAMETER1 RootParameter = {};
     RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
@@ -57,7 +49,7 @@ RootSignatureBuilder& RootSignatureBuilder::AddShaderResourceView(UINT ShaderReg
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE1>& Ranges,
+FRootSignatureBuilder& FRootSignatureBuilder::AddDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE1>& Ranges,
     D3D12_SHADER_VISIBILITY Visibility)
 {
     mDescriptorRangesArray.push_back(Ranges);
@@ -72,7 +64,7 @@ RootSignatureBuilder& RootSignatureBuilder::AddDescriptorTable(const std::vector
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AddStaticSampler(UINT ShaderRegister, UINT RegisterSpace,
+FRootSignatureBuilder& FRootSignatureBuilder::AddStaticSampler(UINT ShaderRegister, UINT RegisterSpace,
     D3D12_FILTER Filter)
 {
     D3D12_STATIC_SAMPLER_DESC SamplerDesc = {};
@@ -94,13 +86,13 @@ RootSignatureBuilder& RootSignatureBuilder::AddStaticSampler(UINT ShaderRegister
     return *this;
 }
 
-RootSignatureBuilder& RootSignatureBuilder::AllowInputLayout()
+FRootSignatureBuilder& FRootSignatureBuilder::AllowInputLayout()
 {
     mFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     return *this;
 }
 
-bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSignature)
+bool FRootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSignature)
 {
     size_t TableIndex = 0;
     for (auto& RootParam : mRootParameters)
@@ -127,8 +119,8 @@ bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSi
         FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
-    ID3DBlob* SignatureBlob = nullptr;
-    ID3DBlob* ErrorBlob = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> SignatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
 
     HRESULT HResult = D3D12SerializeVersionedRootSignature(&RootSignatureDesc, &SignatureBlob, &ErrorBlob);
     if (FAILED(HResult))
@@ -143,9 +135,6 @@ bool RootSignatureBuilder::Build(ID3D12Device* Device, FRootSignature& OutRootSi
 
     OutRootSignature.Destroy();
     HResult = Device->CreateRootSignature(0, SignatureBlob->GetBufferPointer(), SignatureBlob->GetBufferSize(), IID_PPV_ARGS(&OutRootSignature.mRootSignature));
-
-    if (SignatureBlob) SignatureBlob->Release();
-    if (ErrorBlob) ErrorBlob->Release();
 
     return SUCCEEDED(HResult);
 }

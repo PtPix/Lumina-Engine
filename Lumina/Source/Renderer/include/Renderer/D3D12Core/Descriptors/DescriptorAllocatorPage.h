@@ -1,4 +1,12 @@
-﻿#pragma once
+﻿/**
+ * @file DescriptorAllocatorPage.h
+ * @brief A single ID3D12DescriptorHeap wrapper acting as a memory page.
+ *
+ * Uses a free-list allocation strategy to sub-allocate variable sized
+ * contiguous descriptor blocks from a single non-shader-visible heap.
+ */
+
+#pragma once
 
 #include <memory>
 #include <d3d12.h>
@@ -6,7 +14,7 @@
 #include <mutex>
 #include <wrl/client.h>
 
-#include "FDescriptorAllocation.h"
+#include "Renderer/D3D12Core/Descriptors/DescriptorAllocation.h"
 
 class FDevice;
 

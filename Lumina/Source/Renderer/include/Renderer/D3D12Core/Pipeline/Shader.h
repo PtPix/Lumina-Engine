@@ -1,4 +1,11 @@
-﻿#pragma once
+﻿/**
+ * @file Shader.h
+ * @brief Common Shader Definitions.
+ *
+ * Defines Shader Stages, Models, and Macro structures used by the ShaderCompiler.
+ */
+
+#pragma once
 #include <cstdint>
 
 enum EShaderStageFlags : uint32_t
@@ -48,5 +55,6 @@ struct FShaderMacro
 {
     char Name[256];
     char Value[128];
+
     static FShaderMacro CreateShaderMacro(const char* Name, const char* Format, ...);
 };

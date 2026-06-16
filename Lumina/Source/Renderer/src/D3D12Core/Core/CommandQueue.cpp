@@ -1,7 +1,7 @@
 ﻿#include <d3d12.h>
 
-#include "Renderer/D3D12Core/Core/FCommandQueue.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Core/Device.h"
 #include "Renderer/D3D12Core/Common.h"
 
 void FCommandQueue::Create(FDevice* pDevice, ECommandQueueType Type, ECommandQueuePriority Priority, const char* pName)
@@ -38,6 +38,7 @@ void FCommandQueue::Create(FDevice* pDevice, ECommandQueueType Type, ECommandQue
     // Create Execute fence
     pDevice->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mpFence));
     mFenceEventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+
     mNextFenceValue = 1;
     mLastCompletedFenceValue = 0;
 }
@@ -49,6 +50,7 @@ void FCommandQueue::Destroy()
         CloseHandle(mFenceEventHandle);
         mFenceEventHandle = nullptr;
     }
+
     mpFence.Reset();
     mpCommandQueue.Reset();
 }
@@ -71,43 +73,8 @@ FCommandContext* FCommandQueue::AllocateContext()
     mAvailableContexts.pop();
 
     pContext->Begin();
+
     return pContext;
-}
-
-uint64_t FCommandQueue::Signal()
-{
-    uint64_t FenceValueToSignal = mNextFenceValue++;
-    mpCommandQueue->Signal(mpFence.Get(), FenceValueToSignal);
-    return FenceValueToSignal;
-}
-
-bool FCommandQueue::IsFenceComplete(uint64_t FenceValue)
-{
-    if (FenceValue > mLastCompletedFenceValue)
-    {
-        mLastCompletedFenceValue = max(mLastCompletedFenceValue, mpFence->GetCompletedValue());
-    }
-    return FenceValue <= mLastCompletedFenceValue;
-}
-
-void FCommandQueue::WaitForFenceValue(uint64_t FenceValue)
-{
-    if (!IsFenceComplete(FenceValue))
-    {
-        mpFence->SetEventOnCompletion(FenceValue, mFenceEventHandle);
-        WaitForSingleObject(mFenceEventHandle, INFINITE);
-        mLastCompletedFenceValue = FenceValue;
-    }
-}
-
-void FCommandQueue::Flush()
-{
-    WaitForFenceValue(Signal());
-}
-
-void FCommandQueue::WaitQueue(FCommandQueue* pOtherQueue, uint64_t FenceValue)
-{
-    mpCommandQueue->Wait(pOtherQueue->mpFence.Get(), FenceValue);
 }
 
 uint64_t FCommandQueue::ExecuteCommandContext(FCommandContext* pContext)
@@ -123,6 +90,46 @@ uint64_t FCommandQueue::ExecuteCommandContext(FCommandContext* pContext)
     return FenceValue;
 }
 
+uint64_t FCommandQueue::Signal()
+{
+    uint64_t FenceValueToSignal = mNextFenceValue++;
+    mpCommandQueue->Signal(mpFence.Get(), FenceValueToSignal);
+
+    return FenceValueToSignal;
+}
+
+bool FCommandQueue::IsFenceComplete(uint64_t FenceValue)
+{
+    if (FenceValue > mLastCompletedFenceValue)
+    {
+        mLastCompletedFenceValue = max(mLastCompletedFenceValue, mpFence->GetCompletedValue());
+    }
+
+    return FenceValue <= mLastCompletedFenceValue;
+}
+
+void FCommandQueue::WaitForFenceValue(uint64_t FenceValue)
+{
+    if (!IsFenceComplete(FenceValue))
+    {
+        mpFence->SetEventOnCompletion(FenceValue, mFenceEventHandle);
+        WaitForSingleObject(mFenceEventHandle, INFINITE);
+
+        mLastCompletedFenceValue = FenceValue;
+    }
+}
+
+void FCommandQueue::Flush()
+{
+    WaitForFenceValue(Signal());
+}
+
+void FCommandQueue::WaitQueue(FCommandQueue* pOtherQueue, uint64_t FenceValue)
+{
+    mpCommandQueue->Wait(pOtherQueue->mpFence.Get(), FenceValue);
+}
+
+
 void FCommandQueue::ReclaimContexts()
 {
     while (!mInFlightContexts.empty())
@@ -136,6 +143,7 @@ void FCommandQueue::ReclaimContexts()
         }
         else
         {
+            // Context is still in flight; order is guaranteed, so we can break early
             break;
         }
     }

@@ -1,7 +1,9 @@
-﻿#include <cassert>
+﻿#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Resource/GpuResource.h"
+#include "Renderer/D3D12Core/Common.h"
 
-#include "Renderer/D3D12Core/Core/FDevice.h"
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include <cassert>
 
 FCommandContext::~FCommandContext()
 {
@@ -15,9 +17,14 @@ bool FCommandContext::Initialize(FDevice* pDevice, D3D12_COMMAND_LIST_TYPE Type)
     mpDevice = pDevice;
     mType = Type;
 
-    mpDevice->GetDevice()->CreateCommandAllocator(mType, IID_PPV_ARGS(&mpCommandAllocator));
+    HRESULT HResult = mpDevice->GetDevice()->CreateCommandAllocator(mType, IID_PPV_ARGS(&mpCommandAllocator));
+    if (FAILED(HResult))
+    {
+        LUMINA_LOG_ERROR(RHI, "FCommandContext::Initialize failed to create Command Allocator.");
+        return false;
+    }
 
-    HRESULT HResult = mpDevice->GetDevice()->CreateCommandList(
+    HResult = mpDevice->GetDevice()->CreateCommandList(
         0, Type, mpCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mpCommandList)
         );
     if (FAILED(HResult))
@@ -34,7 +41,7 @@ bool FCommandContext::Initialize(FDevice* pDevice, D3D12_COMMAND_LIST_TYPE Type)
 
 void FCommandContext::Begin()
 {
-    mpCommandAllocator.Get()->Reset();
+    mpCommandAllocator->Reset();
     mpCommandList->Reset(mpCommandAllocator.Get(), nullptr);
 
     mResourceBarriers.clear();
@@ -184,8 +191,11 @@ void FCommandContext::SetGraphicsRootConstantBufferView(UINT RootParameterIndex,
 }
 
 void FCommandContext::CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer,
-                                       UINT64 SrcOffset, UINT64 NumBytes) const
+                                       UINT64 SrcOffset, UINT64 NumBytes)
 {
+    // A buffer copy relies on the source being in a read state and dest in a write state.
+    // We must flush barriers before executing the copy to ensure state changes take effect.
+    FlushResourceBarriers();
     mpCommandList->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
 }
 

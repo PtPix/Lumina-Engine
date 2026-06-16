@@ -1,10 +1,10 @@
 ﻿#pragma once
 
+#include "StringUtils/StringConv.h"
+
 #include <d3d12.h>
 #include <cstdio>
 #include <string>
-
-#include "StringUtils/StringConv.h"
 
 // T must be integer type
 template<class T>

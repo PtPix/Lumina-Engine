@@ -1,4 +1,11 @@
-﻿#pragma once
+﻿/**
+ * @file DescriptorAllocation.h
+ * @brief RAII wrapper for an allocated block of CPU descriptors.
+ *
+ * Automatically frees the descriptor block back to its parent page upon destruction.
+ */
+
+#pragma once
 
 #include <d3d12.h>
 #include <memory>
@@ -15,6 +22,7 @@ public:
 
     FDescriptorAllocation(const FDescriptorAllocation&) = delete;
     FDescriptorAllocation& operator=(const FDescriptorAllocation&) = delete;
+
     FDescriptorAllocation(FDescriptorAllocation&& Other) noexcept;
     FDescriptorAllocation& operator=(FDescriptorAllocation&& Other) noexcept;
 
@@ -26,9 +34,10 @@ public:
 
 private:
     D3D12_CPU_DESCRIPTOR_HANDLE mCpuHandle{};
+
     UINT mNumHandles = 0;
     UINT mDescriptorSize = 0;
+    UINT mOffset = 0;
 
     std::shared_ptr<FDescriptorAllocatorPage> mpPage;
-    UINT mOffset = 0;
 };

@@ -4,7 +4,7 @@
 
 #include "D3D12Core/Common.h"
 #include "Renderer/D3D12Core/Pipeline/RootSignature.h"
-#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 #include "RenderGraph/RenderGraph.h"
 #include "RenderPass/FBasePass.h"
 #include "Resources/FFrameResource.h"

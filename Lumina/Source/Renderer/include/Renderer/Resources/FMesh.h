@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Renderer/MeshType.h"
-#include "Renderer/D3D12Core/Resource/FBuffer.h"
+#include "Renderer/D3D12Core/Resource/Buffer.h"
 
 class FCommandContext;
 class FResourceUploader;

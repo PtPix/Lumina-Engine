@@ -10,8 +10,8 @@
 #include "Renderer/D3D12Core/Common.h"
 
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Core/Device.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
     HWND Hwnd,
     UINT Message,

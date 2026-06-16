@@ -1,7 +1,10 @@
-﻿#include <cassert>
+﻿#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Core/CommandContext.h"
 
-#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include <cassert>
 
 void FResourceUploader::Initialize(FDevice* pDevice)
 {
@@ -29,39 +32,13 @@ void FResourceUploader::QueueUpload(FBuffer* pDestBuffer, const void* pData, siz
 
     mpCurrentContext->TransitionResource(pDestBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
     mpCurrentContext->FlushResourceBarriers();
+
     mpCurrentContext->CopyBufferRegion(pDestBuffer->GetResource(), 0, TempBuffer.GetResource(), 0, DataSize);
+
     mpCurrentContext->TransitionResource(pDestBuffer, D3D12_RESOURCE_STATE_GENERIC_READ);
 
     mCurrentTempUploadBuffers.push_back(std::move(TempBuffer));
 }
-
-uint64_t FResourceUploader::EndUpLoadAndExecute()
-{
-    assert(mpCurrentContext != nullptr);
-
-    uint64_t FenceValue = mpCommandQueue->ExecuteCommandContext(mpCurrentContext);
-    mpCurrentContext = nullptr;
-
-    mInFlightUploads.push({ FenceValue, std::move(mCurrentTempUploadBuffers) });
-
-    return FenceValue;
-}
-
-void FResourceUploader::CleanUpStaleUploads()
-{
-    while (!mInFlightUploads.empty())
-    {
-        if (mpCommandQueue->IsFenceComplete(mInFlightUploads.front().FenceValue))
-        {
-            mInFlightUploads.pop();
-        }
-        else
-        {
-            break;
-        }
-    }
-}
-
 
 void FResourceUploader::UploadTexture(FTexture* pDestTexture, const void* pData, uint32_t Width,
                                       uint32_t Height, uint32_t BytesPerPixel)
@@ -81,6 +58,9 @@ void FResourceUploader::UploadTexture(FTexture* pDestTexture, const void* pData,
 
     auto* pMappedData = static_cast<uint8_t*>(TempBuffer.Map());
     const auto* pSourceData = static_cast<const uint8_t*>(pData);
+
+    // NOTE: This assumes an uncompressed format (e.g. RGBA8).
+    // Block-compressed formats (DXT/BC) will require different pitch calculations.
     uint32_t SourceRowPitch = Width * BytesPerPixel;
     for (UINT y = 0; y < NumRows; y++)
     {
@@ -114,6 +94,33 @@ void FResourceUploader::UploadTexture(FTexture* pDestTexture, const void* pData,
     }
 
     mCurrentTempUploadBuffers.push_back(std::move(TempBuffer));
+}
+
+uint64_t FResourceUploader::EndUpLoadAndExecute()
+{
+    assert(mpCurrentContext != nullptr);
+
+    uint64_t FenceValue = mpCommandQueue->ExecuteCommandContext(mpCurrentContext);
+    mpCurrentContext = nullptr;
+
+    mInFlightUploads.push({ FenceValue, std::move(mCurrentTempUploadBuffers) });
+
+    return FenceValue;
+}
+
+void FResourceUploader::CleanUpStaleUploads()
+{
+    while (!mInFlightUploads.empty())
+    {
+        if (mpCommandQueue->IsFenceComplete(mInFlightUploads.front().FenceValue))
+        {
+            mInFlightUploads.pop();
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 void FResourceUploader::FlushAndSync()

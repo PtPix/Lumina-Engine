@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
+#include "Renderer/D3D12Core/Core/CommandContext.h"
 
 static std::wstring ToWide(const std::string& Text)
 {

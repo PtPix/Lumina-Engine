@@ -9,4 +9,6 @@ namespace StringUtils
     [[nodiscard]] std::string WideToUTF8(std::wstring_view wideStr);
     [[nodiscard]] std::wstring UTF8ToWide(const char* utf8Str);
     [[nodiscard]] std::wstring UTF8ToWide(std::string_view utf8Str);
+    [[nodiscard]] std::wstring ASCIIToUnicode(const std::string& str);
+    [[nodiscard]] std::wstring ASCIIToUnicode(const char* str);
 }

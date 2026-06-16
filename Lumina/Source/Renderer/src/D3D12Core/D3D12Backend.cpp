@@ -1,11 +1,11 @@
 #include "Renderer/D3D12Core/D3D12Backend.h"
-
 #include "Renderer/D3D12Core/Common.h"
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
-#include "Renderer/D3D12Core/Core/FCommandQueue.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
-#include "Renderer/D3D12Core/Core/FSwapChain.h"
-#include "Renderer/D3D12Core/Descriptors/FBindlessDescriptorHeap.h"
+
+#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Core/SwapChain.h"
+#include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
 
 FD3D12Backend::~FD3D12Backend()
 {
@@ -35,8 +35,10 @@ void FD3D12Backend::Shutdown()
     }
 
     FlushAllQueues();
+
     DestroySwapChain();
     mpDevice.reset();
+
     mbInitialized = false;
 }
 
@@ -60,6 +62,7 @@ void FD3D12Backend::FlushAllQueues()
 
 void FD3D12Backend::CollectGarbage()
 {
+    // Process deferred descriptor destructions
     if (mpDevice && mpDevice->GetBindlessDescriptorHeap())
     {
         mpDevice->GetBindlessDescriptorHeap()->ReleaseStaleSlots();

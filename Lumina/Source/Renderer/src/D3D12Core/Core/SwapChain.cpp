@@ -1,29 +1,29 @@
-﻿#include <cassert>
-
-#include "Renderer/D3D12Core/Core/FSwapChain.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
-#include "Renderer/D3D12Core/Core/FCommandQueue.h"
+﻿#include "Renderer/D3D12Core/Core/SwapChain.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Core/CommandQueue.h"
 #include "Renderer/D3D12Core/Common.h"
+
+#include <cassert>
 
 bool FSwapChain::Create(const FSwapChainCreateDesc& Desc)
 {
-    // Assertions and Assignment
-    assert(Desc.pDevice);
-    assert(Desc.pCommandQueue && Desc.pCommandQueue->GetCommandQueue());
+    assert(Desc.pDevice != nullptr);
+    assert(Desc.pCommandQueue != nullptr && Desc.pCommandQueue->GetCommandQueue() != nullptr);
     assert(Desc.NumBackBuffers > 0 && Desc.NumBackBuffers <= 3);
 
-    this->mHwnd = Desc.Hwnd;
-    this->mNumBackBuffers = Desc.NumBackBuffers;
-    this->mpDevice = Desc.pDevice;
-    this->mpPresentQueue = Desc.pCommandQueue;
-    this->mbVSync = Desc.bVSync;
-    this->mFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    mHwnd = Desc.Hwnd;
+    mNumBackBuffers = Desc.NumBackBuffers;
+    mpDevice = Desc.pDevice;
+    mpPresentQueue = Desc.pCommandQueue;
+    mbVSync = Desc.bVSync;
+    mFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
     mFenceValues.resize(mNumBackBuffers, 0);
     mRenderTargets.resize(mNumBackBuffers);
 
-    // Create DXGIFactory.
     HRESULT HResult = {};
+
+    // Create DXGIFactory.
     Microsoft::WRL::ComPtr<IDXGIFactory4> pDxgiFactory;
     HResult = CreateDXGIFactory1(IID_PPV_ARGS(&pDxgiFactory));
     if (FAILED(HResult))
@@ -104,8 +104,6 @@ HRESULT FSwapChain::Resize(int Width, int Height, DXGI_FORMAT Format)
 
 HRESULT FSwapChain::Present()
 {
-    // TODO: glitch should be dealed
-
     UINT FlagPresent = mbVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING;
     UINT SyncInterval = mbVSync ? 1 : 0;
 
@@ -139,10 +137,13 @@ HRESULT FSwapChain::Present()
 
 void FSwapChain::MoveToNextFrame()
 {
+    // 1. Schedule a signal command in the queue
     mFenceValues[mCurrentBackBufferIndex] = mpPresentQueue->Signal();
 
+    // 2. Update the frame index to the next back buffer
     mCurrentBackBufferIndex = mpSwapChain->GetCurrentBackBufferIndex();
 
+    // 3. Wait until the next back buffer is ready (i.e., its previous frame execution is complete)
     mpPresentQueue->WaitForFenceValue(mFenceValues[mCurrentBackBufferIndex]);
 
     ++mNumTotalFrames;
@@ -150,10 +151,8 @@ void FSwapChain::MoveToNextFrame()
 
 void FSwapChain::WaitForGPU()
 {
-    if (!mpPresentQueue)
-        return;
-
-    mpPresentQueue->Flush();
+    if (mpPresentQueue)
+        mpPresentQueue->Flush();
 }
 
 void FSwapChain::CreateRenderTargetViews()

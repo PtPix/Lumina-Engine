@@ -1,34 +1,31 @@
-﻿#include "Renderer/D3D12Core/Resource/FTexture.h"
+﻿#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "Renderer/D3D12Core/Core/Device.h"
+#include "Renderer/D3D12Core/Descriptors/DescriptorAllocator.h"
 
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include <utility>
+
 FTexture::FTexture(FTexture&& Other) noexcept
 {
     *this = std::move(Other);
 }
 
-// 🔴 修复 2 的实现：移动赋值操作符
 FTexture& FTexture::operator=(FTexture&& Other) noexcept
 {
     if (this != &Other)
     {
-        // 1. 先清理自己现有的资源
         Destroy();
 
-        // 2. 转移描述符的所有权 (FDescriptorAllocation 已经正确实现了移动语义)
         mRTV = std::move(Other.mRTV);
         mSRV = std::move(Other.mSRV);
         mDSV = std::move(Other.mDSV);
 
-        // 3. 转移基本数据
         mWidth = Other.mWidth;
         mHeight = Other.mHeight;
         mFormat = Other.mFormat;
 
-        // 4. 🔴 极其关键：转移显存分配器的控制权，并将原对象的指针悬空 (防 Double Free)
         mpAllocation = Other.mpAllocation;
         Other.mpAllocation = nullptr;
 
-        // 5. 转移 GpuResource 基类中的成员 (ComPtr 会自动处理移动)
         mpResource = std::move(Other.mpResource);
         mUsageState = Other.mUsageState;
     }
@@ -57,7 +54,7 @@ bool FTexture::Create(FDevice* pDevice, D3D12MA::Allocator* pAllocator, UINT Wid
     ResourceDesc.Flags = Flags;
 
     D3D12MA::ALLOCATION_DESC AllocDesc = {};
-    AllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT; // 纹理几乎永远放在 Default Heap
+    AllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
     HRESULT hr = pAllocator->CreateResource(
         &AllocDesc,
@@ -75,17 +72,14 @@ bool FTexture::Create(FDevice* pDevice, D3D12MA::Allocator* pAllocator, UINT Wid
         mpResource->SetName(Name.c_str());
     }
 
-    // 1. 如果允许作为 RenderTarget，自动创建 RTV
     if (Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
         mRTV = pDevice->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(1);
         pDevice->GetDevice()->CreateRenderTargetView(mpResource.Get(), nullptr, mRTV.GetCpuHandle());
     }
 
-    // 2. 如果允许作为 DepthStencil，自动创建 DSV
     if (Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
     {
-        // 注意：DSV 有自己专属的 Descriptor Heap！
         mDSV = pDevice->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(1);
 
         D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
@@ -96,7 +90,6 @@ bool FTexture::Create(FDevice* pDevice, D3D12MA::Allocator* pAllocator, UINT Wid
         pDevice->GetDevice()->CreateDepthStencilView(mpResource.Get(), &dsvDesc, mDSV.GetCpuHandle());
     }
 
-    // 3. 默认情况下（如果不是纯深度缓冲），我们为其在 CPU 端创建 SRV
     if (!(Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) && !(Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
     {
         mSRV = pDevice->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(1);
@@ -126,7 +119,6 @@ void FTexture::CreateFromSwapChain(FDevice* pDevice, ID3D12Resource* pResource)
     mFormat = ResourceDesc.Format;
 
     mRTV = pDevice->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(1);
-
     pDevice->GetDevice()->CreateRenderTargetView(
         mpResource.Get(), nullptr, mRTV.GetCpuHandle()
         );
@@ -151,15 +143,20 @@ void FTexture::Create2D(FDevice* pDevice, uint32_t Width, uint32_t Height, DXGI_
     SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     SRVDesc.Texture2D.MipLevels = 1;
 
-    // 直接使用刚分配的 CPU 句柄原件！
     pDevice->GetDevice()->CreateShaderResourceView(mpResource.Get(), &SRVDesc, mSRV.GetCpuHandle());
 }
 
 void FTexture::Destroy()
 {
+    mRTV.Free();
+    mSRV.Free();
+    mDSV.Free();
+
     if (mpAllocation)
     {
         mpAllocation->Release();
         mpAllocation = nullptr;
     }
+
+    mpResource.Reset();
 }

@@ -1,4 +1,12 @@
-﻿#pragma once
+﻿/**
+ * @file Buffer.h
+ * @brief GPU Buffer wrappers.
+ *
+ * Provides specialized classes for Vertex, Index, Constant, and Upload buffers.
+ * Handles allocation via D3D12MemAlloc and manages CPU-GPU memory mapping.
+ */
+
+#pragma once
 
 #include "Renderer/D3D12Core/Resource/GpuResource.h"
 #include "D3D12MemAlloc.h"
@@ -8,19 +16,30 @@ class FBuffer : public GpuResource
 public:
     FBuffer() = default;
     ~FBuffer() override { Destroy(); }
+
     FBuffer(const FBuffer&) = delete;
     FBuffer& operator=(const FBuffer&) = delete;
+
     FBuffer(FBuffer&& Other) noexcept;
     FBuffer& operator=(FBuffer&& Other) noexcept;
 
+    // ------------------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------------------
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment,
         D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType,
         const wchar_t* pName);
     void Destroy();
 
+    // ------------------------------------------------------------------------
+    // Memory Mapping
+    // ------------------------------------------------------------------------
     void* Map();
     void Unmap();
 
+    // ------------------------------------------------------------------------
+    // Getters
+    // ------------------------------------------------------------------------
     [[nodiscard]] size_t GetBufferSize() const { return mBufferSize; }
     [[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return mpResource ? mpResource->GetGPUVirtualAddress() : 0; }
 
@@ -60,6 +79,7 @@ public:
 private:
     static size_t CalcAlignedSize(size_t SizeInBytes)
     {
+        // Constant buffers must be 256-byte aligned
         return (SizeInBytes + 255) & ~255;
     }
 };

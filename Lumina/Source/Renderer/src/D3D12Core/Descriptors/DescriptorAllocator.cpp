@@ -1,6 +1,5 @@
-﻿#include "Renderer/D3D12Core/Descriptors/FDescriptorAllocator.h"
-
-#include "Renderer/D3D12Core/Descriptors/FDescriptorAllocatorPage.h"
+﻿#include "Renderer/D3D12Core/Descriptors/DescriptorAllocator.h"
+#include "Renderer/D3D12Core/Descriptors/DescriptorAllocatorPage.h"
 
 FDescriptorAllocator::FDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT DescriptorsPerPage)
     : mHeapType(Type), mDescriptorsPerPage(DescriptorsPerPage)
@@ -16,11 +15,15 @@ FDescriptorAllocation FDescriptorAllocator::Allocate(UINT NumDescriptors)
 {
     std::lock_guard<std::mutex> Lock(mAllocationMutex);
 
-    for (auto& Page : mHeapPool)
+    for (const auto& Page : mHeapPool)
     {
         if (Page->HasSpace(NumDescriptors))
         {
-            return Page->Allocate(NumDescriptors);
+            FDescriptorAllocation Allocation = Page->Allocate(NumDescriptors);
+            if (Allocation.IsValid())
+            {
+                return Allocation;
+            }
         }
     }
 
@@ -32,5 +35,6 @@ std::shared_ptr<FDescriptorAllocatorPage> FDescriptorAllocator::CreateAllocatorP
 {
     auto NewPage = std::make_shared<FDescriptorAllocatorPage>(mpDevice, mHeapType, mDescriptorsPerPage);
     mHeapPool.push_back(NewPage);
+
     return NewPage;
 }

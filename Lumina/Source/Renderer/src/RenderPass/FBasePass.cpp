@@ -1,7 +1,7 @@
 ﻿#include "Renderer/RenderPass/FBasePass.h"
 
 #include "Renderer/Renderer.h"
-#include "Renderer/D3D12Core/Core/FDevice.h"
+#include "Renderer/D3D12Core/Core/Device.h"
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
 #include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
 
@@ -39,7 +39,7 @@ void FBasePass::Initialize(FDevice* pDevice)
     };
 
     // 4. 构建 Graphics Pipeline State
-    GraphicsPipelineStateBuilder Builder;
+    FGraphicsPipelineStateBuilder Builder;
     Builder.SetRootSignature(Renderer::GetBindlessRootSignature()->Get())
            .SetInputLayout(InputElements)
            // BasePass 专注于 RT 的输出，这里填入你 G-Buffer 或后备缓冲的格式
@@ -57,7 +57,7 @@ void FBasePass::Initialize(FDevice* pDevice)
         Builder.SetPixelShader(PixelShaderBlob.GetByteCode(), PixelShaderBlob.GetByteCodeSize());
     }
 
-    mBasePassPSO = std::make_unique<PipelineState>();
+    mBasePassPSO = std::make_unique<FPipelineState>();
     Builder.Build(pDevice->GetDevice(), *mBasePassPSO);
 }
 

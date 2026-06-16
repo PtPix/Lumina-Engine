@@ -1,7 +1,7 @@
 ﻿#include "Renderer/Resources/FMesh.h"
 
-#include "Renderer/D3D12Core/Core/FCommandContext.h"
-#include "Renderer/D3D12Core/Resource/FResourceUploader.h"
+#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 
 bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, FResourceUploader* pUploader)
 {

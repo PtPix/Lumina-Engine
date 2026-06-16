@@ -5,16 +5,16 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 # Cpp Files
 set(D3D12CORE_SOURCES
         # Core
-        "src/D3D12Core/Core/FDevice.cpp"
-        "src/D3D12Core/Core/FCommandQueue.cpp"
-        "src/D3D12Core/Core/FSwapChain.cpp"
-        "src/D3D12Core/Core/FCommandContext.cpp"
+        "src/D3D12Core/Core/Device.cpp"
+        "src/D3D12Core/Core/CommandQueue.cpp"
+        "src/D3D12Core/Core/SwapChain.cpp"
+        "src/D3D12Core/Core/CommandContext.cpp"
 
         # Descriptors
-        "src/D3D12Core/Descriptors/FDescriptorAllocation.cpp"
-        "src/D3D12Core/Descriptors/FDescriptorAllocatorPage.cpp"
-        "src/D3D12Core/Descriptors/FDescriptorAllocator.cpp"
-        "src/D3D12Core/Descriptors/FBindlessDescriptorHeap.cpp"
+        "src/D3D12Core/Descriptors/DescriptorAllocation.cpp"
+        "src/D3D12Core/Descriptors/DescriptorAllocatorPage.cpp"
+        "src/D3D12Core/Descriptors/DescriptorAllocator.cpp"
+        "src/D3D12Core/Descriptors/BindlessDescriptorHeap.cpp"
 
         # Pipeline
         "src/D3D12Core/Pipeline/Shader.cpp"
@@ -23,9 +23,9 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/Pipeline/PipelineState.cpp"
 
         # Resource
-        "src/D3D12Core/Resource/FBuffer.cpp"
-        "src/D3D12Core/Resource/FResourceUploader.cpp"
-        "src/D3D12Core/Resource/FTexture.cpp"
+        "src/D3D12Core/Resource/Buffer.cpp"
+        "src/D3D12Core/Resource/ResourceUploader.cpp"
+        "src/D3D12Core/Resource/Texture.cpp"
 
         # Backend
         "src/D3D12Core/D3D12Backend.cpp"

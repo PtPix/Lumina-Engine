@@ -1,4 +1,12 @@
-﻿#pragma once
+﻿/**
+ * @file GpuResource.h
+ * @brief Base class for all GPU resources.
+ *
+ * Encapsulates the ID3D12Resource COM pointer and tracks the current usage state
+ * to facilitate D3D12 resource barrier transitions.
+ */
+
+#pragma once
 
 #include <d3d12.h>
 #include <wrl/client.h>
@@ -9,8 +17,15 @@ public:
     GpuResource() = default;
     virtual ~GpuResource() = default;
 
+    GpuResource(const GpuResource&) = delete;
+    GpuResource& operator=(const GpuResource&) = delete;
+
+    GpuResource(GpuResource&&) = default;
+    GpuResource& operator=(GpuResource&&) = default;
+
     [[nodiscard]] ID3D12Resource* GetResource() const { return mpResource.Get(); }
     [[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return mUsageState; }
+
     void SetUsageState(D3D12_RESOURCE_STATES UsageState) { mUsageState = UsageState; }
 
 protected:

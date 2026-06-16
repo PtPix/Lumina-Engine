@@ -4,7 +4,7 @@
 
 #include "Renderer/RenderTypes.h"
 #include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Resource/FBuffer.h"
+#include "Renderer/D3D12Core/Resource/Buffer.h"
 #include "Renderer/Scene/FSceneView.h"
 
 class FFrameResource
