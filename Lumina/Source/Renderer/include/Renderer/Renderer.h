@@ -41,8 +41,8 @@ public:
     // ------------------------------------------------------------------------
     // Frame Management
     // ------------------------------------------------------------------------
-    static FCommandContext* BeginFrame();
-    static void EndFrame(FCommandContext* pContext);
+    static void BeginFrame();
+    static void EndFrame();
 
     static void RenderSceneView(FCommandContext* pCommandContext, const FSceneView& View);
 
@@ -74,6 +74,8 @@ private:
     static FRootSignature mBindlessRootSignature;
     static FResourceUploader mUploader;
     static FRenderGraph mRenderGraph;
+
+    static FCommandContext* mpCurrentFrameContext;
 
     static FRGTextureHandle mBackBufferHandle;
 

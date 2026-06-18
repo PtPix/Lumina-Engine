@@ -9,6 +9,7 @@
 
 #include "Renderer/Managers/TextureManager.h"
 #include "Renderer/Scene/FSceneView.h"
+#include "Renderer/RendererCommon.h"
 
 #include <cassert>
 
@@ -18,6 +19,7 @@ std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
 FRenderGraph Renderer::mRenderGraph;
+FCommandContext* Renderer::mpCurrentFrameContext = nullptr;
 
 FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
@@ -71,7 +73,7 @@ void Renderer::Shutdown()
     mpD3D12Backend.reset();
 }
 
-FCommandContext* Renderer::BeginFrame()
+void Renderer::BeginFrame()
 {
     mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();
 
@@ -79,8 +81,8 @@ FCommandContext* Renderer::BeginFrame()
     mUploader.SubmitPendingUploads();
     mUploader.CleanUpStaleUploads();
 
-    FCommandContext* pContext = mpD3D12Backend->AllocateGraphicsContext();
-    assert(pContext != nullptr && "Failed to allocate FCommandContext for BeginFrame!");
+    mpCurrentFrameContext = mpD3D12Backend->AllocateGraphicsContext();
+    // assert(pContext != nullptr && "Failed to allocate FCommandContext for BeginFrame!");
 
     mRenderGraph.Reset();
 
@@ -93,21 +95,19 @@ FCommandContext* Renderer::BeginFrame()
         mpD3D12Backend->GetBackBufferFormat(),
         D3D12_RESOURCE_STATE_PRESENT
     );
-
-    return pContext;
 }
 
-void Renderer::EndFrame(FCommandContext* pContext)
+void Renderer::EndFrame()
 {
-    if (!pContext) return;
+    if (!mpCurrentFrameContext) return;
 
     mRenderGraph.Compile();
-    mRenderGraph.Execute(pContext);
+    mRenderGraph.Execute(mpCurrentFrameContext);
 
-    pContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
-    pContext->FlushResourceBarriers();
+    mpCurrentFrameContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
+    mpCurrentFrameContext->FlushResourceBarriers();
 
-    mpD3D12Backend->ExecuteGraphicsContext(pContext);
+    mpD3D12Backend->ExecuteGraphicsContext(mpCurrentFrameContext);
     mpD3D12Backend->Present();
 }
 
@@ -164,13 +164,10 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
     ID3D12DescriptorHeap* ppHeaps[] = { mpD3D12Backend->GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
 
-    // ==========================================
-    // 3. 绑定我们刚刚上传的大 Buffer 资源 (Root Parameters)
-    // ==========================================
-    pContext->SetGraphicsRootDescriptorTable(1, mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
-    pContext->SetGraphicsRootConstantBufferView(2, CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(3, CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(4, CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
+    pContext->SetGraphicsRootDescriptorTable(ToRootIndex(ERootParam::BindlessTable), mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
+    pContext->SetGraphicsRootConstantBufferView(ToRootIndex(ERootParam::GlobalCBV), CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(ToRootIndex(ERootParam::InstanceSRV), CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(ToRootIndex(ERootParam::MaterialSRV), CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
     if (mBasePass)
     {
         mBasePass->Execute(pContext, View);
@@ -189,14 +186,10 @@ void Renderer::InitializeBindlessRootSignature()
 {
     FRootSignatureBuilder Builder;
 
-    // Parameter 0 : Per Object Bindless Index
-    // register(b0, space0)
-    // Refers to the object data in descriptor heap
+    // ERootParam::PerObjectConstant (0) — b0, space0
     Builder.AddRootConstants(0, 0, 1);
 
-    // Parameter 1 : Bindless Resource
-    // register(t0, space1)
-    // Possess all of the SRV, CBV, UAV
+    // ERootParam::BindlessTable (1) — SRV table: t0 space1 + t0 space2
     std::vector<D3D12_DESCRIPTOR_RANGE1> BindlessRanges;
     D3D12_DESCRIPTOR_RANGE1 SrvRange = {};
     SrvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -218,18 +211,17 @@ void Renderer::InitializeBindlessRootSignature()
     BindlessRanges.push_back(BufRange);
 
     Builder.AddDescriptorTable(BindlessRanges, D3D12_SHADER_VISIBILITY_ALL);
-    // Parameter 2 : Global Static Data
-    // register(b1, space0)
-    // Root CBV
+
+    // ERootParam::GlobalCBV (2) — b1, space0
     Builder.AddConstantBufferView(1, 0);
+
+    // ERootParam::InstanceSRV (3) — t0, space0
     Builder.AddShaderResourceView(0, 0);
+
+    // ERootParam::MaterialSRV (4) — t1, space0
     Builder.AddShaderResourceView(1, 0);
 
-    // Static Sampler
-    // register(s0, space0)
     Builder.AddStaticSampler(0, 0, D3D12_FILTER_ANISOTROPIC);
-
     Builder.AllowInputLayout();
-
     Builder.Build(mpD3D12Backend->GetDevice()->GetDevice(), mBindlessRootSignature);
 }

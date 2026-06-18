@@ -4,6 +4,7 @@
 #include "Renderer/D3D12Core/Core/Device.h"
 #include "Renderer/D3D12Core/Pipeline/PipelineState.h"
 #include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
+#include "Renderer/RendererCommon.h"
 
 void FBasePass::Initialize(FDevice* pDevice)
 {
@@ -68,7 +69,7 @@ void FBasePass::Execute(FCommandContext* pCommandContext, const FSceneView& View
 
     for (const auto& Cmd : View.DrawCommands)
     {
-        pCommandContext->SetGraphicsRoot32BitConstants(0, 1, &Cmd.InstanceIndex, 0);
+        pCommandContext->SetGraphicsRoot32BitConstants(ToRootIndex(ERootParam::PerObjectConstant), 1, &Cmd.InstanceIndex, 0);
         Cmd.pMesh->Draw(pCommandContext);
     }
 }
