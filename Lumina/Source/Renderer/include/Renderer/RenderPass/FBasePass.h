@@ -17,5 +17,5 @@ public:
     void Shutdown() override;
 
 private:
-    std::unique_ptr<FPipelineState> mBasePassPSO;
+    // std::unique_ptr<FPipelineState> mBasePassPSO;
 };

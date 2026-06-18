@@ -13,6 +13,9 @@
 
 #include <cassert>
 
+#include "Renderer/Pipeline/PipelineStateCache.h"
+#include "Renderer/Pipeline/ShaderManager.h"
+
 std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
 std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 
@@ -39,13 +42,14 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     mUploader.Initialize(mpD3D12Backend->GetDevice());
 
-    // mUploader.BeginUpload();
     TextureManager::Initialize(mpD3D12Backend->GetDevice(), &mUploader);
-    // mUploader.EndUpLoadAndExecute();
+
     mUploader.FlushAndSync();
 
     InitializeBindlessRootSignature();
     InitializeSceneBuffers();
+
+    FPipelineStateCache::Initialize(mpD3D12Backend->GetDevice());
 
     mBasePass = std::make_unique<FBasePass>();
     mBasePass->Initialize(mpD3D12Backend->GetDevice());
@@ -63,8 +67,11 @@ void Renderer::Shutdown()
 
     if (mBasePass) {
         mBasePass->Shutdown();
-        mBasePass.reset();
+        Renderer::mBasePass.reset();
     }
+
+    FPipelineStateCache::Shutdown();
+    FShaderManager::Clear();
 
     TextureManager::Shutdown();
     DestroySceneBuffers();

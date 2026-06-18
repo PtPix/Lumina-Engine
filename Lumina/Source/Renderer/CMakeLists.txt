@@ -46,6 +46,8 @@ set(RENDER_CORE_SOURCES
 
         "src/Resources/FMaterial.cpp"
         "src/RenderPass/FBasePass.cpp"
+        "src/Pipeline/ShaderManager.cpp"
+        "src/Pipeline/PipelineStateCache.cpp"
 )
 
 # Build Library
