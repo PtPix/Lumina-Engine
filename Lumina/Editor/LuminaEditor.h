@@ -3,9 +3,9 @@
 #include <memory>
 #include <vector>
 
+#include "IRenderDemo.h"
 #include "Engine/LuminaApp.h"
 #include "ImGUI/imgui.h"
-#include "TestLayer/ITestLayer.h"
 
 class LuminaEditor : public LuminaApp
 {
@@ -16,8 +16,8 @@ public:
     template<typename T>
     void RegisterTestLayer()
     {
-        static_assert(std::is_base_of_v<ITestLayer, T>, "T must inherit from ITestLayer");
-        mTestLayers.push_back(std::make_unique<T>());
+        static_assert(std::is_base_of_v<IRenderDemo, T>, "T must inherit from IRenderDemo");
+        mRenderDemos.push_back(std::make_unique<T>());
     }
 
 protected:
@@ -33,8 +33,8 @@ protected:
 private:
     void RenderEditorUI(FRenderGraph& RenderGraph);
 
-    std::vector<std::unique_ptr<ITestLayer>> mTestLayers;
-    int16_t mActiveLayerIndex = -1;
+    std::vector<std::unique_ptr<IRenderDemo>> mRenderDemos;
+    int16_t mActiveDemoIndex = -1;
 
     ImVec2 mViewportSize = ImVec2(0, 0);
     bool mViewportHovered = false;

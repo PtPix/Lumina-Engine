@@ -1,21 +1,14 @@
-﻿#include <d3d12.h>
-
-#include "Editor/TestLayer/PBRModelTestLayer.h"
+﻿#include "PbrModelDemo/PbrModelDemo.h"
 
 #include "Assets/StaticModel.h"
-#include "Engine/Input.h"
 #include "ImGUI/imgui.h"
-#include "Logger/Logger.h"
+#include "Platform/InputState.h"
 #include "Renderer/Renderer.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
 #include "Renderer/Managers/TextureManager.h"
+#include "Renderer/RenderPass/BasePass.h"
 
-void PBRModelTestLayer::OnAttach()
+void PbrModelDemo::OnAttach()
 {
-    LUMINA_LOG_INFO(App, "PBRModelTestLayer Attaching...");
-
     // Texture Load
     uint32_t AlbedoIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_BaseColor.png", true);
     uint32_t NormalIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_Normal.png", false);
@@ -55,17 +48,23 @@ void PBRModelTestLayer::OnAttach()
     mCamera.SetLens(DirectX::XM_PIDIV4, static_cast<float>(1280) / static_cast<float>(720), 0.1f, 1000.0f);
 }
 
-void PBRModelTestLayer::OnDetach()
+void PbrModelDemo::OnDetach()
 {
     Renderer::GetD3D12Backend()->FlushAllQueues();
 
     for (auto& LoadedMesh : mLoadedMeshes)
     {
         LoadedMesh->Destroy();
+        delete LoadedMesh;
     }
+
+    mLoadedMeshes.clear();
+
+    mScene.Clear();
+    mSceneView.Clear();
 }
 
-void PBRModelTestLayer::OnUpdate(double DeltaTime)
+void PbrModelDemo::OnUpdate(double DeltaTime)
 {
     if (Input::IsMouseButtonDown(EMouseButton::Right))
     {
@@ -88,6 +87,9 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
     DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(viewMat, projMat);
 
     FGlobalPassData GlobalData = mScene.GetGlobalPassData();
+    GlobalData.SunDirection = { mParams.SunDirection[0], mParams.SunDirection[1], mParams.SunDirection[2] };
+    GlobalData.SunColor     = { mParams.SunColor[0], mParams.SunColor[1], mParams.SunColor[2], 1.0f };
+    GlobalData.SunIntensity = mParams.SunIntensity;
     GlobalData.ViewProjectionMatrix = DirectX::XMMatrixTranspose(viewProj);
     GlobalData.CameraPosition = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
     mScene.SetGlobalData(GlobalData);
@@ -95,42 +97,22 @@ void PBRModelTestLayer::OnUpdate(double DeltaTime)
     mScene.ExtractSceneView(mSceneView);
 }
 
-void PBRModelTestLayer::OnRender(FRenderGraph& RenderGraph)
+void PbrModelDemo::OnRender(FRenderGraph& Graph)
 {
-    FRGTextureDesc DepthDesc = {};
-    DepthDesc.Width = Renderer::GetD3D12Backend()->GetWidth();
-    DepthDesc.Height = Renderer::GetD3D12Backend()->GetHeight();
-    DepthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    DepthDesc.Usage = ERGTextureUsage::DepthStencil;
-    DepthDesc.bUseClearValue = true;
-    DepthDesc.ClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-    DepthDesc.ClearValue.DepthStencil.Depth = 1.0f;
-    DepthDesc.ClearValue.DepthStencil.Stencil = 0;
+    Renderer::UploadSceneView(mSceneView);
 
-    FRGTextureHandle Depth = RenderGraph.CreateTexture("SceneDepth", DepthDesc);
-    FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
-
-    RenderGraph.AddPass("BasePass")
-        .WriteRenderTarget(SceneColor, ERGLoadOp::Clear)
-        .WriteDepth(Depth, ERGLoadOp::Clear)
-        .Execute([this](FRenderGraphContext& Context)
-        {
-            FCommandContext* Cmd = Context.GetCommandContext();
-
-            float Width = static_cast<float>(Renderer::GetD3D12Backend()->GetWidth());
-            float Height = static_cast<float>(Renderer::GetD3D12Backend()->GetHeight());
-
-            D3D12_VIEWPORT Viewport = { 0.0f, 0.0f, Width, Height, 0.0f, 1.0f };
-            D3D12_RECT Scissor = { 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) };
-
-            Cmd->SetViewport(Viewport);
-            Cmd->SetScissorRect(Scissor);
-
-            Renderer::RenderSceneView(Cmd, mSceneView);
-        });
+    FBasePassInputs Inputs;
+    Inputs.SceneColor = Graph.GetTexture("EditorViewport.SceneColor");
+    Inputs.View       = &mSceneView;
+    FBasePassOutputs Outputs;
+    AddBasePass(Graph, Inputs, Outputs);
 }
 
-void PBRModelTestLayer::OnRenderUI()
+void PbrModelDemo::OnRenderUI()
 {
+    ImGui::SeparatorText("Lighting");
+    ImGui::SliderFloat3("Sun Direction", mParams.SunDirection, -1.0f, 1.0f);
+    ImGui::ColorEdit3 ("Sun Color",     mParams.SunColor);
+    ImGui::SliderFloat("Sun Intensity", &mParams.SunIntensity, 0.0f, 10.0f);
+    ImGui::Checkbox   ("Rotate Model",  &mParams.bRotateModel);
 }
-

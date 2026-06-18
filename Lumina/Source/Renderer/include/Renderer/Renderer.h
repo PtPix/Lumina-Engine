@@ -19,7 +19,6 @@
 #include "Renderer/D3D12Core/Pipeline/RootSignature.h"
 #include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 #include "RenderGraph/RenderGraph.h"
-#include "RenderPass/FBasePass.h"
 #include "Resources/FFrameResource.h"
 #include "Resources/FMesh.h"
 
@@ -44,7 +43,8 @@ public:
     static void BeginFrame();
     static void EndFrame();
 
-    static void RenderSceneView(FCommandContext* pCommandContext, const FSceneView& View);
+    static void UploadSceneView(const FSceneView& View);
+    static void BindGlobalResources(FCommandContext* pCommandContext);
 
     // ------------------------------------------------------------------------
     // Resource Management
@@ -69,7 +69,6 @@ private:
     static void DestroySceneBuffers();
 
     static std::unique_ptr<FD3D12Backend> mpD3D12Backend;
-    static std::unique_ptr<FBasePass> mBasePass;
 
     static FRootSignature mBindlessRootSignature;
     static FResourceUploader mUploader;

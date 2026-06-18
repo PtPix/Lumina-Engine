@@ -1,5 +1,11 @@
 ﻿#include "Engine/World/FScene.h"
 
+void FScene::Clear()
+{
+    mGameObjects.clear();
+    mMaterials.clear();
+}
+
 void FScene::AddGameObject(const FGameObject& Object)
 {
     mGameObjects.push_back(Object);

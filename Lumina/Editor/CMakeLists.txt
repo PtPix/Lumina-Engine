@@ -3,8 +3,8 @@
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 set(MAIN_SOURCES main.cpp
-        src/LuminaEditor.cpp
-        src/TestLayer/PBRModelTestLayer.cpp
+        LuminaEditor.cpp
+        Demos/PbrModelDemo/PbrModelDemo.cpp
 )
 
 add_executable(${EXECUTABLE_NAME} WIN32 ${MAIN_SOURCES})
@@ -48,7 +48,7 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE Renderer)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Engine)
 
 # Interface
-target_include_directories(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Demos)
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE
         d3d12.lib

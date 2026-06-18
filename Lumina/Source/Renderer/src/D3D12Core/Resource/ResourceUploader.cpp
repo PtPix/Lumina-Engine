@@ -15,7 +15,11 @@ void FResourceUploader::Initialize(FDevice* pDevice)
 
 void FResourceUploader::QueueUpload(FBuffer* pDestBuffer, const void* pData, size_t DataSize)
 {
-    assert(mpCurrentContext != nullptr);
+    // assert(mpCurrentContext != nullptr);
+    if (mpCurrentContext == nullptr)
+    {
+        mpCurrentContext = mpCommandQueue->AllocateContext();
+    }
 
     FUploadBuffer TempBuffer;
     TempBuffer.Create(mpDevice->GetAllocator(), DataSize, L"TempUpload");
@@ -127,10 +131,6 @@ void FResourceUploader::CleanUpStaleUploads()
 void FResourceUploader::FlushAndSync()
 {
     SubmitPendingUploads();
-    // if (mpCurrentContext)
-    // {
-    //     EndUpLoadAndExecute();
-    // }
 
     mpCommandQueue->Flush();
     CleanUpStaleUploads();

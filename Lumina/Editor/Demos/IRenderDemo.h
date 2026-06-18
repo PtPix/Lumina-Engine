@@ -1,21 +1,20 @@
 ﻿#pragma once
+
 #include <string>
 
-class FCommandContext;
 class FRenderGraph;
 
-class ITestLayer
+class IRenderDemo
 {
 public:
-    virtual ~ITestLayer() = default;
+    virtual ~IRenderDemo() = default;
 
     virtual void OnAttach() {}
     virtual void OnDetach() {}
-
     virtual void OnUpdate(double DeltaTime) {}
-    virtual void OnFixedUpdate(double FixedDeltaTime) {}
-    virtual void OnRender(FRenderGraph& RenderGraph) {}
+    virtual void OnRender(FRenderGraph& Graph) {}
     virtual void OnRenderUI() {}
 
     [[nodiscard]] virtual std::string GetName() const = 0;
+    [[nodiscard]] virtual std::string GetDescription() const { return ""; }
 };

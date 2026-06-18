@@ -1,7 +1,7 @@
 ﻿#include "Logger/Logger.h"
 #include "Engine/Settings.h"
 #include "Engine/LuminaEngine.h"
-#include "Editor/LuminaEditor.h"
+#include "LuminaEditor.h"
 
 #include <memory>
 

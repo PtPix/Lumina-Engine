@@ -17,7 +17,6 @@
 #include "Renderer/Pipeline/ShaderManager.h"
 
 std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
-std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
@@ -51,9 +50,6 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     FPipelineStateCache::Initialize(mpD3D12Backend->GetDevice());
 
-    mBasePass = std::make_unique<FBasePass>();
-    mBasePass->Initialize(mpD3D12Backend->GetDevice());
-
     return true;
 }
 
@@ -64,11 +60,6 @@ void Renderer::Shutdown()
 
     mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
-
-    if (mBasePass) {
-        mBasePass->Shutdown();
-        Renderer::mBasePass.reset();
-    }
 
     FPipelineStateCache::Shutdown();
     FShaderManager::Clear();
@@ -108,6 +99,8 @@ void Renderer::EndFrame()
 {
     if (!mpCurrentFrameContext) return;
 
+    BindGlobalResources(mpCurrentFrameContext);
+
     mRenderGraph.Compile();
     mRenderGraph.Execute(mpCurrentFrameContext);
 
@@ -146,9 +139,9 @@ void Renderer::DestroySceneBuffers()
     }
 }
 
-void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView& View)
+void Renderer::UploadSceneView(const FSceneView& View)
 {
-    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();// GetSwapChain()->GetCurrentBackBufferIndex();
+    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();
     FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
 
     memcpy(CurrentFrame.GlobalPassBuffer.Map(), &View.GlobalPassData, sizeof(FGlobalPassData));
@@ -156,29 +149,42 @@ void Renderer::RenderSceneView(class FCommandContext* pContext, const FSceneView
 
     if (!View.InstanceData.empty())
     {
-        memcpy(CurrentFrame.InstanceBuffer.Map(), View.InstanceData.data(), sizeof(FInstanceData) * View.InstanceData.size());
+        memcpy(CurrentFrame.InstanceBuffer.Map(),
+               View.InstanceData.data(),
+               sizeof(FInstanceData) * View.InstanceData.size());
         CurrentFrame.InstanceBuffer.Unmap();
     }
 
     if (!View.MaterialData.empty())
     {
-        memcpy(CurrentFrame.MaterialBuffer.Map(), View.MaterialData.data(), sizeof(FPBRMaterialData) * View.MaterialData.size());
+        memcpy(CurrentFrame.MaterialBuffer.Map(),
+               View.MaterialData.data(),
+               sizeof(FPBRMaterialData) * View.MaterialData.size());
         CurrentFrame.MaterialBuffer.Unmap();
     }
+}
 
+void Renderer::BindGlobalResources(FCommandContext* pContext)
+{
+    FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
 
     pContext->SetGraphicsRootSignature(GetBindlessRootSignature()->Get());
+
     ID3D12DescriptorHeap* ppHeaps[] = { mpD3D12Backend->GetBindlessDescriptorHeap()->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
 
-    pContext->SetGraphicsRootDescriptorTable(ToRootIndex(ERootParam::BindlessTable), mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
-    pContext->SetGraphicsRootConstantBufferView(ToRootIndex(ERootParam::GlobalCBV), CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(ToRootIndex(ERootParam::InstanceSRV), CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(ToRootIndex(ERootParam::MaterialSRV), CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
-    if (mBasePass)
-    {
-        mBasePass->Execute(pContext, View);
-    }
+    pContext->SetGraphicsRootDescriptorTable(
+        ToRootIndex(ERootParam::BindlessTable),
+        mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
+    pContext->SetGraphicsRootConstantBufferView(
+        ToRootIndex(ERootParam::GlobalCBV),
+        CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(
+        ToRootIndex(ERootParam::InstanceSRV),
+        CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
+    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(
+        ToRootIndex(ERootParam::MaterialSRV),
+        CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)

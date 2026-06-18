@@ -19,6 +19,8 @@ public:
     FScene() = default;
     ~FScene() = default;
 
+    void Clear();
+
     void AddGameObject(const FGameObject& Object);
     uint32_t AddMaterial(const FPBRMaterial& Material);
 

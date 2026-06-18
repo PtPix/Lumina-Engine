@@ -1,6 +1,6 @@
-﻿#include "Editor/LuminaEditor.h"
-#include "Editor/TestLayer/PBRModelTestLayer.h"
+﻿#include "LuminaEditor.h"
 #include "ImGUI/imgui.h"
+#include "PbrModelDemo/PbrModelDemo.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/UI/UIRenderer.h"
 
@@ -8,12 +8,12 @@ bool LuminaEditor::OnInit()
 {
     UIRenderer::Initialize(mHwnd, Renderer::GetD3D12Backend()->GetDevice());
 
-    RegisterTestLayer<PBRModelTestLayer>();
+    RegisterTestLayer<PbrModelDemo>();
 
-    if (!mTestLayers.empty())
+    if (!mRenderDemos.empty())
     {
-        mActiveLayerIndex = 0;
-        mTestLayers[mActiveLayerIndex]->OnAttach();
+        mActiveDemoIndex = 0;
+        mRenderDemos[mActiveDemoIndex]->OnAttach();
     }
 
     return true;
@@ -23,18 +23,14 @@ void LuminaEditor::OnUpdate(double DeltaTime)
 {
     UIRenderer::BeginFrame();
 
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+    if (mActiveDemoIndex >= 0 && mActiveDemoIndex < mRenderDemos.size())
     {
-        mTestLayers[mActiveLayerIndex]->OnUpdate(DeltaTime);
+        mRenderDemos[mActiveDemoIndex]->OnUpdate(DeltaTime);
     }
 }
 
 void LuminaEditor::OnFixedUpdate(double FixedDeltaTime)
 {
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
-    {
-        mTestLayers[mActiveLayerIndex]->OnFixedUpdate(FixedDeltaTime);
-    }
 }
 
 void LuminaEditor::OnRender(FRenderGraph& RenderGraph)
@@ -53,20 +49,15 @@ void LuminaEditor::OnRender(FRenderGraph& RenderGraph)
 
     RenderGraph.CreateTexture("EditorViewport.SceneColor", ColorDesc);
 
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+    if (mActiveDemoIndex >= 0 && mActiveDemoIndex < mRenderDemos.size())
     {
-        mTestLayers[mActiveLayerIndex]->OnRender(RenderGraph);
+        mRenderDemos[mActiveDemoIndex]->OnRender(RenderGraph);
     }
 }
 
 void LuminaEditor::OnRenderUI(FRenderGraph& RenderGraph)
 {
     RenderEditorUI(RenderGraph);
-
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
-    {
-        mTestLayers[mActiveLayerIndex]->OnRenderUI();
-    }
 
     FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
     FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
@@ -101,22 +92,22 @@ void LuminaEditor::OnRenderUI(FRenderGraph& RenderGraph)
 void LuminaEditor::OnDestroy()
 {
     UIRenderer::Shutdown();
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+    if (mActiveDemoIndex >= 0 && mActiveDemoIndex < mRenderDemos.size())
     {
-        mTestLayers[mActiveLayerIndex]->OnDetach();
+        mRenderDemos[mActiveDemoIndex]->OnDetach();
     }
-    mTestLayers.clear();
+    mRenderDemos.clear();
 }
 
 void LuminaEditor::SetActiveLayer(int16_t ActiveLayer)
 {
-    assert(ActiveLayer >= 0 && ActiveLayer < mTestLayers.size());
-    if (mActiveLayerIndex >= 0 && mActiveLayerIndex < mTestLayers.size())
+    assert(ActiveLayer >= 0 && ActiveLayer < mRenderDemos.size());
+    if (mActiveDemoIndex >= 0 && mActiveDemoIndex < mRenderDemos.size())
     {
-        mTestLayers[mActiveLayerIndex]->OnDetach();
+        mRenderDemos[mActiveDemoIndex]->OnDetach();
     }
-    mTestLayers[ActiveLayer]->OnAttach();
-    mActiveLayerIndex = ActiveLayer;
+    mRenderDemos[ActiveLayer]->OnAttach();
+    mActiveDemoIndex = ActiveLayer;
 }
 
 void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
@@ -280,14 +271,13 @@ void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
                     ImGui::TreePop();
                 }
 
-                DrawSectionHeader("Layers");
-                for (int Index = 0; Index < static_cast<int>(mTestLayers.size()); ++Index)
+                DrawSectionHeader("Demos");
+                for (int i = 0; i < (int)mRenderDemos.size(); ++i)
                 {
-                    const bool bSelected = Index == mActiveLayerIndex;
-                    ImGui::PushID(Index);
-                    if (ImGui::Selectable(mTestLayers[Index]->GetName().c_str(), bSelected))
+                    ImGui::PushID(i);
+                    if (ImGui::Selectable(mRenderDemos[i]->GetName().c_str(), i == mActiveDemoIndex))
                     {
-                        mActiveLayerIndex = static_cast<int16_t>(Index);
+                        SetActiveLayer((int16_t)i);   // 内部 OnDetach 旧 / OnAttach 新(你已实现)
                     }
                     ImGui::PopID();
                 }
@@ -355,16 +345,20 @@ void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
             {
                 DrawSectionHeader("Inspector");
 
-                if (mActiveLayerIndex >= 0 && mActiveLayerIndex < static_cast<int16_t>(mTestLayers.size()))
+                if (mActiveDemoIndex >= 0 && mActiveDemoIndex < static_cast<int16_t>(mRenderDemos.size()))
                 {
                     ImGui::TextDisabled("Active Layer");
-                    ImGui::TextUnformatted(mTestLayers[mActiveLayerIndex]->GetName().c_str());
+                    ImGui::TextUnformatted(mRenderDemos[mActiveDemoIndex]->GetName().c_str());
                 }
                 else
                 {
                     ImGui::TextDisabled("No active layer");
                 }
-
+                DrawSectionHeader("Demo Settings");
+                if (IRenderDemo* Demo = mRenderDemos[mActiveDemoIndex].get())
+                {
+                    Demo->OnRenderUI();
+                }
                 DrawSectionHeader("Viewport");
                 ImGui::TextDisabled("Size");
                 ImGui::SameLine(120.0f);
