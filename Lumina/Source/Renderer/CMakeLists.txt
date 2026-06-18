@@ -42,7 +42,7 @@ set(RENDER_CORE_SOURCES
         "src/Renderer.cpp"
         "src/Resources/FMesh.cpp"
 
-        "src/Managers/FTextureManager.cpp"
+        "src/Managers/TextureManager.cpp"
 
         "src/Resources/FMaterial.cpp"
         "src/RenderPass/FBasePass.cpp"

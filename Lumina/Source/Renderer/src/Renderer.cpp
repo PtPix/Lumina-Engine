@@ -4,19 +4,24 @@
 #include "Renderer/D3D12Core/D3D12Backend.h"
 #include "Renderer/D3D12Core/Core/CommandContext.h"
 #include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
-#include "Renderer/Managers/FTextureManager.h"
-#include "Renderer/Scene/FSceneView.h"
 #include "Renderer/D3D12Core/Core/SwapChain.h"
+#include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
+
+#include "Renderer/Managers/TextureManager.h"
+#include "Renderer/Scene/FSceneView.h"
+
+#include <cassert>
+
+std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
+std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
 
 FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
-std::unique_ptr<FBasePass> Renderer::mBasePass = nullptr;
+FRenderGraph Renderer::mRenderGraph;
+
+FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
 uint32_t Renderer::mCurrentFrameIndex = 0;
-std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
-FRenderGraph Renderer::mRenderGraph;
-FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
@@ -32,9 +37,9 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
     mUploader.Initialize(mpD3D12Backend->GetDevice());
 
-    mUploader.BeginUpload();
+    // mUploader.BeginUpload();
     TextureManager::Initialize(mpD3D12Backend->GetDevice(), &mUploader);
-    mUploader.EndUpLoadAndExecute();
+    // mUploader.EndUpLoadAndExecute();
     mUploader.FlushAndSync();
 
     InitializeBindlessRootSignature();
@@ -48,25 +53,37 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 
 void Renderer::Shutdown()
 {
+    if (mpD3D12Backend)
+        mpD3D12Backend->FlushAllQueues();
+
     mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
+
     if (mBasePass) {
         mBasePass->Shutdown();
         mBasePass.reset();
     }
+
     TextureManager::Shutdown();
     DestroySceneBuffers();
+
     mpD3D12Backend->Shutdown();
+    mpD3D12Backend.reset();
 }
 
 FCommandContext* Renderer::BeginFrame()
 {
+    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();
+
     mpD3D12Backend->CollectGarbage();
+    mUploader.SubmitPendingUploads();
     mUploader.CleanUpStaleUploads();
 
-    FCommandContext* pContext = mpD3D12Backend->AllocateGraphicsContext();// FD3D12Backend::AllocateContext();
+    FCommandContext* pContext = mpD3D12Backend->AllocateGraphicsContext();
+    assert(pContext != nullptr && "Failed to allocate FCommandContext for BeginFrame!");
 
     mRenderGraph.Reset();
+
     mBackBufferHandle = mRenderGraph.ImportBackBuffer(
         "BackBuffer",
         mpD3D12Backend->GetCurrentBackBufferResource(),
@@ -98,10 +115,8 @@ FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
 {
     auto* pMesh = new FMesh();
 
-    mUploader.BeginUpload();
     pMesh->Initialize(CpuData, mpD3D12Backend->GetAllocator(), &mUploader);
     // TODO : Streaming
-    mUploader.FlushAndSync();
 
     return pMesh;
 }

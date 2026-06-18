@@ -13,12 +13,6 @@ void FResourceUploader::Initialize(FDevice* pDevice)
     mpCommandQueue = mpDevice->GetGraphicsCommandQueue();
 }
 
-void FResourceUploader::BeginUpload()
-{
-    assert(mpCurrentContext == nullptr && "Upload is in progress");
-    mpCurrentContext = mpCommandQueue->AllocateContext();
-}
-
 void FResourceUploader::QueueUpload(FBuffer* pDestBuffer, const void* pData, size_t DataSize)
 {
     assert(mpCurrentContext != nullptr);
@@ -43,8 +37,12 @@ void FResourceUploader::QueueUpload(FBuffer* pDestBuffer, const void* pData, siz
 void FResourceUploader::UploadTexture(FTexture* pDestTexture, const void* pData, uint32_t Width,
                                       uint32_t Height, uint32_t BytesPerPixel)
 {
-    assert(mpCurrentContext != nullptr && "Must call BeginUpload before uploading texture!");
     assert(pDestTexture != nullptr && pDestTexture->GetResource() != nullptr);
+
+    if (mpCurrentContext == nullptr)
+    {
+        mpCurrentContext = mpCommandQueue->AllocateContext();
+    }
 
     ID3D12Resource* pDestResource = pDestTexture->GetResource();
     D3D12_RESOURCE_DESC Desc = pDestResource->GetDesc();
@@ -96,14 +94,17 @@ void FResourceUploader::UploadTexture(FTexture* pDestTexture, const void* pData,
     mCurrentTempUploadBuffers.push_back(std::move(TempBuffer));
 }
 
-uint64_t FResourceUploader::EndUpLoadAndExecute()
+uint64_t FResourceUploader::SubmitPendingUploads()
 {
-    assert(mpCurrentContext != nullptr);
+    if (mpCurrentContext == nullptr)
+        return 0;
 
     uint64_t FenceValue = mpCommandQueue->ExecuteCommandContext(mpCurrentContext);
     mpCurrentContext = nullptr;
 
     mInFlightUploads.push({ FenceValue, std::move(mCurrentTempUploadBuffers) });
+
+    mCurrentTempUploadBuffers.clear();
 
     return FenceValue;
 }
@@ -125,10 +126,11 @@ void FResourceUploader::CleanUpStaleUploads()
 
 void FResourceUploader::FlushAndSync()
 {
-    if (mpCurrentContext)
-    {
-        EndUpLoadAndExecute();
-    }
+    SubmitPendingUploads();
+    // if (mpCurrentContext)
+    // {
+    //     EndUpLoadAndExecute();
+    // }
 
     mpCommandQueue->Flush();
     CleanUpStaleUploads();

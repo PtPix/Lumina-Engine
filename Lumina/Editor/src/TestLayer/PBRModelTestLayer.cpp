@@ -10,20 +10,16 @@
 #include "Renderer/D3D12Core/D3D12Backend.h"
 #include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
 #include "Renderer/D3D12Core/Core/CommandContext.h"
-#include "Renderer/Managers/FTextureManager.h"
+#include "Renderer/Managers/TextureManager.h"
 
 void PBRModelTestLayer::OnAttach()
 {
     LUMINA_LOG_INFO(App, "PBRModelTestLayer Attaching...");
 
     // Texture Load
-    FResourceUploader* pUploader = Renderer::GetUploader();
-    pUploader->BeginUpload();
-    uint32_t AlbedoIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_BaseColor.png", pUploader, true);
-    uint32_t NormalIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_Normal.png", pUploader, false);
-    uint32_t ORMIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_ORM.png", pUploader, false);
-    pUploader->EndUpLoadAndExecute();
-    pUploader->FlushAndSync();
+    uint32_t AlbedoIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_BaseColor.png", true);
+    uint32_t NormalIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_Normal.png", false);
+    uint32_t ORMIndex = TextureManager::LoadTexture("Assets/Textures/Radio/T_HandRadio_ORM.png", false);
 
     // Register a Material
     FPBRMaterial RadioMaterial;

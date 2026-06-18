@@ -33,10 +33,9 @@ public:
     // ------------------------------------------------------------------------
     // Upload Operations
     // ------------------------------------------------------------------------
-    void BeginUpload();
     void QueueUpload(FBuffer* pDestBuffer, const void* pData, size_t DataSize);
     void UploadTexture(FTexture* pDestTexture, const void* pData, uint32_t Width, uint32_t Height, uint32_t BytesPerPixel);
-    uint64_t EndUpLoadAndExecute();
+    uint64_t SubmitPendingUploads();
 
     // ------------------------------------------------------------------------
     // Synchronization
