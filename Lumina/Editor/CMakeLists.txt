@@ -41,6 +41,18 @@ add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
         COMMENT "Auto-copying DXC DLLs (dxcompiler & dxil) to output directory..."
 )
 
+add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_PROPERTY:DXC,IMPORTED_LOCATION>
+        $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
+
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty/DXCompiler/bin/dxcompiler.dll"
+        $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>
+
+        COMMENT "Auto-copying DXC DLLs (dxcompiler & dxil) to output directory..."
+)
+
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE LuminaCore)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ImGUI)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Renderer)
