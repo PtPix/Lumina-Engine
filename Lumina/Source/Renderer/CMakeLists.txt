@@ -48,6 +48,7 @@ set(RENDER_CORE_SOURCES
         "src/Pipeline/ShaderManager.cpp"
         "src/Pipeline/PipelineStateCache.cpp"
         "src/RenderPass/BasePass.cpp"
+        src/D3D12Core/Core/DeferredReleaseQueue.cpp
 )
 
 # Build Library

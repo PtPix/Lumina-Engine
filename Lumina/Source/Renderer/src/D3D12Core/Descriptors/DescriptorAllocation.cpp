@@ -1,5 +1,6 @@
 ﻿#include "Renderer/D3D12Core/Descriptors/DescriptorAllocation.h"
 #include "Renderer/D3D12Core/Descriptors/DescriptorAllocatorPage.h"
+#include "Renderer/D3D12Core/Core/DeferredReleaseQueue.h"
 
 #include <cassert>
 #include <utility>
@@ -51,7 +52,14 @@ void FDescriptorAllocation::Free()
 {
     if (IsValid() && mpPage)
     {
-        mpPage->Free(mOffset, mNumHandles);
+        auto pPage = mpPage;
+        UINT Offset = mOffset;
+        UINT Num = mNumHandles;
+
+        FDeferredReleaseQueue::EnQueue([pPage, Offset, Num]()
+        {
+            pPage->Free(Offset, Num);
+        });
 
         mCpuHandle.ptr = 0;
         mNumHandles = 0;

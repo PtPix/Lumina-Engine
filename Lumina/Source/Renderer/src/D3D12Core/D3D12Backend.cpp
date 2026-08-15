@@ -3,6 +3,7 @@
 
 #include "Renderer/D3D12Core/Core/CommandContext.h"
 #include "Renderer/D3D12Core/Core/CommandQueue.h"
+#include "Renderer/D3D12Core/Core/DeferredReleaseQueue.h"
 #include "Renderer/D3D12Core/Core/Device.h"
 #include "Renderer/D3D12Core/Core/SwapChain.h"
 #include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
@@ -22,6 +23,8 @@ bool FD3D12Backend::Initialize(const FD3D12BackendDesc& Desc)
 
     if (!CreateSwapChain()) { Shutdown(); return false; }
 
+    FDeferredReleaseQueue::Initialize(mpDevice->GetGraphicsCommandQueue());
+
     mbInitialized = true;
     return true;
 }
@@ -35,6 +38,8 @@ void FD3D12Backend::Shutdown()
     }
 
     FlushAllQueues();
+
+    FDeferredReleaseQueue::Shutdown();
 
     DestroySwapChain();
     mpDevice.reset();
@@ -67,6 +72,8 @@ void FD3D12Backend::CollectGarbage()
     {
         mpDevice->GetBindlessDescriptorHeap()->ReleaseStaleSlots();
     }
+
+    FDeferredReleaseQueue::Flush();
 }
 
 bool FD3D12Backend::ResizeSwapChain(uint32_t Width, uint32_t Height)
