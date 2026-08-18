@@ -315,37 +315,32 @@ GpuResource* FRenderGraph::GetGpuResource(FRGTextureHandle Handle) const
 
 bool FRenderGraph::CreatePhysicalTexture(FResource& Resource)
 {
-    D3D12_RESOURCE_FLAGS Flags = D3D12_RESOURCE_FLAG_NONE;
+    FTextureDesc TexDesc = {};
+    TexDesc.Dimension        = ETextureDimension::Texture2D;
+    TexDesc.Width            = Resource.Desc.Width;
+    TexDesc.Height           = Resource.Desc.Height;
+    TexDesc.DepthOrArraySize = 1;
+    TexDesc.MipLevels        = 1;
+    TexDesc.Format           = Resource.Desc.Format;
+    TexDesc.InitialState     = D3D12_RESOURCE_STATE_COMMON;
+    TexDesc.DebugName        = ToWide(Resource.Name);
 
     if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::RenderTarget))
-    {
-        Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-    }
-
+        TexDesc.Flags |= ETextureFlags::AllowRenderTarget;
     if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::DepthStencil))
+        TexDesc.Flags |= ETextureFlags::AllowDepthStencil;
+    if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::UnorderedAccess))
+        TexDesc.Flags |= ETextureFlags::AllowUnorderedAccess;
+    if (!HasUsage(Resource.Desc.Usage, ERGTextureUsage::ShaderResource) &&
+          !HasUsage(Resource.Desc.Usage, ERGTextureUsage::DepthStencil))
     {
-        Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+        TexDesc.Flags |= ETextureFlags::DenyShaderResource;
     }
 
-    if (!HasUsage(Resource.Desc.Usage, ERGTextureUsage::ShaderResource))
-    {
-        Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-    }
+    TexDesc.bUseClearValue = Resource.Desc.bUseClearValue;
+    TexDesc.ClearValue     = Resource.Desc.ClearValue;
 
-    const D3D12_CLEAR_VALUE* pClearValue =
-        Resource.Desc.bUseClearValue ? &Resource.Desc.ClearValue : nullptr;
-
-    return Resource.Texture.Create(
-        mpDevice,
-        mpAllocator,
-        Resource.Desc.Width,
-        Resource.Desc.Height,
-        Resource.Desc.Format,
-        Flags,
-        D3D12_RESOURCE_STATE_COMMON,
-        pClearValue,
-        ToWide(Resource.Name)
-    );
+    return Resource.Texture.Create(mpDevice, mpAllocator, TexDesc);
 }
 
 bool FRenderGraph::IsSameDesc(const FRGTextureDesc& A, const FRGTextureDesc& B) const

@@ -49,6 +49,7 @@ public:
     // ------------------------------------------------------------------------
     // Descriptor Operations
     // ------------------------------------------------------------------------
+    void CopyDescriptor(const FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle, uint32_t DestIndex) const;
     void CreateSRVFromCPUHandle(const FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle, uint32_t DestIndex) const;
 
     // ------------------------------------------------------------------------
@@ -57,6 +58,9 @@ public:
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle(uint32_t Index) const;
     [[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle(uint32_t Index) const;
     [[nodiscard]] ID3D12DescriptorHeap* GetDescriptorHeap() const { return mpDescriptorHeap.Get(); }
+
+    [[nodiscard]] uint32_t GetAllocatedCount() const { return mCurrentWaterMark; }
+    [[nodiscard]] uint32_t GetMaxDescriptors() const { return mMaxDescriptors; }
 
 private:
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mpDescriptorHeap;

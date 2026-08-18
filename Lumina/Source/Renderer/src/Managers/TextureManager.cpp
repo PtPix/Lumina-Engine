@@ -56,11 +56,23 @@ uint32_t TextureManager::CreateTextureFromData(const std::string& Name, const vo
     uint32_t Height, DXGI_FORMAT Format)
 {
     auto pTexture = std::make_unique<FTexture>();
-    std::wstring wName(Name.begin(), Name.end());
 
-    pTexture->Create(mpDevice, mpDevice->GetAllocator(), Width, Height,
-        Format, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
-        nullptr, wName);
+    FTextureDesc Desc = {};
+    Desc.Dimension        = ETextureDimension::Texture2D;
+    Desc.Width            = Width;
+    Desc.Height           = Height;
+    Desc.DepthOrArraySize = 1;
+    Desc.MipLevels        = 1;
+    Desc.Format           = Format;
+    Desc.Flags            = ETextureFlags::None;
+    Desc.InitialState     = D3D12_RESOURCE_STATE_COMMON;
+    Desc.DebugName        = std::wstring(Name.begin(), Name.end());
+
+    if (!pTexture->Create(mpDevice, mpDevice->GetAllocator(), Desc))
+    {
+        LUMINA_LOG_ERROR(Texture, "Failed to create Texture: %s", Name.c_str());
+        return 0;
+    }
 
     mpUploader->UploadTexture(pTexture.get(), pData, Width, Height, 4);
 

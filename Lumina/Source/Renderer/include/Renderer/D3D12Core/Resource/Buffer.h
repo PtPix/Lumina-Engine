@@ -8,14 +8,17 @@
 
 #pragma once
 
+#include "Renderer/D3D12Core/Descriptors/DescriptorAllocation.h"
 #include "Renderer/D3D12Core/Resource/GpuResource.h"
 #include "D3D12MemAlloc.h"
+
+class FDevice;
 
 class FBuffer : public GpuResource
 {
 public:
     FBuffer() = default;
-    ~FBuffer() override { Destroy(); }
+    ~FBuffer() override { FBuffer::Destroy(); }
 
     FBuffer(const FBuffer&) = delete;
     FBuffer& operator=(const FBuffer&) = delete;
@@ -29,13 +32,16 @@ public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, size_t Alignment,
         D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialState, D3D12_HEAP_TYPE HeapType,
         const wchar_t* pName);
-    void Destroy();
+    virtual void Destroy();
 
     // ------------------------------------------------------------------------
     // Memory Mapping
     // ------------------------------------------------------------------------
     void* Map();
     void Unmap();
+
+    void* GetPersistentMappedPtr();
+    void ReleasePersistentMapping();
 
     // ------------------------------------------------------------------------
     // Getters
@@ -46,6 +52,8 @@ public:
 protected:
     Microsoft::WRL::ComPtr<D3D12MA::Allocation> mpAllocation;
     size_t mBufferSize = 0;
+
+    void* mpPersistentMappedData = nullptr;
 };
 
 class FVertexBuffer : public FBuffer
@@ -88,4 +96,62 @@ class FUploadBuffer : public FBuffer
 {
 public:
     bool Create(D3D12MA::Allocator* pAllocator, size_t SizeInBytes, const wchar_t* pName = L"UploadBuffer");
+};
+
+class FStructuredBuffer : public FBuffer
+{
+public:
+    static constexpr uint32_t InvalidBindlessIndex = UINT32_MAX;
+
+    bool Create(FDevice* pDevice, D3D12MA::Allocator* pAllocator, uint32_t ElementSize, uint32_t ElementCount,
+        bool bAllowUAV = false, bool bWithCounter = false, D3D12_HEAP_TYPE HeapType = D3D12_HEAP_TYPE_DEFAULT,
+        const wchar_t* pName = L"StructuredBuffer");
+
+    void Destroy() override;
+
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return mSRV.IsValid() ? mSRV.GetCpuHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{}; }
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetUAV() const { return mUAV.IsValid() ? mUAV.GetCpuHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{}; }
+
+    [[nodiscard]] uint32_t GetBindlessSRVIndex() const { return mBindlessSRVIndex; }
+    [[nodiscard]] uint32_t GetBindlessUAVIndex() const { return mBindlessUAVIndex; }
+
+    [[nodiscard]] uint32_t GetElementSize() const { return mElementSize; }
+    [[nodiscard]] uint32_t GetElementCount() const { return mElementCount; }
+    [[nodiscard]] uint32_t GetCounterOffset() const { return mCounterOffset; }
+
+private:
+    FDescriptorAllocation mSRV;
+    FDescriptorAllocation mUAV;
+
+    uint32_t mBindlessSRVIndex = InvalidBindlessIndex;
+    uint32_t mBindlessUAVIndex = InvalidBindlessIndex;
+
+    uint32_t mElementSize = 0;
+    uint32_t mElementCount = 0;
+    uint64_t mCounterOffset = 0;
+
+    FDevice* mpDevice = nullptr;
+};
+
+class FByteAddressBuffer : public FBuffer
+{
+public:
+    static constexpr uint32_t InvalidBindlessIndex = UINT32_MAX;
+
+    bool Create(FDevice* pDevice, D3D12MA::Allocator* pAllocator, size_t SizeInBytes,
+        bool bAllowUAV = false, const wchar_t* pName = L"ByteAddressBuffer");
+
+    void Destroy() override;
+
+    [[nodiscard]] uint32_t GetBindlessSRVIndex() const { return mBindlessSRVIndex; }
+    [[nodiscard]] uint32_t GetBindlessUAVIndex() const { return mBindlessUAVIndex; }
+
+private:
+    FDescriptorAllocation mSRV;
+    FDescriptorAllocation mUAV;
+
+    uint32_t mBindlessSRVIndex = InvalidBindlessIndex;
+    uint32_t mBindlessUAVIndex = InvalidBindlessIndex;
+
+    FDevice* mpDevice = nullptr;
 };

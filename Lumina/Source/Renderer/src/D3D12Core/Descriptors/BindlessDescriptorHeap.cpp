@@ -56,8 +56,15 @@ uint32_t FBindlessDescriptorHeap::AllocateSlot()
 
 void FBindlessDescriptorHeap::FreeSlot(uint32_t Index, FCommandQueue* pQueue, uint64_t FenceValue)
 {
+    if (Index == UINT32_MAX) return;
+
     std::lock_guard<std::mutex> Lock(mAllocationMutex);
 
+    if (!pQueue)
+    {
+        mFreeSlots.push(Index);
+        return;
+    }
     mDeferredFreeSlots.push_back( {pQueue, FenceValue, Index} );
 }
 
@@ -81,11 +88,19 @@ void FBindlessDescriptorHeap::ReleaseStaleSlots()
     }
 }
 
+void FBindlessDescriptorHeap::CopyDescriptor(const FDevice *pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle,
+    uint32_t DestIndex) const
+{
+    if (SrcCpuHandle.ptr == 0) return;
+
+    D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = GetCpuHandle(DestIndex);
+    pDevice->GetDevice()->CopyDescriptorsSimple(1, DestHandle, SrcCpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+}
+
 void FBindlessDescriptorHeap::CreateSRVFromCPUHandle(const FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcCpuHandle,
                                                      uint32_t DestIndex) const
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE DestHandle = GetCpuHandle(DestIndex);
-    pDevice->GetDevice()->CopyDescriptorsSimple(1, DestHandle, SrcCpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    CopyDescriptor(pDevice, SrcCpuHandle, DestIndex);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE FBindlessDescriptorHeap::GetCpuHandle(uint32_t Index) const
