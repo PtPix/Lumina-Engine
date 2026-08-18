@@ -34,7 +34,7 @@ bool FCommandContext::Initialize(FDevice* pDevice, D3D12_COMMAND_LIST_TYPE Type)
     }
 
     mpCommandList->Close();
-    mResourceBarriers.reserve(16);
+    mResourceBarriers.reserve(MaxBatchedBarriers);
 
     return true;
 }
@@ -53,31 +53,89 @@ void FCommandContext::Close()
     mpCommandList->Close();
 }
 
-void FCommandContext::TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState, bool bFlushImmediate)
+void FCommandContext::TransitionResource(GpuResource *pResource, D3D12_RESOURCE_STATES NewState, uint32_t Subresource,
+    bool bFlushImmediate)
 {
-    if (!pResource || !pResource->GetResource())
-    {
-        return;
-    }
+    if (!pResource || !pResource->GetResource()) return;
 
-    D3D12_RESOURCE_STATES OldState = pResource->GetUsageState();
-    if (OldState == NewState)
-    {
-        return;
-    }
+    const bool bAllSubresources = (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
     D3D12_RESOURCE_BARRIER Barrier = {};
     Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     Barrier.Transition.pResource = pResource->GetResource();
-    Barrier.Transition.StateBefore = OldState;
     Barrier.Transition.StateAfter = NewState;
-    Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    if (bAllSubresources)
+    {
+        if (pResource->AreAllSubresourcesSame())
+        {
+            const D3D12_RESOURCE_STATES OldState = pResource->GetUsageState();
+            if (OldState == NewState) return;
+
+            Barrier.Transition.StateBefore = OldState;
+            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            mResourceBarriers.push_back(Barrier);
+        }
+        else
+        {
+            const uint32_t NumSub = pResource->GetNumSubresources();
+            for (uint32_t Sub = 0; Sub < NumSub; Sub++)
+            {
+                const D3D12_RESOURCE_STATES OldState = pResource->GetSubresourceState(Sub);
+                if (OldState == NewState) continue;
+
+                Barrier.Transition.StateBefore = OldState;
+                Barrier.Transition.Subresource = Sub;
+                mResourceBarriers.push_back(Barrier);
+            }
+        }
+        pResource->SetUsageState(NewState);
+    }
+    else
+    {
+        const D3D12_RESOURCE_STATES OldState = pResource->GetSubresourceState(Subresource);
+        if (OldState != NewState)
+        {
+            Barrier.Transition.StateBefore = OldState;
+            Barrier.Transition.Subresource = Subresource;
+            mResourceBarriers.push_back(Barrier);
+        }
+        pResource->SetSubresourceState(Subresource, NewState);
+    }
+
+    if (!bFlushImmediate || mResourceBarriers.size() >= MaxBatchedBarriers)
+    {
+        FlushResourceBarriers();
+    }
+}
+
+void FCommandContext::InsertUAVBarrier(GpuResource *pResource, bool bFlushImmediate)
+{
+    D3D12_RESOURCE_BARRIER Barrier = {};
+    Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+    Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.UAV.pResource = pResource->GetResource();
 
     mResourceBarriers.push_back(Barrier);
-    pResource->SetUsageState(NewState);
 
-    if (bFlushImmediate || mResourceBarriers.size() >= 16)
+    if (bFlushImmediate || mResourceBarriers.size() >= MaxBatchedBarriers)
+    {
+        FlushResourceBarriers();
+    }
+}
+
+void FCommandContext::InsertAliasingBarrier(GpuResource *pBefore, GpuResource *pAfter, bool bFlushImmediate)
+{
+    D3D12_RESOURCE_BARRIER Barrier = {};
+    Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+    Barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.Aliasing.pResourceBefore = pBefore ? pBefore->GetResource() : nullptr;
+    Barrier.Aliasing.pResourceAfter = pAfter ? pAfter->GetResource() : nullptr;
+
+    mResourceBarriers.push_back(Barrier);
+
+    if (bFlushImmediate || mResourceBarriers.size() >= MaxBatchedBarriers)
     {
         FlushResourceBarriers();
     }
@@ -190,6 +248,42 @@ void FCommandContext::SetGraphicsRootConstantBufferView(UINT RootParameterIndex,
     mpCommandList->SetGraphicsRootConstantBufferView(RootParameterIndex, BufferLocation);
 }
 
+void FCommandContext::SetGraphicsRootShaderResourceView(UINT RootParameterIndex,
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+{
+    mpCommandList->SetGraphicsRootShaderResourceView(RootParameterIndex, BufferLocation);
+}
+
+void FCommandContext::SetGraphicsRootUnorderedAccessView(UINT RootParameterIndex,
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+{
+    mpCommandList->SetGraphicsRootUnorderedAccessView(RootParameterIndex, BufferLocation);
+}
+
+void FCommandContext::SetComputeRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet,
+    const void *pSrcData, UINT DestOffsetIn32BitValues) const
+{
+    mpCommandList->SetComputeRoot32BitConstants(RootParameterIndex, Num32BitValuesToSet, pSrcData, DestOffsetIn32BitValues);
+}
+
+void FCommandContext::SetComputeRootConstantBufferView(UINT RootParameterIndex,
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+{
+    mpCommandList->SetComputeRootConstantBufferView(RootParameterIndex, BufferLocation);
+}
+
+void FCommandContext::SetComputeRootShaderResourceView(UINT RootParameterIndex,
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+{
+    mpCommandList->SetComputeRootShaderResourceView(RootParameterIndex, BufferLocation);
+}
+
+void FCommandContext::SetComputeRootUnorderedAccessView(UINT RootParameterIndex,
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+{
+    mpCommandList->SetComputeRootUnorderedAccessView(RootParameterIndex, BufferLocation);
+}
+
 void FCommandContext::CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer,
                                        UINT64 SrcOffset, UINT64 NumBytes)
 {
@@ -197,6 +291,30 @@ void FCommandContext::CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOff
     // We must flush barriers before executing the copy to ensure state changes take effect.
     FlushResourceBarriers();
     mpCommandList->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
+}
+
+namespace
+{
+    constexpr UINT kPixEventUnicodeMetadata = 1;
+}
+
+void FCommandContext::BeginEvent(const char *Name) const
+{
+    if (!Name) return;
+    const std::wstring Wide = StringUtils::UTF8ToWide(Name);
+    mpCommandList->BeginEvent(kPixEventUnicodeMetadata, Wide.c_str(), static_cast<UINT>((Wide.size() + 1) * sizeof(wchar_t)));
+}
+
+void FCommandContext::EndEvent() const
+{
+    mpCommandList->EndEvent();
+}
+
+void FCommandContext::SetMarker(const char *Name) const
+{
+    if (!Name) return;
+    const std::wstring Wide = StringUtils::UTF8ToWide(Name);
+    mpCommandList->SetMarker(kPixEventUnicodeMetadata, Wide.c_str(), static_cast<UINT>((Wide.size() + 1) * sizeof(wchar_t)));
 }
 
 void FCommandContext::IASetVertexBuffers(UINT StartSlot, UINT NumViews, const D3D12_VERTEX_BUFFER_VIEW* pViews) const

@@ -30,6 +30,7 @@ public:
 
 private:
     friend class FGraphicsPipelineStateBuilder;
+    friend class FComputePipelineStateBuilder;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> mPipelineState;
 };
 
@@ -64,4 +65,18 @@ private:
     D3D12_GRAPHICS_PIPELINE_STATE_DESC mPipelineStateDesc;
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputElementDesc;
     std::vector<DXGI_FORMAT> mRtvFormats;
+};
+
+class FComputePipelineStateBuilder
+{
+public:
+    FComputePipelineStateBuilder();
+
+    FComputePipelineStateBuilder& SetRootSignature(ID3D12RootSignature* pRootSignature);
+    FComputePipelineStateBuilder& SetComputeShader(const void* ByteCode, size_t ByteCodeLength);
+
+    bool Build(ID3D12Device* Device, FPipelineState& OutPipelineState);
+
+private:
+    D3D12_COMPUTE_PIPELINE_STATE_DESC mPipelineStateDesc;
 };

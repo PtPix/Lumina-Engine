@@ -35,7 +35,13 @@ public:
     // ------------------------------------------------------------------------
     // Resource Barrier Management
     // ------------------------------------------------------------------------
-    void TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState, bool bFlushImmediate = false);
+    void TransitionResource(GpuResource* pResource, D3D12_RESOURCE_STATES NewState,
+        uint32_t Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool bFlushImmediate = false);
+
+    void InsertUAVBarrier(GpuResource* pResource, bool bFlushImmediate = false);
+
+    void InsertAliasingBarrier(GpuResource* pBefore, GpuResource* pAfter, bool bFlushImmediate = false);
+
     void FlushResourceBarriers();
 
     // ------------------------------------------------------------------------
@@ -55,6 +61,13 @@ public:
 
     void SetGraphicsRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet, const void* pSrcData, UINT DestOffsetIn32BitValues);
     void SetGraphicsRootConstantBufferView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation);
+    void SetGraphicsRootShaderResourceView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
+    void SetGraphicsRootUnorderedAccessView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
+
+    void SetComputeRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet, const void* pSrcData, UINT DestOffsetIn32BitValues) const;
+    void SetComputeRootConstantBufferView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
+    void SetComputeRootShaderResourceView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
+    void SetComputeRootUnorderedAccessView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
 
     // ------------------------------------------------------------------------
     // Rasterizer & Output Merger State
@@ -82,6 +95,13 @@ public:
     void CopyBufferRegion(ID3D12Resource* pDstBuffer, UINT64 DstOffset, ID3D12Resource* pSrcBuffer, UINT64 SrcOffset, UINT64 NumBytes);
 
     // ------------------------------------------------------------------------
+    // Debug Markers (RenderDoc / PIX)
+    // ------------------------------------------------------------------------
+    void BeginEvent(const char* Name) const;
+    void EndEvent() const;
+    void SetMarker(const char* Name) const;
+
+    // ------------------------------------------------------------------------
     // Getters
     // ------------------------------------------------------------------------
     [[nodiscard]] ID3D12GraphicsCommandList* GetCommandList() const { return mpCommandList.Get(); }
@@ -96,4 +116,24 @@ private:
     D3D12_COMMAND_LIST_TYPE mType;
 
     std::vector<D3D12_RESOURCE_BARRIER> mResourceBarriers;
+    static constexpr uint32_t MaxBatchedBarriers = 32;
 };
+
+class FScopedGpuEvent
+{
+public:
+    FScopedGpuEvent(FCommandContext* pContext, const char* Name) : mpContext(pContext)
+    {
+        if (mpContext) mpContext->BeginEvent(Name);
+    }
+
+    ~FScopedGpuEvent() { if (mpContext) mpContext->EndEvent(); }
+
+    FScopedGpuEvent(const FScopedGpuEvent&) = delete;
+    FScopedGpuEvent& operator=(const FScopedGpuEvent&) = delete;
+
+private:
+    FCommandContext* mpContext;
+};
+
+#define LUMINA_GPU_EVENT(Context, Name) FScopedGpuEvent ScopedGpuEvent_##__LINE__((Context), (Name))

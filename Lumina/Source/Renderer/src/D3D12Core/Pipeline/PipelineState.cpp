@@ -156,3 +156,44 @@ bool FGraphicsPipelineStateBuilder::Build(ID3D12Device* Device, FPipelineState& 
 
     return true;
 }
+
+FComputePipelineStateBuilder::FComputePipelineStateBuilder()
+{
+    ZeroMemory(&mPipelineStateDesc, sizeof(mPipelineStateDesc));
+    mPipelineStateDesc.NodeMask = 0;
+    mPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+}
+
+FComputePipelineStateBuilder & FComputePipelineStateBuilder::SetRootSignature(ID3D12RootSignature *pRootSignature)
+{
+    mPipelineStateDesc.pRootSignature = pRootSignature;
+    return *this;
+
+}
+
+FComputePipelineStateBuilder & FComputePipelineStateBuilder::SetComputeShader(const void *ByteCode,
+    size_t ByteCodeLength)
+{
+    mPipelineStateDesc.CS = { reinterpret_cast<const BYTE*>(ByteCode), ByteCodeLength };
+    return *this;
+}
+
+bool FComputePipelineStateBuilder::Build(ID3D12Device *Device, FPipelineState &OutPipelineState)
+{
+    if (!mPipelineStateDesc.pRootSignature)
+    {
+        LUMINA_LOG_ERROR(RHI, "Compute Pipeline State requires a Root Signature!");
+        return false;
+    }
+
+    OutPipelineState.Destroy();
+    HRESULT HResult = Device->CreateComputePipelineState(&mPipelineStateDesc, IID_PPV_ARGS(&OutPipelineState.mPipelineState));
+
+    if (FAILED(HResult))
+    {
+        LUMINA_LOG_ERROR(RHI, "Failed to create compute pipeline state");
+        return false;
+    }
+
+    return true;
+}

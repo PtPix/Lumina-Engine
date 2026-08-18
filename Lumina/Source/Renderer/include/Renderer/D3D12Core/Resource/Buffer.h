@@ -117,7 +117,7 @@ public:
 
     [[nodiscard]] uint32_t GetElementSize() const { return mElementSize; }
     [[nodiscard]] uint32_t GetElementCount() const { return mElementCount; }
-    [[nodiscard]] uint32_t GetCounterOffset() const { return mCounterOffset; }
+    [[nodiscard]] uint64_t GetCounterOffset() const { return mCounterOffset; }
 
 private:
     FDescriptorAllocation mSRV;

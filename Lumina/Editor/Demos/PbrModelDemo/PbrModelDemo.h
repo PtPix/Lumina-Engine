@@ -17,7 +17,7 @@ public:
 private:
     struct FParams
     {
-        float SunDirection[3] = { 0.577f, -0.577f, 0.577 };
+        float SunDirection[3] = { 0.577f, -0.577f, 0.577f };
         float SunColor[3]     = { 1.0f, 0.9f, 0.8f };
         float SunIntensity    = 3.14f;
         bool  bRotateModel    = false;
