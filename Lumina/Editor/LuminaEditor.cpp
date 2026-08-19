@@ -60,7 +60,8 @@ void LuminaEditor::OnRenderUI(FRenderGraph& RenderGraph)
     RenderEditorUI(RenderGraph);
 
     FRGTextureHandle BackBuffer = Renderer::GetBackBufferHandle();
-    FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
+    // FRGTextureHandle SceneColor = RenderGraph.GetTexture("EditorViewport.SceneColor");
+    FRGTextureHandle SceneColor = RenderGraph.GetTexture("Debug.VisualizedDepth");
 
     auto UIPass = RenderGraph.AddPass("EditorUI");
 

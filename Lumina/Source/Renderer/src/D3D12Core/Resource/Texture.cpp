@@ -36,6 +36,8 @@ FTexture& FTexture::operator=(FTexture&& Other) noexcept
         mpAllocation = std::move(Other.mpAllocation);
         mpDevice = Other.mpDevice;
 
+        mbExternalResource = Other.mbExternalResource;
+
         mpResource = std::move(Other.mpResource);
         mAllSubresourcesState = Other.mAllSubresourcesState;
         mbAllSubresourcesSame = Other.mbAllSubresourcesSame;
@@ -47,6 +49,7 @@ FTexture& FTexture::operator=(FTexture&& Other) noexcept
         Other.mpDevice = nullptr;
         Other.mNumMips = 1;
         Other.mArraySize = 1;
+        Other.mbExternalResource = false;
     }
     return *this;
 }
@@ -59,6 +62,7 @@ bool FTexture::Create(FDevice *pDevice, D3D12MA::Allocator *pAllocator, const FT
 
     mpDevice = pDevice;
     mDesc = Desc;
+    mbExternalResource = false;
 
     // Mip Num
     mNumMips = (mDesc.MipLevels == 0)
@@ -149,7 +153,8 @@ void FTexture::CreateFromSwapChain(FDevice* pDevice, ID3D12Resource* pResource)
     Destroy();
 
     mpDevice = pDevice;
-    mpResource = pResource;
+    mpResource.Attach(pResource);
+    pResource->AddRef();
 
     D3D12_RESOURCE_DESC ResourceDesc = mpResource->GetDesc();
 
@@ -170,7 +175,9 @@ void FTexture::CreateFromSwapChain(FDevice* pDevice, ID3D12Resource* pResource)
 
     InitStateTracking(1, D3D12_RESOURCE_STATE_PRESENT);
 
-    // BackBuffer only nees RTV
+    mbExternalResource = true;
+
+    // BackBuffer only needs RTV
     mRTVs.resize(1);
     mRTVs[0] = pDevice->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(1);
     pDevice->GetDevice()->CreateRenderTargetView(mpResource.Get(), nullptr, mRTVs[0].GetCpuHandle());
@@ -421,12 +428,12 @@ void FTexture::Destroy()
     mUAVs.clear();
     mSRV.Free();
 
-    if (mpResource || mpAllocation)
+    if (!mbExternalResource && (mpResource || mpAllocation))
     {
         auto pResource = mpResource;
         auto pAllocation = mpAllocation;
 
-        FDeferredReleaseQueue::EnQueue([pResource, pAllocation]() mutable
+        FDeferredReleaseQueue::Enqueue([pResource, pAllocation]() mutable
         {
             pAllocation.Reset();
             pResource.Reset();

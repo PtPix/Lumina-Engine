@@ -9,6 +9,7 @@ set(D3D12CORE_SOURCES
         "src/D3D12Core/Core/CommandQueue.cpp"
         "src/D3D12Core/Core/SwapChain.cpp"
         "src/D3D12Core/Core/CommandContext.cpp"
+        "src/D3D12Core/Core/DeferredReleaseQueue.cpp"
 
         # Descriptors
         "src/D3D12Core/Descriptors/DescriptorAllocation.cpp"
@@ -48,7 +49,7 @@ set(RENDER_CORE_SOURCES
         "src/Pipeline/ShaderManager.cpp"
         "src/Pipeline/PipelineStateCache.cpp"
         "src/RenderPass/BasePass.cpp"
-        src/D3D12Core/Core/DeferredReleaseQueue.cpp
+        "src/RenderPass/DebugVisualizePass.cpp"
 )
 
 # Build Library

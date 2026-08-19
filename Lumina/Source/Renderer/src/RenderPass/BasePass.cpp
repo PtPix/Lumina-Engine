@@ -24,7 +24,7 @@ namespace
         };
         Desc.RTVFormats    = { DXGI_FORMAT_R8G8B8A8_UNORM };
         Desc.DSVFormat     = DXGI_FORMAT_D32_FLOAT;
-        Desc.bDepthTest    = true;
+        Desc.DepthTest    = EDepthTest::Less;
         Desc.RootSignature = Renderer::GetBindlessRootSignature()->Get();
         return Desc;
     }

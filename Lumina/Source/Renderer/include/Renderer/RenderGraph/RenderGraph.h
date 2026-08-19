@@ -67,6 +67,9 @@ public:
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetDSV(FRGTextureHandle Handle) const;
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetSRV(FRGTextureHandle Handle) const;
 
+    [[nodiscard]] uint32_t GetSRVIndex(FRGTextureHandle Handle) const;
+    [[nodiscard]] uint32_t GetUAVIndex(FRGTextureHandle Handle, uint32_t Mip = 0) const;
+
 private:
     friend class FRenderGraph;
 
@@ -100,6 +103,7 @@ public:
     void Shutdown();
 
     void Reset();
+    void ClearImportedResources();
 
     FRGTextureHandle CreateTexture(const char* Name, const FRGTextureDesc& Desc);
     FRGTextureHandle GetTexture(const char* Name);
@@ -158,14 +162,17 @@ private:
     FResource& GetResourceInternal(FRGTextureHandle Handle);
     const FResource& GetResourceInternal(FRGTextureHandle Handle) const;
 
-    GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
+    [[nodiscard]] GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
 
     bool CreatePhysicalTexture(FResource& Resource);
     bool IsSameDesc(const FRGTextureDesc& A, const FRGTextureDesc& B) const;
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetRTVInternal(FRGTextureHandle Handle) const;
-    D3D12_CPU_DESCRIPTOR_HANDLE GetDSVInternal(FRGTextureHandle Handle) const;
-    D3D12_CPU_DESCRIPTOR_HANDLE GetSRVInternal(FRGTextureHandle Handle) const;
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetRTVInternal(FRGTextureHandle Handle) const;
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetDSVInternal(FRGTextureHandle Handle) const;
+    [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetSRVInternal(FRGTextureHandle Handle) const;
+
+    uint32_t GetSRVIndexInternal(FRGTextureHandle Handle) const;
+    uint32_t GetUAVIndexInternal(FRGTextureHandle Handle, uint32_t Mip) const;
 
 private:
     FDevice* mpDevice = nullptr;

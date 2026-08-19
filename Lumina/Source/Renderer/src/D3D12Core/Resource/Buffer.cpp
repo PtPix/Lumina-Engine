@@ -91,7 +91,7 @@ void FBuffer::Destroy()
     {
         auto pAllocation = mpAllocation;
         auto pResource   = mpResource;
-        FDeferredReleaseQueue::EnQueue([pAllocation, pResource]() mutable
+        FDeferredReleaseQueue::Enqueue([pAllocation, pResource]() mutable
         {
             pAllocation.Reset();
             pResource.Reset();

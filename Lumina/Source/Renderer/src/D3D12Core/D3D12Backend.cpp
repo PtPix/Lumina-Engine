@@ -83,6 +83,9 @@ bool FD3D12Backend::ResizeSwapChain(uint32_t Width, uint32_t Height)
         return false;
     }
 
+    FlushAllQueues();
+    FDeferredReleaseQueue::FlushAll();
+
     HRESULT HResult = mpSwapChain->Resize(static_cast<int>(Width), static_cast<int>(Height), mDesc.BackBufferFormat);
     if (FAILED(HResult)) return false;
 

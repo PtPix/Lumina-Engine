@@ -35,6 +35,16 @@ D3D12_CPU_DESCRIPTOR_HANDLE FRenderGraphContext::GetSRV(FRGTextureHandle Handle)
     return mpGraph->GetSRVInternal(Handle);
 }
 
+uint32_t FRenderGraphContext::GetSRVIndex(FRGTextureHandle Handle) const
+{
+    return mpGraph->GetSRVIndexInternal(Handle);
+}
+
+uint32_t FRenderGraphContext::GetUAVIndex(FRGTextureHandle Handle, uint32_t Mip) const
+{
+    return mpGraph->GetUAVIndexInternal(Handle, Mip);
+}
+
 FRenderGraphPassBuilder& FRenderGraphPassBuilder::ReadTexture(FRGTextureHandle Texture)
 {
     mpGraph->mPasses[mPassIndex].Reads.push_back({ Texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE });
@@ -90,6 +100,18 @@ void FRenderGraph::Shutdown()
 void FRenderGraph::Reset()
 {
     mPasses.clear();
+}
+
+void FRenderGraph::ClearImportedResources()
+{
+    for (FResource& Resource : mResources)
+    {
+        if (Resource.bImported)
+        {
+            Resource.pImportedResource = nullptr;
+            Resource.ImportedRTV = {};
+        }
+    }
 }
 
 FRGTextureHandle FRenderGraph::CreateTexture(const char* Name, const FRGTextureDesc& Desc)
@@ -366,5 +388,20 @@ D3D12_CPU_DESCRIPTOR_HANDLE FRenderGraph::GetDSVInternal(FRGTextureHandle Handle
 D3D12_CPU_DESCRIPTOR_HANDLE FRenderGraph::GetSRVInternal(FRGTextureHandle Handle) const
 {
     const FResource& Resource = GetResourceInternal(Handle);
+    if (Resource.bImported) return D3D12_CPU_DESCRIPTOR_HANDLE{};
     return Resource.Texture.GetSRV();
+}
+
+uint32_t FRenderGraph::GetSRVIndexInternal(FRGTextureHandle Handle) const
+{
+    const FResource& Resource = GetResourceInternal(Handle);
+    if (Resource.bImported) return FTexture::InvalidBindlessIndex;
+    return Resource.Texture.GetBindlessSRVIndex();
+}
+
+uint32_t FRenderGraph::GetUAVIndexInternal(FRGTextureHandle Handle, uint32_t Mip) const
+{
+    const FResource& Resource = GetResourceInternal(Handle);
+    if (Resource.bImported) return FTexture::InvalidBindlessIndex;
+    return Resource.Texture.GetBindlessUAVIndex(Mip);
 }

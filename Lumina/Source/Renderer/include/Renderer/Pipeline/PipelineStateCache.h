@@ -21,23 +21,93 @@
 
 class FDevice;
 
+// Shader permutation
+struct FShaderDefine
+{
+    std::string Name;
+    std::string Value;
+
+    FShaderDefine() = default;
+    FShaderDefine(std::string InName, std::string InValue) : Name(std::move(InName)), Value(std::move(InValue)) {}
+};
+
+// Type Enum
+enum class EBlendMode : uint8_t
+{
+    Opaque,
+    AlphaBlend, // src.a * src + (1 - src.a) * dst
+    Additive, // src + dst
+    PremultipliedAlpha, // src + (1 - src.a) * dst
+};
+
+enum class ECullMode : uint8_t
+{
+    None,
+    Front,
+    Back,
+};
+
+enum class EDepthTest : uint8_t
+{
+    Disabled,
+    Never,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Equal,
+    Always,
+};
+
+enum class EFillMode : uint8_t
+{
+    Solid,
+    Wireframe,
+};
+
 struct FGraphicsPSODesc
 {
-    // Shaders (single HLSL file with VS/PS entry points, matching current usage)
+    // Shaders
     std::wstring ShaderPath;
     std::string  VSEntry;
     std::string  PSEntry;
     EShaderModel ShaderModel = EShaderModel::SM6_0;
+    std::vector<FShaderDefine> Defines;
 
-    // Fixed-function state that affects PSO identity
+    // Input / Output
     std::vector<D3D12_INPUT_ELEMENT_DESC> InputLayout;
     std::vector<DXGI_FORMAT>              RTVFormats;
     DXGI_FORMAT                           DSVFormat   = DXGI_FORMAT_UNKNOWN;
-    bool                                  bDepthTest  = false;
-    D3D12_PRIMITIVE_TOPOLOGY_TYPE         TopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    // Root signature this PSO is built against (not hashed by pointer alone —
-    // see note in MakeHash; for a single global root sig this is constant).
+    // Rasterizer
+    ECullMode CullMode = ECullMode::Back;
+    EFillMode FillMode = EFillMode::Solid;
+    bool bFrontCounterClockwise = false;
+    int32_t DepthBias = 0;
+    float SlopeScaledDepthBias = 0.0f;
+    float DepthBiasClamp = 0.0f;
+    bool bDepthClipEnable = true;
+
+    // Depth / Stencil
+    EDepthTest DepthTest  = EDepthTest::Disabled;
+    bool bDepthWrite = true;
+
+    // Blend
+    EBlendMode BlendMode = EBlendMode::Opaque;
+
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE TopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    uint32_t SampleCount = 1;
+
+    ID3D12RootSignature* RootSignature = nullptr;
+};
+
+struct FComputePSODesc
+{
+    std::wstring ShaderPath;
+    std::string CSEntry;
+    EShaderModel ShaderModel = EShaderModel::SM6_0;
+    std::vector<FShaderDefine> Defines;
+
     ID3D12RootSignature* RootSignature = nullptr;
 };
 
@@ -47,11 +117,16 @@ public:
     static void Initialize(FDevice* pDevice);
     static void Shutdown();
 
-    // Returns a cached PSO, building it on first request. nullptr on failure.
     static FPipelineState* GetOrCreate(const FGraphicsPSODesc& Desc);
+    static FPipelineState* GetOrCreate(const FComputePSODesc& Desc);
+
+    static void InvalidateAll();
+
+    [[nodiscard]] static size_t GetCachedCount();
 
 private:
     static size_t MakeHash(const FGraphicsPSODesc& Desc);
+    static size_t MakeHash(const FComputePSODesc& Desc);
 
     static FDevice* mpDevice;
     static std::unordered_map<size_t, std::unique_ptr<FPipelineState>> mCache;

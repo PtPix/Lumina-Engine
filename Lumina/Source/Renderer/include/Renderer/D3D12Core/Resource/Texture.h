@@ -2,8 +2,8 @@
  * @file Texture.h
  * @brief GPU Texture resource wrapper.
  *
- * Manages D3D12 2D Textures and their associated descriptors (RTV, SRV, DSV).
- * Handles ownership of memory allocations and descriptor lifecycle.
+ * Support 2D / 2DArray / 3D / Cube / MipChain / UAV.
+ * SRV / UAV will be in bindless heap.
  */
 
 #pragma once
@@ -143,6 +143,8 @@ private:
     uint32_t mArraySize = 1;
 
     DXGI_FORMAT mResourceFormat = DXGI_FORMAT_UNKNOWN;
+
+    bool mbExternalResource = false;
 
     // RTV, DSV : mip * slices. SRV : 1. UAV: mip
     std::vector<FDescriptorAllocation> mRTVs;

@@ -86,6 +86,24 @@ FRootSignatureBuilder& FRootSignatureBuilder::AddStaticSampler(UINT ShaderRegist
     return *this;
 }
 
+FRootSignatureBuilder & FRootSignatureBuilder::AddStaticSampler(const D3D12_STATIC_SAMPLER_DESC &SamplerDesc)
+{
+    mStaticSamplers.push_back(SamplerDesc);
+    return *this;
+}
+
+FRootSignatureBuilder & FRootSignatureBuilder::AddUnorderedAccessView(UINT ShaderRegister, UINT RegisterSpace)
+{
+    D3D12_ROOT_PARAMETER1 RootParameter = {};
+    RootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+    RootParameter.Descriptor.ShaderRegister = ShaderRegister;
+    RootParameter.Descriptor.RegisterSpace = RegisterSpace;
+    RootParameter.Descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE;
+    RootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    mRootParameters.push_back(RootParameter);
+    return *this;
+}
+
 FRootSignatureBuilder& FRootSignatureBuilder::AllowInputLayout()
 {
     mFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;

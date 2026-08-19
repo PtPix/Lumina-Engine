@@ -56,7 +56,7 @@ void FDescriptorAllocation::Free()
         UINT Offset = mOffset;
         UINT Num = mNumHandles;
 
-        FDeferredReleaseQueue::EnQueue([pPage, Offset, Num]()
+        FDeferredReleaseQueue::Enqueue([pPage, Offset, Num]()
         {
             pPage->Free(Offset, Num);
         });

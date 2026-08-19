@@ -6,6 +6,7 @@
 #include "Renderer/Renderer.h"
 #include "Renderer/Managers/TextureManager.h"
 #include "Renderer/RenderPass/BasePass.h"
+#include "Renderer/RenderPass/DebugVisualizePass.h"
 
 void PbrModelDemo::OnAttach()
 {
@@ -106,6 +107,12 @@ void PbrModelDemo::OnRender(FRenderGraph& Graph)
     Inputs.View       = &mSceneView;
     FBasePassOutputs Outputs;
     AddBasePass(Graph, Inputs, Outputs);
+
+    // --- A1 验收 ---
+    FDebugVisualizeInputs DbgInputs;
+    DbgInputs.SceneDepth = Outputs.SceneDepth;
+    FDebugVisualizeOutputs DbgOutputs;
+    AddDebugVisualizeDepthPass(Graph, DbgInputs, DbgOutputs);
 }
 
 void PbrModelDemo::OnRenderUI()

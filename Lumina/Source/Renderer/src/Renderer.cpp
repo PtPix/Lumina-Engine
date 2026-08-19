@@ -13,6 +13,7 @@
 
 #include <cassert>
 
+#include "Renderer/D3D12Core/Core/DeferredReleaseQueue.h"
 #include "Renderer/Pipeline/PipelineStateCache.h"
 #include "Renderer/Pipeline/ShaderManager.h"
 
@@ -58,6 +59,8 @@ void Renderer::Shutdown()
     if (mpD3D12Backend)
         mpD3D12Backend->FlushAllQueues();
 
+    FDeferredReleaseQueue::FlushAll();
+
     mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
 
@@ -97,7 +100,11 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame()
 {
-    if (!mpCurrentFrameContext) return;
+    if (!mpCurrentFrameContext)
+    {
+        LUMINA_LOG_ERROR(RHI, "Renderer::EndFrame: no valid command context，Jump over current frame");
+        return;
+    }
 
     BindGlobalResources(mpCurrentFrameContext);
 
@@ -191,6 +198,8 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
     if (mpD3D12Backend)
     {
+        mpD3D12Backend->FlushAllQueues();
+        mRenderGraph.ClearImportedResources();
         mpD3D12Backend->ResizeSwapChain(Width, Height);
     }
 }

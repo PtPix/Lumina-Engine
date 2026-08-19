@@ -13,7 +13,7 @@ public:
     static void Initialize(FCommandQueue* pGraphicsQueue);
     static void Shutdown();
 
-    static void EnQueue(std::function<void()> ReleaseFunc);
+    static void Enqueue(std::function<void()> ReleaseFunc);
 
     static void Flush();
     static void FlushAll();

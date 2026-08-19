@@ -18,7 +18,7 @@ class FBuffer : public GpuResource
 {
 public:
     FBuffer() = default;
-    ~FBuffer() override { FBuffer::Destroy(); }
+    ~FBuffer() override { Destroy(); }
 
     FBuffer(const FBuffer&) = delete;
     FBuffer& operator=(const FBuffer&) = delete;

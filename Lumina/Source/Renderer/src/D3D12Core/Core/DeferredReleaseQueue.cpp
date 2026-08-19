@@ -22,7 +22,7 @@ void FDeferredReleaseQueue::Shutdown()
     mbImmediateMode = true;
 }
 
-void FDeferredReleaseQueue::EnQueue(std::function<void()> ReleaseFunc)
+void FDeferredReleaseQueue::Enqueue(std::function<void()> ReleaseFunc)
 {
     if (!ReleaseFunc) return;
 
@@ -70,7 +70,10 @@ void FDeferredReleaseQueue::FlushAll()
 
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        if (!mpGraphicsQueue) return;
+        if (mpGraphicsQueue)
+        {
+            mpGraphicsQueue->Flush();
+        }
 
         All.reserve(mEntries.size());
         for (auto& Entry : mEntries) All.push_back(std::move(Entry.ReleaseFunc));
