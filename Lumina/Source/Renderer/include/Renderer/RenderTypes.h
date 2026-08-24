@@ -1,15 +1,8 @@
 ﻿#pragma once
+#include <cstdint>
 
-#include <DirectXMath.h>
-
-struct FGlobalPassData
+enum EShadingModel : uint32_t
 {
-    DirectX::XMMATRIX ViewProjectionMatrix;
-    DirectX::XMFLOAT3 CameraPosition;
-    float Padding1;
-
-    DirectX::XMFLOAT3 SunDirection;
-    float SunIntensity;
-
-    DirectX::XMFLOAT4 SunColor;
+    SHADINGMODEL_DEFAULT_LIT = 0,
+    SHADINGMODEL_UNLIT = 1
 };

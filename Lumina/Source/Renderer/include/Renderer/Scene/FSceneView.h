@@ -1,24 +1,27 @@
 ﻿#pragma once
 
+#include "Renderer/ShaderInterop/SharedTypes.h"
 #include "Renderer/RenderTypes.h"
-#include "Renderer/Resources/FMaterial.h"
 
 #include <DirectXMath.h>
 #include <vector>
-#include <string>
-
-// Per Instance Data
-struct alignas(16) FInstanceData
-{
-    DirectX::XMMATRIX WorldMatrix;
-    uint32_t MaterialIndex;
-    uint32_t Pad[3];
-};
 
 struct FDrawCommand
 {
     class FMesh* pMesh;
     uint32_t InstanceIndex;
+};
+
+struct FGlobalPassData
+{
+    DirectX::XMMATRIX ViewProjectionMatrix;
+    DirectX::XMFLOAT3 CameraPosition;
+    float Padding1;
+
+    DirectX::XMFLOAT3 SunDirection;
+    float SunIntensity;
+
+    DirectX::XMFLOAT4 SunColor;
 };
 
 struct FSceneView

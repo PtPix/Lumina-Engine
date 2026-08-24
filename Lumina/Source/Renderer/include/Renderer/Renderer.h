@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "Renderer/D3D12Core/Common.h"
+#include "Renderer/Pipeline/GlobalRootSignature.h"
 #include "Renderer/D3D12Core/Pipeline/RootSignature.h"
 #include "Renderer/D3D12Core/Resource/ResourceUploader.h"
 #include "RenderGraph/RenderGraph.h"
@@ -43,7 +44,6 @@ public:
     static void BeginFrame();
     static void EndFrame();
 
-    static void UploadSceneView(const FSceneView& View);
     static void BindGlobalResources(FCommandContext* pCommandContext);
 
     // ------------------------------------------------------------------------
@@ -54,23 +54,16 @@ public:
     // ------------------------------------------------------------------------
     // Getters
     // ------------------------------------------------------------------------
-    static FRootSignature* GetBindlessRootSignature() { return &mBindlessRootSignature; }
     static FResourceUploader* GetUploader() { return &mUploader; }
     static FD3D12Backend* GetD3D12Backend() { return mpD3D12Backend.get(); }
     static FRenderGraph& GetRenderGraph() { return mRenderGraph; }
     static FRGTextureHandle GetBackBufferHandle() { return mBackBufferHandle; }
 
-    static uint32_t           GetCurrentFrameIndex()     { return mCurrentFrameIndex; }
-    static FFrameResource&    GetCurrentFrameResource()  { return mFrameResources[mCurrentFrameIndex]; }
-
 private:
     static void InitializeBindlessRootSignature();
-    static void InitializeSceneBuffers();
-    static void DestroySceneBuffers();
 
     static std::unique_ptr<FD3D12Backend> mpD3D12Backend;
 
-    static FRootSignature mBindlessRootSignature;
     static FResourceUploader mUploader;
     static FRenderGraph mRenderGraph;
 
@@ -79,6 +72,4 @@ private:
     static FRGTextureHandle mBackBufferHandle;
 
     static const int NUM_FRAMES = NUM_SWAPCHAIN_BACKBUFFER;
-    static FFrameResource mFrameResources[NUM_FRAMES];
-    static uint32_t mCurrentFrameIndex;
 };

@@ -9,24 +9,21 @@
 
 #include "Renderer/Managers/TextureManager.h"
 #include "Renderer/Scene/FSceneView.h"
-#include "Renderer/RendererCommon.h"
 
 #include <cassert>
 
 #include "Renderer/D3D12Core/Core/DeferredReleaseQueue.h"
+#include "Renderer/Pipeline/GlobalRootSignature.h"
 #include "Renderer/Pipeline/PipelineStateCache.h"
 #include "Renderer/Pipeline/ShaderManager.h"
 
 std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
 
-FRootSignature Renderer::mBindlessRootSignature;
 FResourceUploader Renderer::mUploader;
 FRenderGraph Renderer::mRenderGraph;
 FCommandContext* Renderer::mpCurrentFrameContext = nullptr;
 
 FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
-FFrameResource Renderer::mFrameResources[Renderer::NUM_FRAMES];
-uint32_t Renderer::mCurrentFrameIndex = 0;
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
@@ -47,7 +44,6 @@ bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
     mUploader.FlushAndSync();
 
     InitializeBindlessRootSignature();
-    InitializeSceneBuffers();
 
     FPipelineStateCache::Initialize(mpD3D12Backend->GetDevice());
 
@@ -64,11 +60,12 @@ void Renderer::Shutdown()
     mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
 
+    FGlobalRootSignature::Shutdown();
+
     FPipelineStateCache::Shutdown();
     FShaderManager::Clear();
 
     TextureManager::Shutdown();
-    DestroySceneBuffers();
 
     mpD3D12Backend->Shutdown();
     mpD3D12Backend.reset();
@@ -76,8 +73,6 @@ void Renderer::Shutdown()
 
 void Renderer::BeginFrame()
 {
-    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();
-
     mpD3D12Backend->CollectGarbage();
     mUploader.SubmitPendingUploads();
     mUploader.CleanUpStaleUploads();
@@ -128,70 +123,31 @@ FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
     return pMesh;
 }
 
-void Renderer::InitializeSceneBuffers()
-{
-    for (int i = 0; i < NUM_FRAMES; ++i)
-    {
-        mFrameResources[i].Initialize(mpD3D12Backend->GetAllocator(), 10000, 1000);
-    }
-}
-
-void Renderer::DestroySceneBuffers()
-{
-    for (int i = 0; i < NUM_FRAMES; ++i)
-    {
-        mFrameResources[i].GlobalPassBuffer.Destroy();
-        mFrameResources[i].InstanceBuffer.Destroy();
-        mFrameResources[i].MaterialBuffer.Destroy();
-    }
-}
-
-void Renderer::UploadSceneView(const FSceneView& View)
-{
-    mCurrentFrameIndex = mpD3D12Backend->GetCurrentBackBufferIndex();
-    FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
-
-    memcpy(CurrentFrame.GlobalPassBuffer.Map(), &View.GlobalPassData, sizeof(FGlobalPassData));
-    CurrentFrame.GlobalPassBuffer.Unmap();
-
-    if (!View.InstanceData.empty())
-    {
-        memcpy(CurrentFrame.InstanceBuffer.Map(),
-               View.InstanceData.data(),
-               sizeof(FInstanceData) * View.InstanceData.size());
-        CurrentFrame.InstanceBuffer.Unmap();
-    }
-
-    if (!View.MaterialData.empty())
-    {
-        memcpy(CurrentFrame.MaterialBuffer.Map(),
-               View.MaterialData.data(),
-               sizeof(FPBRMaterialData) * View.MaterialData.size());
-        CurrentFrame.MaterialBuffer.Unmap();
-    }
-}
-
 void Renderer::BindGlobalResources(FCommandContext* pContext)
 {
-    FFrameResource& CurrentFrame = mFrameResources[mCurrentFrameIndex];
+    if (!pContext) return;
 
-    pContext->SetGraphicsRootSignature(GetBindlessRootSignature()->Get());
+    FBindlessDescriptorHeap* pHeap = mpD3D12Backend->GetBindlessDescriptorHeap();
+    if (!pHeap) return;
 
-    ID3D12DescriptorHeap* ppHeaps[] = { mpD3D12Backend->GetBindlessDescriptorHeap()->GetDescriptorHeap() };
+    ID3D12DescriptorHeap* ppHeaps[] = { pHeap->GetDescriptorHeap() };
     pContext->SetDescriptorHeaps(1, ppHeaps);
 
-    pContext->SetGraphicsRootDescriptorTable(
-        ToRootIndex(ERootParam::BindlessTable),
-        mpD3D12Backend->GetBindlessDescriptorHeap()->GetGpuHandle(0));
-    pContext->SetGraphicsRootConstantBufferView(
-        ToRootIndex(ERootParam::GlobalCBV),
-        CurrentFrame.GlobalPassBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(
-        ToRootIndex(ERootParam::InstanceSRV),
-        CurrentFrame.InstanceBuffer.GetGPUVirtualAddress());
-    pContext->GetCommandList()->SetGraphicsRootShaderResourceView(
-        ToRootIndex(ERootParam::MaterialSRV),
-        CurrentFrame.MaterialBuffer.GetGPUVirtualAddress());
+    // Graphics
+    ID3D12RootSignature* pGraphicsRS = FGlobalRootSignature::GetGraphicsRootSignature();
+    if (pGraphicsRS)
+    {
+        pContext->SetGraphicsRootSignature(pGraphicsRS);
+        pContext->SetGraphicsRootDescriptorTable(ToRootIndex(EGlobalRootParam::BindlessTable), pHeap->GetGpuHandle(0));
+    }
+
+    // Compute
+    ID3D12RootSignature* pComputeRS = FGlobalRootSignature::GetComputeRootSignature();
+    if (pComputeRS)
+    {
+        pContext->SetComputeRootSignature(pComputeRS);
+        pContext->SetComputeRootDescriptorTable(ToRootIndex(EGlobalRootParam::BindlessTable), pHeap->GetGpuHandle(0));
+    }
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
@@ -206,44 +162,8 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 
 void Renderer::InitializeBindlessRootSignature()
 {
-    FRootSignatureBuilder Builder;
-
-    // ERootParam::PerObjectConstant (0) — b0, space0
-    Builder.AddRootConstants(0, 0, 1);
-
-    // ERootParam::BindlessTable (1) — SRV table: t0 space1 + t0 space2
-    std::vector<D3D12_DESCRIPTOR_RANGE1> BindlessRanges;
-    D3D12_DESCRIPTOR_RANGE1 SrvRange = {};
-    SrvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    SrvRange.NumDescriptors = UINT_MAX;
-    SrvRange.BaseShaderRegister = 0;
-    SrvRange.RegisterSpace = 1;
-    SrvRange.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-    SrvRange.OffsetInDescriptorsFromTableStart = 0;
-    BindlessRanges.push_back(SrvRange);
-
-
-    D3D12_DESCRIPTOR_RANGE1 BufRange = {};
-    BufRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    BufRange.NumDescriptors = UINT_MAX;
-    BufRange.BaseShaderRegister = 0;
-    BufRange.RegisterSpace = 2;
-    BufRange.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
-    BufRange.OffsetInDescriptorsFromTableStart = 0;
-    BindlessRanges.push_back(BufRange);
-
-    Builder.AddDescriptorTable(BindlessRanges, D3D12_SHADER_VISIBILITY_ALL);
-
-    // ERootParam::GlobalCBV (2) — b1, space0
-    Builder.AddConstantBufferView(1, 0);
-
-    // ERootParam::InstanceSRV (3) — t0, space0
-    Builder.AddShaderResourceView(0, 0);
-
-    // ERootParam::MaterialSRV (4) — t1, space0
-    Builder.AddShaderResourceView(1, 0);
-
-    Builder.AddStaticSampler(0, 0, D3D12_FILTER_ANISOTROPIC);
-    Builder.AllowInputLayout();
-    Builder.Build(mpD3D12Backend->GetDevice()->GetDevice(), mBindlessRootSignature);
+    if (!FGlobalRootSignature::Initialize(mpD3D12Backend->GetDevice()))
+    {
+        LUMINA_LOG_ERROR(RHI, "Global RootSignature initialization failed.");
+    }
 }

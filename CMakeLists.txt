@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(Lumina VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+
+
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
@@ -24,5 +27,7 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Engine")
 
 # Compile Editor
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Editor")
-
+set_target_properties(Lumina PROPERTIES
+        VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
 

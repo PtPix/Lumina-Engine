@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "Renderer/Scene/FViewInfo.h"
+
 Camera::Camera() :
     mPosition(0.0f, 0.0f, -1.0f), mYaw(0.0f), mPitch(0.0f),
     mMovementSpeed(1.5f), mLookSpeed(0.008f),
@@ -79,5 +81,8 @@ DirectX::XMMATRIX Camera::GetViewMatrix() const
 
 DirectX::XMMATRIX Camera::GetProjectionMatrix() const
 {
-    return DirectX::XMMatrixPerspectiveFovLH(mFovY, mAspectRatio, mNearPlane, mFarPlane);
+    const DirectX::XMMATRIX ProjectionMatrix = FViewInfo::MakeProjectionMatrixReverseZ(
+        DirectX::XM_PIDIV4, 1280.f / 720.f, 0.1f, 1000.0f);
+
+    return ProjectionMatrix;
 }

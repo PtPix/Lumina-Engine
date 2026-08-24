@@ -100,8 +100,6 @@ void PbrModelDemo::OnUpdate(double DeltaTime)
 
 void PbrModelDemo::OnRender(FRenderGraph& Graph)
 {
-    Renderer::UploadSceneView(mSceneView);
-
     FBasePassInputs Inputs;
     Inputs.SceneColor = Graph.GetTexture("EditorViewport.SceneColor");
     Inputs.View       = &mSceneView;
