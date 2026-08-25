@@ -52,6 +52,8 @@ set(RENDER_CORE_SOURCES
         "src/RenderPass/DebugVisualizePass.cpp"
         "src/Scene/FViewInfo.cpp"
         "src/Pipeline/GlobalRootSignature.cpp"
+        "src/Core/RendererCore.cpp"
+        "src/Core/RendererModule.cpp"
 )
 
 # Build Library

@@ -15,6 +15,7 @@
 #include <memory>
 #include <vector>
 
+#include "Renderer/Core/RendererCore.h"
 #include "D3D12/D3D12Common.h"
 #include "Renderer/Pipeline/GlobalRootSignature.h"
 #include "D3D12/D3D12RootSignature.h"
@@ -72,4 +73,6 @@ private:
     static FRGTextureHandle mBackBufferHandle;
 
     static const int NUM_FRAMES = NUM_SWAPCHAIN_BACKBUFFER;
+
+    friend class FRendererCore;
 };

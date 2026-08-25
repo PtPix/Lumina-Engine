@@ -1,6 +1,5 @@
 ﻿#include "Renderer/Renderer.h"
 
-#include "Renderer/RenderTypes.h"
 #include "../include/Renderer/D3D12/D3D12Backend.h"
 #include "../include/Renderer/D3D12/D3D12CommandContext.h"
 #include "../include/Renderer/D3D12/D3D12Device.h"
@@ -27,6 +26,17 @@ FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
+    FRendererInitParams CoreParams = {};
+    CoreParams.WindowHandle = Hwnd;
+    CoreParams.Width = Width;
+    CoreParams.Height = Height;
+    CoreParams.bEnableDebugLayer = true;
+
+    if (!FRendererCore::Initialize(CoreParams))
+    {
+        return false;
+    }
+
     mpD3D12Backend = std::make_unique<FD3D12Backend>();
     FD3D12BackendDesc D3D12BackendDesc;
     D3D12BackendDesc.Hwnd = Hwnd;
@@ -73,6 +83,7 @@ void Renderer::Shutdown()
 
 void Renderer::BeginFrame()
 {
+    FRendererCore::BeginFrame();
     mpD3D12Backend->CollectGarbage();
     mUploader.SubmitPendingUploads();
     mUploader.CleanUpStaleUploads();
@@ -111,6 +122,8 @@ void Renderer::EndFrame()
 
     mpD3D12Backend->ExecuteGraphicsContext(mpCurrentFrameContext);
     mpD3D12Backend->Present();
+
+    FRendererCore::EndFrame();
 }
 
 FMesh* Renderer::CreateMesh(const FMeshData& CpuData)

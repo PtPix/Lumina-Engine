@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include "../D3D12/D3D12PipelineState.h"
-#include "../D3D12/D3D12Shader.h"
+#include "Renderer/D3D12/D3D12PipelineState.h"
+#include "Renderer/D3D12/D3D12Shader.h"
+#include "Renderer/Core/RenderTypes.h"
 
 #include <d3d12.h>
 #include <string>
@@ -32,14 +33,6 @@ struct FShaderDefine
 };
 
 // Type Enum
-enum class EBlendMode : uint8_t
-{
-    Opaque,
-    AlphaBlend, // src.a * src + (1 - src.a) * dst
-    Additive, // src + dst
-    PremultipliedAlpha, // src + (1 - src.a) * dst
-};
-
 enum class ECullMode : uint8_t
 {
     None,

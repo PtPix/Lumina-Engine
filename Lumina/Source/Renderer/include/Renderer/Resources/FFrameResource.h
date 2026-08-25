@@ -2,7 +2,6 @@
 
 #include <d3d12.h>
 
-#include "Renderer/RenderTypes.h"
 #include "../D3D12/D3D12Backend.h"
 #include "../D3D12/D3D12Buffer.h"
 #include "Renderer/Scene/FSceneView.h"

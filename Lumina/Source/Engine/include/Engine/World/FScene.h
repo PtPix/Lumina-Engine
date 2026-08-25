@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <DirectXMath.h>
 
-#include "Renderer/RenderTypes.h"
 #include "Renderer/Resources/FMaterial.h"
 #include "Renderer/Scene/FSceneView.h"
 

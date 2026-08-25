@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "Renderer/ShaderInterop/SharedTypes.h"
-#include "Renderer/RenderTypes.h"
 
 #include <DirectXMath.h>
 #include <vector>
