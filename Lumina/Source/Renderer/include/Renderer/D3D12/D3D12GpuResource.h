@@ -13,17 +13,17 @@
 #include <vector>
 #include <cstdint>
 
-class D3D12GpuResource
+class FD3D12GpuResource
 {
 public:
-    D3D12GpuResource() = default;
-    virtual ~D3D12GpuResource() = default;
+    FD3D12GpuResource() = default;
+    virtual ~FD3D12GpuResource() = default;
 
-    D3D12GpuResource(const D3D12GpuResource&) = delete;
-    D3D12GpuResource& operator=(const D3D12GpuResource&) = delete;
+    FD3D12GpuResource(const FD3D12GpuResource&) = delete;
+    FD3D12GpuResource& operator=(const FD3D12GpuResource&) = delete;
 
-    D3D12GpuResource(D3D12GpuResource&&) = default;
-    D3D12GpuResource& operator=(D3D12GpuResource&&) = default;
+    FD3D12GpuResource(FD3D12GpuResource&&) = default;
+    FD3D12GpuResource& operator=(FD3D12GpuResource&&) = default;
 
     [[nodiscard]] ID3D12Resource* GetResource() const { return mpResource.Get(); }
 

@@ -112,7 +112,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE FD3D12Backend::GetCurrentBackBufferRTV() const
     return mpSwapChain ? mpSwapChain->GetCurrentBackBufferRTVHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{};
 }
 
-D3D12GpuResource* FD3D12Backend::GetCurrentBackBufferResource() const
+FD3D12GpuResource* FD3D12Backend::GetCurrentBackBufferResource() const
 {
     return mpSwapChain ? mpSwapChain->GetCurrentRenderTargetResource() : nullptr;
 }

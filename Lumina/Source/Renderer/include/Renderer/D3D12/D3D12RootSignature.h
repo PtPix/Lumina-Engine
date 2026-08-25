@@ -58,8 +58,8 @@ public:
     FRootSignatureBuilder& AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace = 0);
     FRootSignatureBuilder& AddDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE1>& Ranges, D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL);
     FRootSignatureBuilder& AddStaticSampler(UINT ShaderRegister, UINT RegisterSpace = 0, D3D12_FILTER Filter = D3D12_FILTER_MIN_MAG_MIP_POINT);
-    FRootSignatureBuilder& AddUnorderedAccessView(UINT ShaderRegister, UINT RegisterSpace = 0);
     FRootSignatureBuilder& AddStaticSampler(const D3D12_STATIC_SAMPLER_DESC& SamplerDesc);
+    FRootSignatureBuilder& AddUnorderedAccessView(UINT ShaderRegister, UINT RegisterSpace = 0);
 
     FRootSignatureBuilder& AllowInputLayout();
 

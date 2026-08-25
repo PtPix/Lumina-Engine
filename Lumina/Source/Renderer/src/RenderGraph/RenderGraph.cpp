@@ -9,7 +9,7 @@ static std::wstring ToWide(const std::string& Text)
     return std::wstring(Text.begin(), Text.end());
 }
 
-D3D12GpuResource* FRenderGraphContext::GetResource(FRGTextureHandle Handle) const
+FD3D12GpuResource* FRenderGraphContext::GetResource(FRGTextureHandle Handle) const
 {
     return mpGraph->GetGpuResource(Handle);
 }
@@ -171,7 +171,7 @@ FRGTextureHandle FRenderGraph::GetTexture(const char* Name)
     return { UINT32_MAX };
 }
 
-FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, D3D12GpuResource* pResource,
+FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, FD3D12GpuResource* pResource,
                                                 D3D12_CPU_DESCRIPTOR_HANDLE Rtv, uint32_t Width, uint32_t Height, DXGI_FORMAT Format,
                                                 D3D12_RESOURCE_STATES InitialState)
 {
@@ -329,7 +329,7 @@ const FRenderGraph::FResource& FRenderGraph::GetResourceInternal(FRGTextureHandl
     return mResources[Handle.Index];
 }
 
-D3D12GpuResource* FRenderGraph::GetGpuResource(FRGTextureHandle Handle) const
+FD3D12GpuResource* FRenderGraph::GetGpuResource(FRGTextureHandle Handle) const
 {
     const FResource& Resource = GetResourceInternal(Handle);
     return Resource.bImported ? Resource.pImportedResource : const_cast<FD3D12Texture*>(&Resource.Texture);

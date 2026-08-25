@@ -69,7 +69,7 @@ struct FD3D12TextureDesc
     std::wstring DebugName = L"Texture";
 };
 
-class FD3D12Texture : public D3D12GpuResource
+class FD3D12Texture : public FD3D12GpuResource
 {
 public:
     static constexpr  uint32_t InvalidBindlessIndex = UINT32_MAX;

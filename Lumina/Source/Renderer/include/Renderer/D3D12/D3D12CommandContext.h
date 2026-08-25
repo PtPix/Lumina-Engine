@@ -14,7 +14,7 @@
 #include <vector>
 
 class FD3D12Device;
-class D3D12GpuResource;
+class FD3D12GpuResource;
 
 class FD3D12CommandContext
 {
@@ -35,12 +35,12 @@ public:
     // ------------------------------------------------------------------------
     // Resource Barrier Management
     // ------------------------------------------------------------------------
-    void TransitionResource(D3D12GpuResource* pResource, D3D12_RESOURCE_STATES NewState,
+    void TransitionResource(FD3D12GpuResource* pResource, D3D12_RESOURCE_STATES NewState,
         uint32_t Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool bFlushImmediate = false);
 
-    void InsertUAVBarrier(D3D12GpuResource* pResource, bool bFlushImmediate = false);
+    void InsertUAVBarrier(FD3D12GpuResource* pResource, bool bFlushImmediate = false);
 
-    void InsertAliasingBarrier(D3D12GpuResource* pBefore, D3D12GpuResource* pAfter, bool bFlushImmediate = false);
+    void InsertAliasingBarrier(FD3D12GpuResource* pBefore, FD3D12GpuResource* pAfter, bool bFlushImmediate = false);
 
     void FlushResourceBarriers();
 
@@ -64,8 +64,8 @@ public:
     void SetGraphicsRootShaderResourceView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
     void SetGraphicsRootUnorderedAccessView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
 
-    void SetComputeRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet, const void* pSrcData, UINT DestOffsetIn32BitValues) const;
-    void SetComputeRootConstantBufferView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
+    void SetComputeRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet, const void* pSrcData, UINT DestOffsetIn32BitValues);
+    void SetComputeRootConstantBufferView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation);
     void SetComputeRootShaderResourceView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
     void SetComputeRootUnorderedAccessView(UINT RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const;
 

@@ -20,15 +20,14 @@
 #include <d3d12.h>
 #include <dxgiformat.h>
 
+class FD3D12GpuResource;
 class FD3D12Device;
 class FD3D12SwapChain;
 class FD3D12CommandQueue;
 class FD3D12CommandContext;
 class FD3D12DescriptorAllocator;
 class FD3D12BindlessDescriptorHeap;
-class D3D12GpuResource;
 
-struct ID3D12Device;
 struct IDXGIFactory6;
 
 namespace D3D12MA { class Allocator; }
@@ -100,7 +99,7 @@ public:
 
     [[nodiscard]] uint32_t GetCurrentBackBufferIndex() const;
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() const;
-    [[nodiscard]] D3D12GpuResource* GetCurrentBackBufferResource() const;
+    [[nodiscard]] FD3D12GpuResource* GetCurrentBackBufferResource() const;
 
     // ------------------------------------------------------------------------
     // Getters - Core RHI Objects

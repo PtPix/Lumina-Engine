@@ -14,7 +14,7 @@
 
 class FD3D12Device;
 
-class FD3D12Buffer : public D3D12GpuResource
+class FD3D12Buffer : public FD3D12GpuResource
 {
 public:
     FD3D12Buffer() = default;

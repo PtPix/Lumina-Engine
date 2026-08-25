@@ -96,9 +96,9 @@ private:
     Microsoft::WRL::ComPtr<IDXGIAdapter> mpAdapter;
     Microsoft::WRL::ComPtr<D3D12MA::Allocator> mpAllocator;
 
-    std::unique_ptr<FD3D12CommandQueue> mpGraphicsQueue = std::make_unique<FD3D12CommandQueue>();
-    std::unique_ptr<FD3D12CommandQueue> mpComputeQueue = std::make_unique<FD3D12CommandQueue>();
-    std::unique_ptr<FD3D12CommandQueue> mpCopyQueue = std::make_unique<FD3D12CommandQueue>();
+    std::unique_ptr<FD3D12CommandQueue> mpGraphicsQueue;
+    std::unique_ptr<FD3D12CommandQueue> mpComputeQueue;
+    std::unique_ptr<FD3D12CommandQueue> mpCopyQueue;
 
     std::unique_ptr<FD3D12DescriptorAllocator> mpDescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     std::unique_ptr<FD3D12BindlessDescriptorHeap> mpBindlessHeap = std::make_unique<FD3D12BindlessDescriptorHeap>();

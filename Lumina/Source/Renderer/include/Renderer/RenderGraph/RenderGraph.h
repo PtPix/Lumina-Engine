@@ -7,7 +7,7 @@
 #include "../D3D12/D3D12Texture.h"
 
 class FD3D12CommandContext;
-class D3D12GpuResource;
+class FD3D12GpuResource;
 class FD3D12Device;
 
 enum class ERGTextureUsage : uint16_t
@@ -60,7 +60,7 @@ class FRenderGraphContext
 public:
     [[nodiscard]] FD3D12CommandContext* GetCommandContext() const { return mpCommandContext; }
 
-    [[nodiscard]] D3D12GpuResource* GetResource(FRGTextureHandle Handle) const;
+    [[nodiscard]] FD3D12GpuResource* GetResource(FRGTextureHandle Handle) const;
     [[nodiscard]] FD3D12Texture* GetTexture(FRGTextureHandle Handle) const;
 
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetRTV(FRGTextureHandle Handle) const;
@@ -108,7 +108,7 @@ public:
     FRGTextureHandle CreateTexture(const char* Name, const FRGTextureDesc& Desc);
     FRGTextureHandle GetTexture(const char* Name);
 
-    FRGTextureHandle ImportBackBuffer(const char* Name, D3D12GpuResource* pResource, D3D12_CPU_DESCRIPTOR_HANDLE Rtv,
+    FRGTextureHandle ImportBackBuffer(const char* Name, FD3D12GpuResource* pResource, D3D12_CPU_DESCRIPTOR_HANDLE Rtv,
         uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_RESOURCE_STATES InitialState);
 
     FRenderGraphPassBuilder AddPass(const char* Name);
@@ -126,7 +126,7 @@ private:
         FRGTextureDesc Desc;
 
         bool bImported = false;
-        D3D12GpuResource* pImportedResource = nullptr;
+        FD3D12GpuResource* pImportedResource = nullptr;
         D3D12_CPU_DESCRIPTOR_HANDLE ImportedRTV = {};
 
         FD3D12Texture Texture;
@@ -162,7 +162,7 @@ private:
     FResource& GetResourceInternal(FRGTextureHandle Handle);
     const FResource& GetResourceInternal(FRGTextureHandle Handle) const;
 
-    [[nodiscard]] D3D12GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
+    [[nodiscard]] FD3D12GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
 
     bool CreatePhysicalTexture(FResource& Resource);
     bool IsSameDesc(const FRGTextureDesc& A, const FRGTextureDesc& B) const;

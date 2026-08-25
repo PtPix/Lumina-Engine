@@ -307,12 +307,15 @@ HRESULT HResult = {};
     {
         LUMINA_TIME_LOG_SCOPE("Create Command Queues");
 
+        mpGraphicsQueue = std::make_unique<FD3D12CommandQueue>();
         mpGraphicsQueue->Create(this, GRAPHICS);
         SetName(mpGraphicsQueue->GetCommandQueue(), "Rendering Graphics Command Queue");
 
+        mpComputeQueue = std::make_unique<FD3D12CommandQueue>();
         mpComputeQueue->Create(this, COMPUTE);
         SetName(mpComputeQueue->GetCommandQueue(), "Rendering Compute Command Queue");
 
+        mpCopyQueue = std::make_unique<FD3D12CommandQueue>();
         mpCopyQueue->Create(this, COPY);
         SetName(mpCopyQueue->GetCommandQueue(), "Rendering Copy Command Queue");
     }

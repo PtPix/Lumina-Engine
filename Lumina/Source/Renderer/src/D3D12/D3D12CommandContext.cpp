@@ -53,7 +53,7 @@ void FD3D12CommandContext::Close()
     mpCommandList->Close();
 }
 
-void FD3D12CommandContext::TransitionResource(D3D12GpuResource *pResource, D3D12_RESOURCE_STATES NewState, uint32_t Subresource,
+void FD3D12CommandContext::TransitionResource(FD3D12GpuResource *pResource, D3D12_RESOURCE_STATES NewState, uint32_t Subresource,
     bool bFlushImmediate)
 {
     if (!pResource || !pResource->GetResource()) return;
@@ -110,7 +110,7 @@ void FD3D12CommandContext::TransitionResource(D3D12GpuResource *pResource, D3D12
     }
 }
 
-void FD3D12CommandContext::InsertUAVBarrier(D3D12GpuResource *pResource, bool bFlushImmediate)
+void FD3D12CommandContext::InsertUAVBarrier(FD3D12GpuResource *pResource, bool bFlushImmediate)
 {
     D3D12_RESOURCE_BARRIER Barrier = {};
     Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
@@ -125,7 +125,7 @@ void FD3D12CommandContext::InsertUAVBarrier(D3D12GpuResource *pResource, bool bF
     }
 }
 
-void FD3D12CommandContext::InsertAliasingBarrier(D3D12GpuResource *pBefore, D3D12GpuResource *pAfter, bool bFlushImmediate)
+void FD3D12CommandContext::InsertAliasingBarrier(FD3D12GpuResource *pBefore, FD3D12GpuResource *pAfter, bool bFlushImmediate)
 {
     D3D12_RESOURCE_BARRIER Barrier = {};
     Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
@@ -261,13 +261,13 @@ void FD3D12CommandContext::SetGraphicsRootUnorderedAccessView(UINT RootParameter
 }
 
 void FD3D12CommandContext::SetComputeRoot32BitConstants(UINT RootParameterIndex, UINT Num32BitValuesToSet,
-    const void *pSrcData, UINT DestOffsetIn32BitValues) const
+    const void *pSrcData, UINT DestOffsetIn32BitValues)
 {
     mpCommandList->SetComputeRoot32BitConstants(RootParameterIndex, Num32BitValuesToSet, pSrcData, DestOffsetIn32BitValues);
 }
 
 void FD3D12CommandContext::SetComputeRootConstantBufferView(UINT RootParameterIndex,
-    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation) const
+    D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
 {
     mpCommandList->SetComputeRootConstantBufferView(RootParameterIndex, BufferLocation);
 }
