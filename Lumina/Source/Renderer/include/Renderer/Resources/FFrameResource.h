@@ -3,8 +3,8 @@
 #include <d3d12.h>
 
 #include "Renderer/RenderTypes.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Resource/Buffer.h"
+#include "../D3D12/D3D12Backend.h"
+#include "../D3D12/D3D12Buffer.h"
 #include "Renderer/Scene/FSceneView.h"
 
 class FFrameResource
@@ -30,7 +30,7 @@ public:
                               D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD, L"Frame_MaterialBuffer");
     }
 
-    FBuffer GlobalPassBuffer;
-    FBuffer InstanceBuffer;
-    FBuffer MaterialBuffer;
+    FD3D12Buffer GlobalPassBuffer;
+    FD3D12Buffer InstanceBuffer;
+    FD3D12Buffer MaterialBuffer;
 };

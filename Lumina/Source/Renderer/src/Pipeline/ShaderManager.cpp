@@ -1,8 +1,8 @@
 ﻿#include "Renderer/Pipeline/ShaderManager.h"
 
-std::unordered_map<std::string, std::unique_ptr<ShaderUtils::FBlob>> FShaderManager::mShaderCache;
+std::unordered_map<std::string, std::unique_ptr<ShaderUtils::FD3D12Blob>> FShaderManager::mShaderCache;
 
-ShaderUtils::FBlob* FShaderManager::GetShader(const FShaderStageCompileDesc& Desc)
+ShaderUtils::FD3D12Blob* FShaderManager::GetShader(const FD3D12ShaderStageCompileDesc& Desc)
 {
     const std::string Key = MakeKey(Desc);
 
@@ -12,7 +12,7 @@ ShaderUtils::FBlob* FShaderManager::GetShader(const FShaderStageCompileDesc& Des
     }
 
     std::string ErrorString;
-    ShaderUtils::FBlob Blob = ShaderUtils::CompileFromSource(Desc, ErrorString);
+    ShaderUtils::FD3D12Blob Blob = ShaderUtils::CompileFromSource(Desc, ErrorString);
     if (Blob.IsNull())
     {
         LUMINA_LOG_ERROR(RHI, "FShaderManager: failed to compile '%s' entry '%s': %s",
@@ -21,8 +21,8 @@ ShaderUtils::FBlob* FShaderManager::GetShader(const FShaderStageCompileDesc& Des
         return nullptr;
     }
 
-    auto Stored = std::make_unique<ShaderUtils::FBlob>(std::move(Blob));
-    ShaderUtils::FBlob* Result = Stored.get();
+    auto Stored = std::make_unique<ShaderUtils::FD3D12Blob>(std::move(Blob));
+    ShaderUtils::FD3D12Blob* Result = Stored.get();
     mShaderCache.emplace(Key, std::move(Stored));
     return Result;
 }
@@ -32,7 +32,7 @@ void FShaderManager::Clear()
     mShaderCache.clear();
 }
 
-std::string FShaderManager::MakeKey(const FShaderStageCompileDesc& Desc)
+std::string FShaderManager::MakeKey(const FD3D12ShaderStageCompileDesc& Desc)
 {
     // path | entry | stage | model | macros
     std::string Key = StringUtils::WideToUTF8(Desc.FilePath);

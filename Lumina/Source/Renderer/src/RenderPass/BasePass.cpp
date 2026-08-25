@@ -4,8 +4,8 @@
 #include "Renderer/Pipeline/PipelineStateCache.h"
 #include "Renderer/Scene/FSceneView.h"
 #include "Renderer/Resources/FMesh.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "../../include/Renderer/D3D12/D3D12Backend.h"
+#include "../../include/Renderer/D3D12/D3D12CommandContext.h"
 #include "Renderer/Pipeline/GlobalRootSignature.h"
 
 namespace
@@ -68,7 +68,7 @@ void AddBasePass(FRenderGraph& Graph,
         .WriteDepth(Outputs.SceneDepth, ERGLoadOp::Clear)
         .Execute([View, Width, Height](FRenderGraphContext& Context)
         {
-            FCommandContext* Cmd = Context.GetCommandContext();
+            FD3D12CommandContext* Cmd = Context.GetCommandContext();
 
             // 2. viewport / scissor
             D3D12_VIEWPORT Viewport = { 0.0f, 0.0f,
@@ -78,7 +78,7 @@ void AddBasePass(FRenderGraph& Graph,
             Cmd->SetScissorRect(Scissor);
 
             // 4. PSO(走缓存)
-            FPipelineState* PSO = FPipelineStateCache::GetOrCreate(MakeBasePassPSODesc());
+            FD3D12PipelineState* PSO = FPipelineStateCache::GetOrCreate(MakeBasePassPSODesc());
             if (!PSO) return;
             Cmd->SetPipelineState(PSO->Get());
             Cmd->SetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

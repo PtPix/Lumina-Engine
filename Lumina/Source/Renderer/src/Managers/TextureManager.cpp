@@ -2,18 +2,18 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../../stb_image.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+#include "../../include/Renderer/D3D12/D3D12Backend.h"
+#include "../../include/Renderer/D3D12/D3D12Device.h"
+#include "../../include/Renderer/D3D12/D3D12ResourceUploader.h"
 
-FDevice* TextureManager::mpDevice = nullptr;
+FD3D12Device* TextureManager::mpDevice = nullptr;
 std::unordered_map<std::string, FTextureData> TextureManager::mTextureMap;
 uint32_t TextureManager::mDefaultWhiteIndex = 0;
 uint32_t TextureManager::mDefaultBlackIndex = 0;
 uint32_t TextureManager::mDefaultNormalIndex = 0;
-FResourceUploader* TextureManager::mpUploader = nullptr;
+FD3D12ResourceUploader* TextureManager::mpUploader = nullptr;
 
-void TextureManager::Initialize(FDevice* pDevice, FResourceUploader* pUploader)
+void TextureManager::Initialize(FD3D12Device* pDevice, FD3D12ResourceUploader* pUploader)
 {
     mpDevice = pDevice;
     mpUploader = pUploader;
@@ -55,16 +55,16 @@ uint32_t TextureManager::LoadTexture(const std::string& FilePath, bool bIsSRGB)
 uint32_t TextureManager::CreateTextureFromData(const std::string& Name, const void* pData, uint32_t Width,
     uint32_t Height, DXGI_FORMAT Format)
 {
-    auto pTexture = std::make_unique<FTexture>();
+    auto pTexture = std::make_unique<FD3D12Texture>();
 
-    FTextureDesc Desc = {};
-    Desc.Dimension        = ETextureDimension::Texture2D;
+    FD3D12TextureDesc Desc = {};
+    Desc.Dimension        = ED3D12TextureDimension::Texture2D;
     Desc.Width            = Width;
     Desc.Height           = Height;
     Desc.DepthOrArraySize = 1;
     Desc.MipLevels        = 1;
     Desc.Format           = Format;
-    Desc.Flags            = ETextureFlags::None;
+    Desc.Flags            = ED3D12TextureFlags::None;
     Desc.InitialState     = D3D12_RESOURCE_STATE_COMMON;
     Desc.DebugName        = std::wstring(Name.begin(), Name.end());
 
@@ -76,7 +76,7 @@ uint32_t TextureManager::CreateTextureFromData(const std::string& Name, const vo
 
     mpUploader->UploadTexture(pTexture.get(), pData, Width, Height, 4);
 
-    FBindlessDescriptorHeap* pBindlessHeap = mpDevice->GetBindlessDescriptorHeap();
+    FD3D12BindlessDescriptorHeap* pBindlessHeap = mpDevice->GetBindlessDescriptorHeap();
     uint32_t BindlessIndex = pBindlessHeap->AllocateSlot();
     pBindlessHeap->CreateSRVFromCPUHandle(mpDevice, pTexture->GetSRV(), BindlessIndex);
 

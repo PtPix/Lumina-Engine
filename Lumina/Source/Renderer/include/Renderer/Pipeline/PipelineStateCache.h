@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "Renderer/D3D12Core/Pipeline/PipelineState.h"
-#include "Renderer/D3D12Core/Pipeline/Shader.h"
+#include "../D3D12/D3D12PipelineState.h"
+#include "../D3D12/D3D12Shader.h"
 
 #include <d3d12.h>
 #include <string>
@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <memory>
 
-class FDevice;
+class FD3D12Device;
 
 // Shader permutation
 struct FShaderDefine
@@ -114,11 +114,11 @@ struct FComputePSODesc
 class FPipelineStateCache
 {
 public:
-    static void Initialize(FDevice* pDevice);
+    static void Initialize(FD3D12Device* pDevice);
     static void Shutdown();
 
-    static FPipelineState* GetOrCreate(const FGraphicsPSODesc& Desc);
-    static FPipelineState* GetOrCreate(const FComputePSODesc& Desc);
+    static FD3D12PipelineState* GetOrCreate(const FGraphicsPSODesc& Desc);
+    static FD3D12PipelineState* GetOrCreate(const FComputePSODesc& Desc);
 
     static void InvalidateAll();
 
@@ -128,6 +128,6 @@ private:
     static size_t MakeHash(const FGraphicsPSODesc& Desc);
     static size_t MakeHash(const FComputePSODesc& Desc);
 
-    static FDevice* mpDevice;
-    static std::unordered_map<size_t, std::unique_ptr<FPipelineState>> mCache;
+    static FD3D12Device* mpDevice;
+    static std::unordered_map<size_t, std::unique_ptr<FD3D12PipelineState>> mCache;
 };

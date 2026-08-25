@@ -1,9 +1,9 @@
 ﻿#include "Renderer/Resources/FMesh.h"
 
-#include "Renderer/D3D12Core/Core/CommandContext.h"
-#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+#include "../../include/Renderer/D3D12/D3D12CommandContext.h"
+#include "../../include/Renderer/D3D12/D3D12ResourceUploader.h"
 
-bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, FResourceUploader* pUploader)
+bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator, FD3D12ResourceUploader* pUploader)
 {
     mIndexCount = static_cast<uint32_t>(MeshData.Indices.size());
 
@@ -19,7 +19,7 @@ bool FMesh::Initialize(const FMeshData& MeshData, D3D12MA::Allocator* pAllocator
     return true;
 }
 
-void FMesh::Draw(FCommandContext* pCommandContext)
+void FMesh::Draw(FD3D12CommandContext* pCommandContext)
 {
     const D3D12_VERTEX_BUFFER_VIEW VertexBufferView = mVertexBuffer.GetView();
     const D3D12_INDEX_BUFFER_VIEW IndexBufferView = mIndexBuffer.GetView();

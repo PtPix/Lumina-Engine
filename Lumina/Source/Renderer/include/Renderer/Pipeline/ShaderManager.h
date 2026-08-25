@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
+#include "../D3D12/D3D12ShaderCompiler.h"
 
 #include <string>
 #include <unordered_map>
@@ -22,12 +22,12 @@ class FShaderManager
 public:
     // Returns a cached blob, compiling on first request.
     // Returns nullptr (and logs) if compilation fails.
-    static ShaderUtils::FBlob* GetShader(const FShaderStageCompileDesc& Desc);
+    static ShaderUtils::FD3D12Blob* GetShader(const FD3D12ShaderStageCompileDesc& Desc);
 
     static void Clear();
 
 private:
-    static std::string MakeKey(const FShaderStageCompileDesc& Desc);
+    static std::string MakeKey(const FD3D12ShaderStageCompileDesc& Desc);
 
-    static std::unordered_map<std::string, std::unique_ptr<ShaderUtils::FBlob>> mShaderCache;
+    static std::unordered_map<std::string, std::unique_ptr<ShaderUtils::FD3D12Blob>> mShaderCache;
 };

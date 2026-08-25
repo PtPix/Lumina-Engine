@@ -1,27 +1,27 @@
 ﻿#include "Renderer/Renderer.h"
 
 #include "Renderer/RenderTypes.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Core/SwapChain.h"
-#include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
+#include "../include/Renderer/D3D12/D3D12Backend.h"
+#include "../include/Renderer/D3D12/D3D12CommandContext.h"
+#include "../include/Renderer/D3D12/D3D12Device.h"
+#include "../include/Renderer/D3D12/D3D12SwapChain.h"
+#include "../include/Renderer/D3D12/D3D12BindlessDescriptorHeap.h"
 
 #include "Renderer/Managers/TextureManager.h"
 #include "Renderer/Scene/FSceneView.h"
 
 #include <cassert>
 
-#include "Renderer/D3D12Core/Core/DeferredReleaseQueue.h"
+#include "../include/Renderer/D3D12/D3D12DeferredReleaseQueue.h"
 #include "Renderer/Pipeline/GlobalRootSignature.h"
 #include "Renderer/Pipeline/PipelineStateCache.h"
 #include "Renderer/Pipeline/ShaderManager.h"
 
 std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
 
-FResourceUploader Renderer::mUploader;
+FD3D12ResourceUploader Renderer::mUploader;
 FRenderGraph Renderer::mRenderGraph;
-FCommandContext* Renderer::mpCurrentFrameContext = nullptr;
+FD3D12CommandContext* Renderer::mpCurrentFrameContext = nullptr;
 
 FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
 
@@ -55,7 +55,7 @@ void Renderer::Shutdown()
     if (mpD3D12Backend)
         mpD3D12Backend->FlushAllQueues();
 
-    FDeferredReleaseQueue::FlushAll();
+    FD3D12DeferredReleaseQueue::FlushAll();
 
     mRenderGraph.Shutdown();
     mUploader.FlushAndSync();
@@ -123,11 +123,11 @@ FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
     return pMesh;
 }
 
-void Renderer::BindGlobalResources(FCommandContext* pContext)
+void Renderer::BindGlobalResources(FD3D12CommandContext* pContext)
 {
     if (!pContext) return;
 
-    FBindlessDescriptorHeap* pHeap = mpD3D12Backend->GetBindlessDescriptorHeap();
+    FD3D12BindlessDescriptorHeap* pHeap = mpD3D12Backend->GetBindlessDescriptorHeap();
     if (!pHeap) return;
 
     ID3D12DescriptorHeap* ppHeaps[] = { pHeap->GetDescriptorHeap() };

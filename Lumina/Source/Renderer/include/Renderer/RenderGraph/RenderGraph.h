@@ -4,11 +4,11 @@
 #include <d3d12.h>
 #include <functional>
 
-#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "../D3D12/D3D12Texture.h"
 
-class FCommandContext;
-class GpuResource;
-class FDevice;
+class FD3D12CommandContext;
+class D3D12GpuResource;
+class FD3D12Device;
 
 enum class ERGTextureUsage : uint16_t
 {
@@ -58,10 +58,10 @@ class FRenderGraph;
 class FRenderGraphContext
 {
 public:
-    [[nodiscard]] FCommandContext* GetCommandContext() const { return mpCommandContext; }
+    [[nodiscard]] FD3D12CommandContext* GetCommandContext() const { return mpCommandContext; }
 
-    [[nodiscard]] GpuResource* GetResource(FRGTextureHandle Handle) const;
-    [[nodiscard]] FTexture* GetTexture(FRGTextureHandle Handle) const;
+    [[nodiscard]] D3D12GpuResource* GetResource(FRGTextureHandle Handle) const;
+    [[nodiscard]] FD3D12Texture* GetTexture(FRGTextureHandle Handle) const;
 
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetRTV(FRGTextureHandle Handle) const;
     [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetDSV(FRGTextureHandle Handle) const;
@@ -74,7 +74,7 @@ private:
     friend class FRenderGraph;
 
     FRenderGraph* mpGraph = nullptr;
-    FCommandContext* mpCommandContext = nullptr;
+    FD3D12CommandContext* mpCommandContext = nullptr;
 };
 
 class FRenderGraphPassBuilder
@@ -99,7 +99,7 @@ private:
 class FRenderGraph
 {
 public:
-    void Initialize(FDevice* pDevice, D3D12MA::Allocator* pAllocator);
+    void Initialize(FD3D12Device* pDevice, D3D12MA::Allocator* pAllocator);
     void Shutdown();
 
     void Reset();
@@ -108,13 +108,13 @@ public:
     FRGTextureHandle CreateTexture(const char* Name, const FRGTextureDesc& Desc);
     FRGTextureHandle GetTexture(const char* Name);
 
-    FRGTextureHandle ImportBackBuffer(const char* Name, GpuResource* pResource, D3D12_CPU_DESCRIPTOR_HANDLE Rtv,
+    FRGTextureHandle ImportBackBuffer(const char* Name, D3D12GpuResource* pResource, D3D12_CPU_DESCRIPTOR_HANDLE Rtv,
         uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_RESOURCE_STATES InitialState);
 
     FRenderGraphPassBuilder AddPass(const char* Name);
 
     void Compile();
-    void Execute(FCommandContext* pCommandContext);
+    void Execute(FD3D12CommandContext* pCommandContext);
 
 private:
     friend class FRenderGraphContext;
@@ -126,10 +126,10 @@ private:
         FRGTextureDesc Desc;
 
         bool bImported = false;
-        GpuResource* pImportedResource = nullptr;
+        D3D12GpuResource* pImportedResource = nullptr;
         D3D12_CPU_DESCRIPTOR_HANDLE ImportedRTV = {};
 
-        FTexture Texture;
+        FD3D12Texture Texture;
     };
 
     struct FTextureAccess
@@ -162,7 +162,7 @@ private:
     FResource& GetResourceInternal(FRGTextureHandle Handle);
     const FResource& GetResourceInternal(FRGTextureHandle Handle) const;
 
-    [[nodiscard]] GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
+    [[nodiscard]] D3D12GpuResource* GetGpuResource(FRGTextureHandle Handle) const;
 
     bool CreatePhysicalTexture(FResource& Resource);
     bool IsSameDesc(const FRGTextureDesc& A, const FRGTextureDesc& B) const;
@@ -175,7 +175,7 @@ private:
     uint32_t GetUAVIndexInternal(FRGTextureHandle Handle, uint32_t Mip) const;
 
 private:
-    FDevice* mpDevice = nullptr;
+    FD3D12Device* mpDevice = nullptr;
     D3D12MA::Allocator* mpAllocator = nullptr;
 
     std::vector<FResource> mResources;

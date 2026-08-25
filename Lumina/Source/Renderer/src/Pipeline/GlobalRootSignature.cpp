@@ -1,12 +1,12 @@
 #include "Renderer/Pipeline/GlobalRootSignature.h"
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Pipeline/RootSignature.h"
+#include "../../include/Renderer/D3D12/D3D12Device.h"
+#include "../../include/Renderer/D3D12/D3D12RootSignature.h"
 
-FRootSignature FGlobalRootSignature::mGraphicsRootSignature;
-FRootSignature FGlobalRootSignature::mComputeRootSignature;
+FD3D12RootSignature FGlobalRootSignature::mGraphicsRootSignature;
+FD3D12RootSignature FGlobalRootSignature::mComputeRootSignature;
 bool FGlobalRootSignature::mbInitialized = false;
 
-bool FGlobalRootSignature::Initialize(FDevice *pDevice)
+bool FGlobalRootSignature::Initialize(FD3D12Device *pDevice)
 {
     if (mbInitialized) return true;
 
@@ -34,7 +34,7 @@ ID3D12RootSignature * FGlobalRootSignature::GetComputeRootSignature()
     return mbInitialized ? mComputeRootSignature.Get() : nullptr;
 }
 
-bool FGlobalRootSignature::BuildRootSignature(FDevice *pDevice, FRootSignature &OutRootSignature)
+bool FGlobalRootSignature::BuildRootSignature(FD3D12Device *pDevice, FD3D12RootSignature &OutRootSignature)
 {
     FRootSignatureBuilder Builder;
 

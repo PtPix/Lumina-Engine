@@ -2,12 +2,12 @@
 
 #include "Renderer/Renderer.h"
 #include "Renderer/Pipeline/PipelineStateCache.h"
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Descriptors/BindlessDescriptorHeap.h"
-#include "Renderer/D3D12Core/Pipeline/RootSignature.h"
-#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "../../include/Renderer/D3D12/D3D12Backend.h"
+#include "../../include/Renderer/D3D12/D3D12CommandContext.h"
+#include "../../include/Renderer/D3D12/D3D12Device.h"
+#include "../../include/Renderer/D3D12/D3D12BindlessDescriptorHeap.h"
+#include "../../include/Renderer/D3D12/D3D12RootSignature.h"
+#include "../../include/Renderer/D3D12/D3D12Texture.h"
 
 namespace
 {
@@ -19,7 +19,7 @@ namespace
           BindlessTable = 1,   // t0 space1 (SRV) + u0 space3 (UAV)，共享同一 heap
       };
 
-      FRootSignature gDebugRootSignature;
+      FD3D12RootSignature gDebugRootSignature;
       bool           gbRootSignatureBuilt = false;
 
       ID3D12RootSignature* GetOrCreateDebugRootSignature()
@@ -86,7 +86,7 @@ void AddDebugVisualizeDepthPass(FRenderGraph& Graph,
           .ReadWriteUAV(OutputHandle)
           .Execute([DepthHandle, OutputHandle, Width, Height](FRenderGraphContext& Context)
           {
-              FCommandContext* Cmd = Context.GetCommandContext();
+              FD3D12CommandContext* Cmd = Context.GetCommandContext();
               LUMINA_GPU_EVENT(Cmd, "DebugVisualizeDepth");
 
               ID3D12RootSignature* pRootSignature = GetOrCreateDebugRootSignature();
@@ -98,16 +98,16 @@ void AddDebugVisualizeDepthPass(FRenderGraph& Graph,
               PSODesc.ShaderModel   = EShaderModel::SM6_0;
               PSODesc.RootSignature = pRootSignature;
 
-              FPipelineState* PSO = FPipelineStateCache::GetOrCreate(PSODesc);
+              FD3D12PipelineState* PSO = FPipelineStateCache::GetOrCreate(PSODesc);
               if (!PSO) return;
 
               const uint32_t DepthSRVIndex  = Context.GetSRVIndex(DepthHandle);
               const uint32_t OutputUAVIndex = Context.GetUAVIndex(OutputHandle, 0);
 
-              if (DepthSRVIndex  == FTexture::InvalidBindlessIndex) return;
-              if (OutputUAVIndex == FTexture::InvalidBindlessIndex) return;
+              if (DepthSRVIndex  == FD3D12Texture::InvalidBindlessIndex) return;
+              if (OutputUAVIndex == FD3D12Texture::InvalidBindlessIndex) return;
 
-              FBindlessDescriptorHeap* pHeap =
+              FD3D12BindlessDescriptorHeap* pHeap =
                   Renderer::GetD3D12Backend()->GetBindlessDescriptorHeap();
 
               ID3D12DescriptorHeap* ppHeaps[] = { pHeap->GetDescriptorHeap() };

@@ -2,8 +2,8 @@
 
 #include <d3d12.h>
 
-class FDevice;
-class FRootSignature;
+class FD3D12Device;
+class FD3D12RootSignature;
 
 // Layout :
 //     Slot 0: Bindless index and PerDraw data
@@ -27,16 +27,16 @@ constexpr UINT ToRootIndex(EGlobalRootParam Param)
 class FGlobalRootSignature
 {
 public:
-    static bool Initialize(FDevice* pDevice);
+    static bool Initialize(FD3D12Device* pDevice);
     static void Shutdown();
 
     static ID3D12RootSignature* GetGraphicsRootSignature();
     static ID3D12RootSignature* GetComputeRootSignature();
 
 private:
-    static bool BuildRootSignature(FDevice* pDevice, FRootSignature& OutRootSignature);
+    static bool BuildRootSignature(FD3D12Device* pDevice, FD3D12RootSignature& OutRootSignature);
 
-    static FRootSignature mGraphicsRootSignature;
-    static FRootSignature mComputeRootSignature;
+    static FD3D12RootSignature mGraphicsRootSignature;
+    static FD3D12RootSignature mComputeRootSignature;
     static bool mbInitialized;
 };

@@ -1,25 +1,25 @@
 ﻿#pragma once
 
-#include "Renderer/D3D12Core/Resource/Texture.h"
+#include "../D3D12/D3D12Texture.h"
 
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <d3d12.h>
 
-class FDevice;
-class FResourceUploader;
+class FD3D12Device;
+class FD3D12ResourceUploader;
 
 struct FTextureData
 {
-    std::unique_ptr<FTexture> pTexture;
+    std::unique_ptr<FD3D12Texture> pTexture;
     uint32_t BindlessIndex = 0;
 };
 
 class TextureManager
 {
 public:
-    static void Initialize(FDevice* pDevice, FResourceUploader* pUploader);
+    static void Initialize(FD3D12Device* pDevice, FD3D12ResourceUploader* pUploader);
     static void Shutdown();
 
     static uint32_t LoadTexture(const std::string& FilePath, bool bIsSRGB = true);
@@ -33,8 +33,8 @@ private:
     static void CreateDefaultTextures();
 
 private:
-    static FDevice* mpDevice;
-    static FResourceUploader* mpUploader;
+    static FD3D12Device* mpDevice;
+    static FD3D12ResourceUploader* mpUploader;
 
     static std::unordered_map<std::string, FTextureData> mTextureMap;
 

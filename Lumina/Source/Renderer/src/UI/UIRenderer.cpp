@@ -7,11 +7,11 @@
 #include "ImGUI/imgui.h"
 #include "ImGUI/imgui_impl_win32.h"
 #include "ImGUI/imgui_impl_dx12.h"
-#include "Renderer/D3D12Core/Common.h"
+#include "../../include/Renderer/D3D12/D3D12Common.h"
 
-#include "Renderer/D3D12Core/D3D12Backend.h"
-#include "Renderer/D3D12Core/Core/CommandContext.h"
-#include "Renderer/D3D12Core/Core/Device.h"
+#include "../../include/Renderer/D3D12/D3D12Backend.h"
+#include "../../include/Renderer/D3D12/D3D12CommandContext.h"
+#include "../../include/Renderer/D3D12/D3D12Device.h"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
     HWND Hwnd,
     UINT Message,
@@ -48,7 +48,7 @@ ImTextureID UIRenderer::GetTextureID(uint32_t Slot)
     return static_cast<ImTextureID>(GpuHandle.ptr);
 }
 
-void UIRenderer::CopySRVToSlot(FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcSRV, uint32_t Slot)
+void UIRenderer::CopySRVToSlot(FD3D12Device* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE SrcSRV, uint32_t Slot)
 {
     D3D12_CPU_DESCRIPTOR_HANDLE DstCPU =
         mImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -63,7 +63,7 @@ void UIRenderer::CopySRVToSlot(FDevice* pDevice, D3D12_CPU_DESCRIPTOR_HANDLE Src
     );
 }
 
-void UIRenderer::Initialize(HWND Hwnd, FDevice* pDevice)
+void UIRenderer::Initialize(HWND Hwnd, FD3D12Device* pDevice)
 {
     if (mbInitialized) return;
 
@@ -127,7 +127,7 @@ void UIRenderer::BeginFrame()
     ImGui::NewFrame();
 }
 
-void UIRenderer::Render(FCommandContext* pCommandContext, D3D12_CPU_DESCRIPTOR_HANDLE Rtv)
+void UIRenderer::Render(FD3D12CommandContext* pCommandContext, D3D12_CPU_DESCRIPTOR_HANDLE Rtv)
 {
     if (!mbInitialized) return;
 

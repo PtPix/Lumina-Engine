@@ -15,16 +15,16 @@
 #include <memory>
 #include <vector>
 
-#include "Renderer/D3D12Core/Common.h"
+#include "D3D12/D3D12Common.h"
 #include "Renderer/Pipeline/GlobalRootSignature.h"
-#include "Renderer/D3D12Core/Pipeline/RootSignature.h"
-#include "Renderer/D3D12Core/Resource/ResourceUploader.h"
+#include "D3D12/D3D12RootSignature.h"
+#include "D3D12/D3D12ResourceUploader.h"
 #include "RenderGraph/RenderGraph.h"
 #include "Resources/FFrameResource.h"
 #include "Resources/FMesh.h"
 
 struct FSceneView;
-class FCommandContext;
+class FD3D12CommandContext;
 class FD3D12Backend;
 
 class Renderer
@@ -44,7 +44,7 @@ public:
     static void BeginFrame();
     static void EndFrame();
 
-    static void BindGlobalResources(FCommandContext* pCommandContext);
+    static void BindGlobalResources(FD3D12CommandContext* pCommandContext);
 
     // ------------------------------------------------------------------------
     // Resource Management
@@ -54,7 +54,7 @@ public:
     // ------------------------------------------------------------------------
     // Getters
     // ------------------------------------------------------------------------
-    static FResourceUploader* GetUploader() { return &mUploader; }
+    static FD3D12ResourceUploader* GetUploader() { return &mUploader; }
     static FD3D12Backend* GetD3D12Backend() { return mpD3D12Backend.get(); }
     static FRenderGraph& GetRenderGraph() { return mRenderGraph; }
     static FRGTextureHandle GetBackBufferHandle() { return mBackBufferHandle; }
@@ -64,10 +64,10 @@ private:
 
     static std::unique_ptr<FD3D12Backend> mpD3D12Backend;
 
-    static FResourceUploader mUploader;
+    static FD3D12ResourceUploader mUploader;
     static FRenderGraph mRenderGraph;
 
-    static FCommandContext* mpCurrentFrameContext;
+    static FD3D12CommandContext* mpCurrentFrameContext;
 
     static FRGTextureHandle mBackBufferHandle;
 

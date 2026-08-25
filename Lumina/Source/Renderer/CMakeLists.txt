@@ -3,33 +3,33 @@ project(Renderer)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Cpp Files
-set(D3D12CORE_SOURCES
-        # Core
-        "src/D3D12Core/Core/Device.cpp"
-        "src/D3D12Core/Core/CommandQueue.cpp"
-        "src/D3D12Core/Core/SwapChain.cpp"
-        "src/D3D12Core/Core/CommandContext.cpp"
-        "src/D3D12Core/Core/DeferredReleaseQueue.cpp"
+set(D3D12_SOURCES
+        # Basic Equipments
+        "src/D3D12/D3D12Device.cpp"
+        "src/D3D12/D3D12CommandQueue.cpp"
+        "src/D3D12/D3D12SwapChain.cpp"
+        "src/D3D12/D3D12CommandContext.cpp"
+        "src/D3D12/D3D12DeferredReleaseQueue.cpp"
 
         # Descriptors
-        "src/D3D12Core/Descriptors/DescriptorAllocation.cpp"
-        "src/D3D12Core/Descriptors/DescriptorAllocatorPage.cpp"
-        "src/D3D12Core/Descriptors/DescriptorAllocator.cpp"
-        "src/D3D12Core/Descriptors/BindlessDescriptorHeap.cpp"
+        "src/D3D12/D3D12DescriptorAllocation.cpp"
+        "src/D3D12/D3D12DescriptorAllocatorPage.cpp"
+        "src/D3D12/D3D12DescriptorAllocator.cpp"
+        "src/D3D12/D3D12BindlessDescriptorHeap.cpp"
 
         # Pipeline
-        "src/D3D12Core/Pipeline/Shader.cpp"
-        "src/D3D12Core/Pipeline/ShaderCompiler.cpp"
-        "src/D3D12Core/Pipeline/RootSignature.cpp"
-        "src/D3D12Core/Pipeline/PipelineState.cpp"
+        "src/D3D12/D3D12Shader.cpp"
+        "src/D3D12/D3D12ShaderCompiler.cpp"
+        "src/D3D12/D3D12RootSignature.cpp"
+        "src/D3D12/D3D12PipelineState.cpp"
 
         # Resource
-        "src/D3D12Core/Resource/Buffer.cpp"
-        "src/D3D12Core/Resource/ResourceUploader.cpp"
-        "src/D3D12Core/Resource/Texture.cpp"
+        "src/D3D12/D3D12Buffer.cpp"
+        "src/D3D12/D3D12ResourceUploader.cpp"
+        "src/D3D12/D3D12Texture.cpp"
 
         # Backend
-        "src/D3D12Core/D3D12Backend.cpp"
+        "src/D3D12/D3D12Backend.cpp"
 )
 
 set(RENDER_GRAPH_SOURCES
@@ -50,14 +50,12 @@ set(RENDER_CORE_SOURCES
         "src/Pipeline/PipelineStateCache.cpp"
         "src/RenderPass/BasePass.cpp"
         "src/RenderPass/DebugVisualizePass.cpp"
-        include/Renderer/ShaderInterop/SharedTypes.h
-        src/Scene/FViewInfo.cpp
-        include/Renderer/Pipeline/GlobalRootSignature.h
-        src/Pipeline/GlobalRootSignature.cpp
+        "src/Scene/FViewInfo.cpp"
+        "src/Pipeline/GlobalRootSignature.cpp"
 )
 
 # Build Library
-add_library(Renderer STATIC ${D3D12CORE_SOURCES} ${RENDER_GRAPH_SOURCES} ${RENDER_CORE_SOURCES})
+add_library(Renderer STATIC ${D3D12_SOURCES} ${RENDER_GRAPH_SOURCES} ${RENDER_CORE_SOURCES})
 
 # Interfaces
 target_include_directories(Renderer PUBLIC

@@ -2,19 +2,19 @@
 
 #include <cassert>
 
-#include "Renderer/D3D12Core/Core/CommandContext.h"
+#include "../../include/Renderer/D3D12/D3D12CommandContext.h"
 
 static std::wstring ToWide(const std::string& Text)
 {
     return std::wstring(Text.begin(), Text.end());
 }
 
-GpuResource* FRenderGraphContext::GetResource(FRGTextureHandle Handle) const
+D3D12GpuResource* FRenderGraphContext::GetResource(FRGTextureHandle Handle) const
 {
     return mpGraph->GetGpuResource(Handle);
 }
 
-FTexture* FRenderGraphContext::GetTexture(FRGTextureHandle Handle) const
+FD3D12Texture* FRenderGraphContext::GetTexture(FRGTextureHandle Handle) const
 {
     FRenderGraph::FResource& Resource = mpGraph->GetResourceInternal(Handle);
     return Resource.bImported ? nullptr : &Resource.Texture;
@@ -76,7 +76,7 @@ FRenderGraphPassBuilder& FRenderGraphPassBuilder::Execute(std::function<void(FRe
     return *this;
 }
 
-void FRenderGraph::Initialize(FDevice* pDevice, D3D12MA::Allocator* pAllocator)
+void FRenderGraph::Initialize(FD3D12Device* pDevice, D3D12MA::Allocator* pAllocator)
 {
     mpDevice = pDevice;
     mpAllocator = pAllocator;
@@ -171,7 +171,7 @@ FRGTextureHandle FRenderGraph::GetTexture(const char* Name)
     return { UINT32_MAX };
 }
 
-FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, GpuResource* pResource,
+FRGTextureHandle FRenderGraph::ImportBackBuffer(const char* Name, D3D12GpuResource* pResource,
                                                 D3D12_CPU_DESCRIPTOR_HANDLE Rtv, uint32_t Width, uint32_t Height, DXGI_FORMAT Format,
                                                 D3D12_RESOURCE_STATES InitialState)
 {
@@ -228,7 +228,7 @@ void FRenderGraph::Compile()
     // TODO: Compile
 }
 
-void FRenderGraph::Execute(FCommandContext* pCommandContext)
+void FRenderGraph::Execute(FD3D12CommandContext* pCommandContext)
 {
     assert(pCommandContext != nullptr);
 
@@ -329,16 +329,16 @@ const FRenderGraph::FResource& FRenderGraph::GetResourceInternal(FRGTextureHandl
     return mResources[Handle.Index];
 }
 
-GpuResource* FRenderGraph::GetGpuResource(FRGTextureHandle Handle) const
+D3D12GpuResource* FRenderGraph::GetGpuResource(FRGTextureHandle Handle) const
 {
     const FResource& Resource = GetResourceInternal(Handle);
-    return Resource.bImported ? Resource.pImportedResource : const_cast<FTexture*>(&Resource.Texture);
+    return Resource.bImported ? Resource.pImportedResource : const_cast<FD3D12Texture*>(&Resource.Texture);
 }
 
 bool FRenderGraph::CreatePhysicalTexture(FResource& Resource)
 {
-    FTextureDesc TexDesc = {};
-    TexDesc.Dimension        = ETextureDimension::Texture2D;
+    FD3D12TextureDesc TexDesc = {};
+    TexDesc.Dimension        = ED3D12TextureDimension::Texture2D;
     TexDesc.Width            = Resource.Desc.Width;
     TexDesc.Height           = Resource.Desc.Height;
     TexDesc.DepthOrArraySize = 1;
@@ -348,15 +348,15 @@ bool FRenderGraph::CreatePhysicalTexture(FResource& Resource)
     TexDesc.DebugName        = ToWide(Resource.Name);
 
     if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::RenderTarget))
-        TexDesc.Flags |= ETextureFlags::AllowRenderTarget;
+        TexDesc.Flags |= ED3D12TextureFlags::AllowRenderTarget;
     if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::DepthStencil))
-        TexDesc.Flags |= ETextureFlags::AllowDepthStencil;
+        TexDesc.Flags |= ED3D12TextureFlags::AllowDepthStencil;
     if (HasUsage(Resource.Desc.Usage, ERGTextureUsage::UnorderedAccess))
-        TexDesc.Flags |= ETextureFlags::AllowUnorderedAccess;
+        TexDesc.Flags |= ED3D12TextureFlags::AllowUnorderedAccess;
     if (!HasUsage(Resource.Desc.Usage, ERGTextureUsage::ShaderResource) &&
           !HasUsage(Resource.Desc.Usage, ERGTextureUsage::DepthStencil))
     {
-        TexDesc.Flags |= ETextureFlags::DenyShaderResource;
+        TexDesc.Flags |= ED3D12TextureFlags::DenyShaderResource;
     }
 
     TexDesc.bUseClearValue = Resource.Desc.bUseClearValue;
@@ -395,13 +395,13 @@ D3D12_CPU_DESCRIPTOR_HANDLE FRenderGraph::GetSRVInternal(FRGTextureHandle Handle
 uint32_t FRenderGraph::GetSRVIndexInternal(FRGTextureHandle Handle) const
 {
     const FResource& Resource = GetResourceInternal(Handle);
-    if (Resource.bImported) return FTexture::InvalidBindlessIndex;
+    if (Resource.bImported) return FD3D12Texture::InvalidBindlessIndex;
     return Resource.Texture.GetBindlessSRVIndex();
 }
 
 uint32_t FRenderGraph::GetUAVIndexInternal(FRGTextureHandle Handle, uint32_t Mip) const
 {
     const FResource& Resource = GetResourceInternal(Handle);
-    if (Resource.bImported) return FTexture::InvalidBindlessIndex;
+    if (Resource.bImported) return FD3D12Texture::InvalidBindlessIndex;
     return Resource.Texture.GetBindlessUAVIndex(Mip);
 }

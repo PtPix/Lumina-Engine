@@ -1,15 +1,15 @@
 ﻿#include "Renderer/Pipeline/PipelineStateCache.h"
 
 #include "Renderer/Pipeline/ShaderManager.h"
-#include "Renderer/D3D12Core/Core/Device.h"
-#include "Renderer/D3D12Core/Pipeline/ShaderCompiler.h"
+#include "../../include/Renderer/D3D12/D3D12Device.h"
+#include "../../include/Renderer/D3D12/D3D12ShaderCompiler.h"
 
 #include <functional>
 
-FDevice* FPipelineStateCache::mpDevice = nullptr;
-std::unordered_map<size_t, std::unique_ptr<FPipelineState>> FPipelineStateCache::mCache;
+FD3D12Device* FPipelineStateCache::mpDevice = nullptr;
+std::unordered_map<size_t, std::unique_ptr<FD3D12PipelineState>> FPipelineStateCache::mCache;
 
-void FPipelineStateCache::Initialize(FDevice* pDevice)
+void FPipelineStateCache::Initialize(FD3D12Device* pDevice)
 {
     mpDevice = pDevice;
 }
@@ -188,31 +188,31 @@ static std::vector<FShaderMacro> ToShaderMacros(const std::vector<FShaderDefine>
       return Desc;
   }
 
-FPipelineState* FPipelineStateCache::GetOrCreate(const FGraphicsPSODesc& Desc)
+FD3D12PipelineState* FPipelineStateCache::GetOrCreate(const FGraphicsPSODesc& Desc)
 {
     const size_t Hash = MakeHash(Desc);
     if (auto It = mCache.find(Hash); It != mCache.end()) { return It->second.get(); }
 
     const std::vector<FShaderMacro> Macros = ToShaderMacros(Desc.Defines);
 
-    FShaderStageCompileDesc VSDesc;
+    FD3D12ShaderStageCompileDesc VSDesc;
     VSDesc.FilePath    = Desc.ShaderPath;
     VSDesc.EntryPoint  = Desc.VSEntry;
     VSDesc.ShaderStage = EShaderStage::VertexShader;
     VSDesc.ShaderModel = Desc.ShaderModel;
     VSDesc.Macros      = Macros;
 
-    ShaderUtils::FBlob* VS = FShaderManager::GetShader(VSDesc);
+    ShaderUtils::FD3D12Blob* VS = FShaderManager::GetShader(VSDesc);
     if (!VS)
     {
         LUMINA_LOG_ERROR(RHI, "FPipelineStateCache: VS Compile Failed '%s'", StringUtils::WideToUTF8(Desc.ShaderPath).c_str());
         return nullptr;
     }
 
-    ShaderUtils::FBlob* PS = nullptr;
+    ShaderUtils::FD3D12Blob* PS = nullptr;
     if (!Desc.PSEntry.empty())
     {
-        FShaderStageCompileDesc PSDesc;
+        FD3D12ShaderStageCompileDesc PSDesc;
         PSDesc.FilePath    = Desc.ShaderPath;
         PSDesc.EntryPoint  = Desc.PSEntry;
         PSDesc.ShaderStage = EShaderStage::PixelShader;
@@ -227,7 +227,7 @@ FPipelineState* FPipelineStateCache::GetOrCreate(const FGraphicsPSODesc& Desc)
         }
     }
 
-    FGraphicsPipelineStateBuilder Builder;
+    FD3D12GraphicsPipelineStateBuilder Builder;
     Builder.SetRootSignature(Desc.RootSignature)
            .SetInputLayout(Desc.InputLayout)
            .SetRenderTargetFormats(Desc.RTVFormats, Desc.DSVFormat)
@@ -271,27 +271,27 @@ FPipelineState* FPipelineStateCache::GetOrCreate(const FGraphicsPSODesc& Desc)
     }
     Builder.SetBlendState(BlendDesc);
 
-    auto PSO = std::make_unique<FPipelineState>();
+    auto PSO = std::make_unique<FD3D12PipelineState>();
     if (!Builder.Build(mpDevice->GetDevice(), *PSO)) return nullptr;
 
-    FPipelineState* Result = PSO.get();
+    FD3D12PipelineState* Result = PSO.get();
     mCache.emplace(Hash, std::move(PSO));
     return Result;
 }
 
-FPipelineState * FPipelineStateCache::GetOrCreate(const FComputePSODesc &Desc)
+FD3D12PipelineState * FPipelineStateCache::GetOrCreate(const FComputePSODesc &Desc)
 {
     const size_t Hash = MakeHash(Desc);
     if (auto it = mCache.find(Hash); it != mCache.end()) return it->second.get();
 
-    FShaderStageCompileDesc CSDesc;
+    FD3D12ShaderStageCompileDesc CSDesc;
     CSDesc.FilePath    = Desc.ShaderPath;
     CSDesc.EntryPoint  = Desc.CSEntry;
     CSDesc.ShaderStage = EShaderStage::ComputeShader;
     CSDesc.ShaderModel = Desc.ShaderModel;
     CSDesc.Macros      = ToShaderMacros(Desc.Defines);
 
-    ShaderUtils::FBlob* CS = FShaderManager::GetShader(CSDesc);
+    ShaderUtils::FD3D12Blob* CS = FShaderManager::GetShader(CSDesc);
     if (!CS)
     {
         LUMINA_LOG_ERROR(RHI, "FPipelineStateCache: CS Compile Fail '%s'",
@@ -299,14 +299,14 @@ FPipelineState * FPipelineStateCache::GetOrCreate(const FComputePSODesc &Desc)
         return nullptr;
     }
 
-    FComputePipelineStateBuilder Builder;
+    FD3D12ComputePipelineStateBuilder Builder;
     Builder.SetRootSignature(Desc.RootSignature)
            .SetComputeShader(CS->GetByteCode(), CS->GetByteCodeSize());
 
-    auto PSO = std::make_unique<FPipelineState>();
+    auto PSO = std::make_unique<FD3D12PipelineState>();
     if (!Builder.Build(mpDevice->GetDevice(), *PSO)) return nullptr;
 
-    FPipelineState* Result = PSO.get();
+    FD3D12PipelineState* Result = PSO.get();
     mCache.emplace(Hash, std::move(PSO));
     return Result;
 }
