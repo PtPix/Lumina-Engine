@@ -50,10 +50,13 @@ set(RENDER_CORE_SOURCES
         "src/Pipeline/PipelineStateCache.cpp"
         "src/RenderPass/BasePass.cpp"
         "src/RenderPass/DebugVisualizePass.cpp"
-        "src/Scene/FViewInfo.cpp"
         "src/Pipeline/GlobalRootSignature.cpp"
         "src/Core/RendererCore.cpp"
         "src/Core/RendererModule.cpp"
+        "src/Scene/SceneView.cpp"
+        "src/SceneRendering/ViewInfo.cpp"
+        src/SceneRendering/SceneRenderer.cpp
+        src/UniformBuffer/ViewUniformBuffer.cpp
 )
 
 # Build Library
