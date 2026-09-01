@@ -71,10 +71,16 @@ public:
     // Material Management
     // ------------------------------------------------------------------------
     /**
-      * @brief Add or update a material.
-      * @return Material index.
-      */
-    uint32_t AddOrUpdateMaterial(uint32_t MaterialIndex, const FGPUMaterialData& MaterialData);
+       * @brief Add a new material.
+       * @return Material index (auto-assigned).
+       */
+    uint32_t AddMaterial(const FGPUMaterialData& MaterialData);
+
+    /**
+       * @brief Update an existing material.
+       * @param MaterialIndex The material index to update.
+       */
+    void UpdateMaterial(uint32_t MaterialIndex, const FGPUMaterialData& MaterialData);
 
     // ------------------------------------------------------------------------
     // Upload to GPU
@@ -116,6 +122,8 @@ private:
     // Map: PrimitiveID -> Index;
     std::unordered_map<uint32_t, uint32_t> mPrimitiveIDToIndex;
     uint32_t mNextPrimitiveID = 1;
+
+   uint32_t mNextMaterialIndex = 0;
 
     // GPU Buffers (per-frame for dynamic updates)
     FD3D12StructuredBuffer mInstanceBuffer[NUM_FRAMES_IN_FLIGHT];

@@ -16,7 +16,7 @@ bool FGPUScene::Initialize(FD3D12Device *pDevice, const FGPUSceneConfig &Config)
 
     mInstanceData.reserve(mConfig.MaxInstances);
     mMaterialData.reserve(mConfig.MaxMaterials);
-    mInstanceData.resize(mConfig.MaxInstances);
+    mInstanceData.reserve(mConfig.MaxInstances);
 
     if (!CreateBuffers())
     {
@@ -113,9 +113,11 @@ void FGPUScene::RemovePrimitive(uint32_t PrimitiveID)
     mbPrimitiveDataDirty = true;
 }
 
-uint32_t FGPUScene::AddOrUpdateMaterial(uint32_t MaterialIndex, const FGPUMaterialData &MaterialData)
+uint32_t FGPUScene::AddMaterial(const FGPUMaterialData &MaterialData)
 {
     if (!mbInitialized) return 0;
+
+    uint32_t MaterialIndex = mNextMaterialIndex++;
 
     if (MaterialIndex >= mMaterialData.size())
     {
@@ -126,6 +128,17 @@ uint32_t FGPUScene::AddOrUpdateMaterial(uint32_t MaterialIndex, const FGPUMateri
     mbMaterialDataDirty = true;
 
     return MaterialIndex;
+}
+
+void FGPUScene::UpdateMaterial(uint32_t MaterialIndex, const FGPUMaterialData &MaterialData)
+{
+    if (!mbInitialized || MaterialIndex >= mMaterialData.size())
+    {
+        return;
+    }
+
+    mMaterialData[MaterialIndex] = MaterialData;
+    mbMaterialDataDirty = true;
 }
 
 void FGPUScene::UploadToGPU(uint32_t FrameIndex)
