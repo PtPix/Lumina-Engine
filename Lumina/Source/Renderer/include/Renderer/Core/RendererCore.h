@@ -19,6 +19,7 @@
 class FD3D12Backend;
 class FD3D12Device;
 class FD3D12CommandContext;
+class FGPUScene;
 namespace D3D12MA { class Allocator; }
 
 struct FRendererInitParams
@@ -56,7 +57,8 @@ public:
     // ------------------------------------------------------------------------
     [[nodiscard]] static FD3D12Backend* GetBackend() { return mpBackend; }
     [[nodiscard]] static FD3D12Device* GetDevice();
-     [[nodiscard]] static D3D12MA::Allocator* GetAllocator();
+    [[nodiscard]] static D3D12MA::Allocator* GetAllocator();
+    [[nodiscard]] static FGPUScene* GetGPUScene() { return mpGPUScene; }
 
     // ------------------------------------------------------------------------
     // Viewport & Resolution
@@ -77,6 +79,8 @@ private:
 
     static FD3D12Backend* mpBackend;
 
+    static FGPUScene* mpGPUScene;
+
     static uint32_t mCurrentFrameIndex;
     static uint64_t mFrameNumber;
 
@@ -90,3 +94,4 @@ private:
 #define RENDERER_BACKEND()   FRendererCore::GetBackend()
 #define RENDERER_ALLOCATOR() FRendererCore::GetAllocator()
 #define RENDERER_FRAME()     FRendererCore::GetFrameIndex()
+#define RENDERER_GPU_SCENE() FRendererCore::GetGPUScene()

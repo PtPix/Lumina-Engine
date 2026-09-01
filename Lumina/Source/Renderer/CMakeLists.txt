@@ -57,6 +57,7 @@ set(RENDER_CORE_SOURCES
         "src/SceneRendering/ViewInfo.cpp"
         src/SceneRendering/SceneRenderer.cpp
         src/UniformBuffer/ViewUniformBuffer.cpp
+        src/GPUScene/GPUScene.cpp
 )
 
 # Build Library

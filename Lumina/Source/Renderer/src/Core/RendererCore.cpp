@@ -7,6 +7,7 @@
 
 bool FRendererCore::mbInitialized = false;
 FD3D12Backend* FRendererCore::mpBackend = nullptr;
+FGPUScene* FRendererCore::mpGPUScene = nullptr;
 
 uint32_t FRendererCore::mCurrentFrameIndex = 0;
 uint64_t FRendererCore::mFrameNumber = 0;
@@ -22,6 +23,8 @@ bool FRendererCore::Initialize(const FRendererInitParams &Params)
 
     mRenderWidth = Params.Width;
     mRenderHeight = Params.Height;
+
+    mpGPUScene = nullptr;
 
     mbInitialized = true;
 
