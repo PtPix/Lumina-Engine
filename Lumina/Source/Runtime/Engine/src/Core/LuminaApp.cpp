@@ -1,4 +1,4 @@
-﻿#include "Engine/LuminaApp.h"
+﻿#include "Core/LuminaApp.h"
 
 bool LuminaApp::InitializeApp(HWND Hwnd, uint32_t Width, uint32_t Height)
 {

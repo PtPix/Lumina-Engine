@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "LuminaApp.h"
+#include "Core/LuminaApp.h"
 #include "Profiler/Profiler.h"
 
-#include "Settings.h"
+#include "Core/Settings.h"
 #include "Platform/Window.h"
 
 #include <memory>
@@ -41,4 +41,3 @@ private:
     FWindowSettings mWindowSettings;
     FGraphicsSettings mGraphicsSettings;
 };
-

@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "IRenderDemo.h"
-#include "Engine/LuminaApp.h"
+#include "Core/LuminaApp.h"
 #include "ImGUI/imgui.h"
 
 class LuminaEditor : public LuminaApp

@@ -1,6 +1,6 @@
 ﻿#include "Logger/Logger.h"
-#include "Engine/Settings.h"
-#include "Engine/LuminaEngine.h"
+#include "Core/Settings.h"
+#include "Core/LuminaEngine.h"
 #include "LuminaEditor.h"
 
 #include <memory>

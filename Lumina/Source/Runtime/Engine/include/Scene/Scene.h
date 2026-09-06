@@ -29,6 +29,7 @@ public:
     uint32_t MaterialIndex = 0;
 };
 
+// Renamed from FScene to better reflect its purpose
 class FScene
 {
 public:

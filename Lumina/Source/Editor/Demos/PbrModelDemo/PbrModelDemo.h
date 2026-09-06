@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 #include "IRenderDemo.h"
-#include "Engine/Camera.h"
-#include "Engine/World/FScene.h"
+#include "Camera/Camera.h"
+#include "Scene/Scene.h"
 
 class FMesh;
 
