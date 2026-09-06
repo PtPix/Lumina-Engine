@@ -21,6 +21,10 @@ set(RENDERCORE_PUBLIC_HEADERS
         "include/ShaderManager.h"
         "include/PipelineStateCache.h"
         "include/GlobalRootSignature.h"
+
+        # GPU Scene
+        "include/GPUScene.h"
+        "include/GPUSceneData.h"
 )
 
 # ---- Private Sources ----
@@ -37,6 +41,9 @@ set(RENDERCORE_SOURCES
         "src/ShaderManager.cpp"
         "src/PipelineStateCache.cpp"
         "src/GlobalRootSignature.cpp"
+
+        # GPU Scene
+        "src/GPUScene.cpp"
 )
 
 # Build Library

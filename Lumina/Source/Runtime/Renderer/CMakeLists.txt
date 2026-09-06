@@ -17,8 +17,6 @@ set(RENDERER_PUBLIC_HEADERS
         "include/ObjectUniformBuffer.h"
 
         # Scene
-        "include/Scene/GPUScene.h"
-        "include/Scene/GPUSceneData.h"
         "include/Scene/SceneView.h"
         "include/Scene/SceneRenderer.h"
         "include/Scene/ViewInfo.h"
@@ -49,7 +47,6 @@ set(RENDERER_SOURCES
         "src/ViewInfo.cpp"
 
         # Scene
-        "src/Scene/GPUScene.cpp"
         "src/Scene/SceneView.cpp"
         "src/SceneRenderer.cpp"
 

@@ -1,6 +1,6 @@
 #include "Passes/BasePass/BasePass.h"
 #include "Scene/ViewInfo.h"
-#include "Scene/GPUScene.h"
+#include "GPUScene.h"
 #include "RenderCore.h"
 #include "D3D12CommandContext.h"
 
