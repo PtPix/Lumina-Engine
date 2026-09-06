@@ -2,9 +2,13 @@
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-set(MAIN_SOURCES main.cpp
-        LuminaEditor.cpp
-        Demos/PbrModelDemo/PbrModelDemo.cpp
+set(MAIN_SOURCES
+        # Core
+        Core/main.cpp
+        Core/EditorApp.cpp
+
+        # Demos/Samples
+        Demos/Samples/PbrModelDemo/PbrModelDemo.cpp
 )
 
 add_executable(${EXECUTABLE_NAME} WIN32 ${MAIN_SOURCES})
@@ -54,5 +58,9 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE ImGUI)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE LuminaRenderer)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE LuminaEngine)
 
-# Interface
-target_include_directories(${EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Demos)
+# Include directories for Editor subsystems
+target_include_directories(${EXECUTABLE_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/Core
+        ${CMAKE_CURRENT_SOURCE_DIR}/Demos
+)

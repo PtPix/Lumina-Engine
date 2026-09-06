@@ -1,4 +1,4 @@
-﻿#include "PbrModelDemo/PbrModelDemo.h"
+﻿#include "PbrModelDemo.h"
 
 #include "Assets/StaticModel.h"
 #include "ImGUI/imgui.h"

@@ -3,10 +3,15 @@
 #include <memory>
 #include <vector>
 
-#include "IRenderDemo.h"
+#include "Demos/DemoBase.h"
 #include "Core/LuminaApp.h"
 #include "ImGUI/imgui.h"
 
+/**
+ * @brief Main Editor Application
+ *
+ * Manages the editor lifecycle, UI, and demo/sample system.
+ */
 class LuminaEditor : public LuminaApp
 {
 public:
@@ -14,7 +19,7 @@ public:
     ~LuminaEditor() override = default;
 
     template<typename T>
-    void RegisterTestLayer()
+    void RegisterDemo()
     {
         static_assert(std::is_base_of_v<IRenderDemo, T>, "T must inherit from IRenderDemo");
         mRenderDemos.push_back(std::make_unique<T>());
@@ -28,7 +33,7 @@ protected:
     void OnRenderUI(FRenderGraph& RenderGraph) override;
     void OnDestroy() override;
 
-    void SetActiveLayer(int16_t ActiveLayer);
+    void SetActiveDemo(int16_t ActiveIndex);
 
 private:
     void RenderEditorUI(FRenderGraph& RenderGraph);

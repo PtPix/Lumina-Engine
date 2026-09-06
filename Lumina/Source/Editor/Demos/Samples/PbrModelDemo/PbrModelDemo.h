@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "IRenderDemo.h"
+#include "Demos/DemoBase.h"
 #include "Camera/Camera.h"
 #include "Scene/Scene.h"
 

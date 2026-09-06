@@ -1,6 +1,6 @@
-﻿#include "LuminaEditor.h"
+﻿#include "Core/EditorApp.h"
 #include "ImGUI/imgui.h"
-#include "PbrModelDemo/PbrModelDemo.h"
+#include "Demos/Samples/PbrModelDemo/PbrModelDemo.h"
 #include "Renderer.h"
 #include "RenderCore.h"
 #include "UIRenderer.h"
@@ -10,7 +10,7 @@ bool LuminaEditor::OnInit()
 {
     UIRenderer::Initialize(mHwnd, FRendererCore::GetDevice());
 
-    RegisterTestLayer<PbrModelDemo>();
+    RegisterDemo<PbrModelDemo>();
 
     if (!mRenderDemos.empty())
     {
@@ -102,15 +102,15 @@ void LuminaEditor::OnDestroy()
     mRenderDemos.clear();
 }
 
-void LuminaEditor::SetActiveLayer(int16_t ActiveLayer)
+void LuminaEditor::SetActiveDemo(int16_t ActiveIndex)
 {
-    assert(ActiveLayer >= 0 && ActiveLayer < mRenderDemos.size());
+    assert(ActiveIndex >= 0 && ActiveIndex < mRenderDemos.size());
     if (mActiveDemoIndex >= 0 && mActiveDemoIndex < mRenderDemos.size())
     {
         mRenderDemos[mActiveDemoIndex]->OnDetach();
     }
-    mRenderDemos[ActiveLayer]->OnAttach();
-    mActiveDemoIndex = ActiveLayer;
+    mRenderDemos[ActiveIndex]->OnAttach();
+    mActiveDemoIndex = ActiveIndex;
 }
 
 void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
@@ -280,7 +280,7 @@ void LuminaEditor::RenderEditorUI(FRenderGraph& RenderGraph)
                     ImGui::PushID(i);
                     if (ImGui::Selectable(mRenderDemos[i]->GetName().c_str(), i == mActiveDemoIndex))
                     {
-                        SetActiveLayer((int16_t)i);   // 内部 OnDetach 旧 / OnAttach 新(你已实现)
+                        SetActiveDemo((int16_t)i);   // 内部 OnDetach 旧 / OnAttach 新(你已实现)
                     }
                     ImGui::PopID();
                 }
