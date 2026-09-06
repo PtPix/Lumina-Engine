@@ -5,7 +5,8 @@
 
 #include <cassert>
 
-// Forward declare to avoid including heavy headers
+// Define FRenderPassBase here to provide complete type for unique_ptr in RenderGraph
+// This avoids RenderCore depending on Renderer layer
 class FRenderPassBase
 {
 public:

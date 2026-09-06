@@ -1,149 +1,84 @@
-﻿#include "Renderer.h"
+﻿/**
+ * @file Renderer.cpp
+ * @brief Implementation of Renderer compatibility layer and Renderer-specific functions.
+ *
+ * Most functionality has been moved to FRendererCore.
+ * This file contains implementations that require Renderer layer types (like FMesh).
+ */
 
-// Include RenderPass to complete FRenderPassBase type
-#include "Passes/RenderPass.h"
-
+#include "Renderer.h"
+#include "FMesh.h"
+#include "MeshType.h"
+#include "RenderCore.h"
 #include "D3D12Backend.h"
 #include "D3D12CommandContext.h"
-#include "D3D12Device.h"
-#include "D3D12SwapChain.h"
+#include "D3D12ResourceUploader.h"
 #include "D3D12BindlessDescriptorHeap.h"
-#include "D3D12DeferredReleaseQueue.h"
-
-#include "TextureManager.h"
 #include "GlobalRootSignature.h"
+#include "TextureManager.h"
 #include "PipelineStateCache.h"
 #include "ShaderManager.h"
-#include "Scene/SceneView.h"
 #include "Logger/Logger.h"
 
-#include <cassert>
-
-std::unique_ptr<FD3D12Backend> Renderer::mpD3D12Backend = nullptr;
-
-FD3D12ResourceUploader Renderer::mUploader;
-FRenderGraph Renderer::mRenderGraph;
-FD3D12CommandContext* Renderer::mpCurrentFrameContext = nullptr;
-
-FRGTextureHandle Renderer::mBackBufferHandle = { UINT32_MAX };
-
+// Implementation of Initialize (initializes RenderCore + Renderer layer subsystems)
 bool Renderer::Initialize(HWND Hwnd, uint32_t Width, uint32_t Height)
 {
-    FRendererInitParams CoreParams = {};
-    CoreParams.WindowHandle = Hwnd;
-    CoreParams.Width = Width;
-    CoreParams.Height = Height;
-    CoreParams.bEnableDebugLayer = true;
+    // Initialize RenderCore first
+    FRendererInitParams Params;
+    Params.WindowHandle = Hwnd;
+    Params.Width = Width;
+    Params.Height = Height;
 
-    if (!FRendererCore::Initialize(CoreParams))
+    if (!FRendererCore::Initialize(Params))
     {
         return false;
     }
 
-    mpD3D12Backend = std::make_unique<FD3D12Backend>();
-    FD3D12BackendDesc D3D12BackendDesc;
-    D3D12BackendDesc.Hwnd = Hwnd;
-    D3D12BackendDesc.Width = Width;
-    D3D12BackendDesc.Height = Height;
+    // Initialize Renderer layer subsystems
+    TextureManager::Initialize(FRendererCore::GetDevice(), FRendererCore::GetUploader());
 
-    mpD3D12Backend->Initialize(D3D12BackendDesc);
+    // Flush initial uploads
+    FRendererCore::GetUploader()->FlushAndSync();
 
-    mRenderGraph.Initialize(mpD3D12Backend->GetDevice(), mpD3D12Backend->GetAllocator());
+    // Initialize GlobalRootSignature
+    if (!FGlobalRootSignature::Initialize(FRendererCore::GetDevice()))
+    {
+        LUMINA_LOG_ERROR(RHI, "Global RootSignature initialization failed.");
+    }
 
-    mUploader.Initialize(mpD3D12Backend->GetDevice());
-
-    TextureManager::Initialize(mpD3D12Backend->GetDevice(), &mUploader);
-
-    mUploader.FlushAndSync();
-
-    InitializeBindlessRootSignature();
-
-    FPipelineStateCache::Initialize(mpD3D12Backend->GetDevice());
+    // Initialize PipelineStateCache
+    FPipelineStateCache::Initialize(FRendererCore::GetDevice());
 
     return true;
 }
 
+// Implementation of Shutdown (shuts down Renderer layer subsystems + RenderCore)
 void Renderer::Shutdown()
 {
-    if (mpD3D12Backend)
-        mpD3D12Backend->FlushAllQueues();
-
-    FD3D12DeferredReleaseQueue::FlushAll();
-
-    mRenderGraph.Shutdown();
-    mUploader.FlushAndSync();
-
+    // Shutdown Renderer layer subsystems first
     FGlobalRootSignature::Shutdown();
-
     FPipelineStateCache::Shutdown();
     FShaderManager::Clear();
-
     TextureManager::Shutdown();
 
-    mpD3D12Backend->Shutdown();
-    mpD3D12Backend.reset();
+    // Shutdown RenderCore
+    FRendererCore::Shutdown();
 }
 
-void Renderer::BeginFrame()
-{
-    FRendererCore::BeginFrame();
-    mpD3D12Backend->CollectGarbage();
-    mUploader.SubmitPendingUploads();
-    mUploader.CleanUpStaleUploads();
-
-    mpCurrentFrameContext = mpD3D12Backend->AllocateGraphicsContext();
-    // assert(pContext != nullptr && "Failed to allocate FCommandContext for BeginFrame!");
-
-    mRenderGraph.Reset();
-
-    mBackBufferHandle = mRenderGraph.ImportBackBuffer(
-        "BackBuffer",
-        mpD3D12Backend->GetCurrentBackBufferResource(),
-        mpD3D12Backend->GetCurrentBackBufferRTV(),
-        mpD3D12Backend->GetWidth(),
-        mpD3D12Backend->GetHeight(),
-        mpD3D12Backend->GetBackBufferFormat(),
-        D3D12_RESOURCE_STATE_PRESENT
-    );
-}
-
-void Renderer::EndFrame()
-{
-    if (!mpCurrentFrameContext)
-    {
-        LUMINA_LOG_ERROR(RHI, "Renderer::EndFrame: no valid command context，Jump over current frame");
-        return;
-    }
-
-    BindGlobalResources(mpCurrentFrameContext);
-
-    mRenderGraph.Compile();
-    mRenderGraph.Execute(mpCurrentFrameContext);
-
-    mpCurrentFrameContext->TransitionResource(mpD3D12Backend->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT);
-    mpCurrentFrameContext->FlushResourceBarriers();
-
-    mpD3D12Backend->ExecuteGraphicsContext(mpCurrentFrameContext);
-    mpD3D12Backend->Present();
-
-    FRendererCore::EndFrame();
-}
-
+// Implementation of CreateMesh (requires FMesh definition from Renderer module)
 FMesh* Renderer::CreateMesh(const FMeshData& CpuData)
 {
     auto* pMesh = new FMesh();
-
-    pMesh->Initialize(CpuData, mpD3D12Backend->GetAllocator(), &mUploader);
-    // TODO : Streaming
-
+    pMesh->Initialize(CpuData, FRendererCore::GetAllocator(), FRendererCore::GetUploader());
     return pMesh;
 }
 
+// Implementation of BindGlobalResources (requires GlobalRootSignature from Renderer module)
 void Renderer::BindGlobalResources(FD3D12CommandContext* pContext)
 {
     if (!pContext) return;
 
-    FD3D12BindlessDescriptorHeap* pHeap = mpD3D12Backend->GetBindlessDescriptorHeap();
+    FD3D12BindlessDescriptorHeap* pHeap = FRendererCore::GetBackend()->GetBindlessDescriptorHeap();
     if (!pHeap) return;
 
     ID3D12DescriptorHeap* ppHeaps[] = { pHeap->GetDescriptorHeap() };
@@ -163,23 +98,5 @@ void Renderer::BindGlobalResources(FD3D12CommandContext* pContext)
     {
         pContext->SetComputeRootSignature(pComputeRS);
         pContext->SetComputeRootDescriptorTable(ToRootIndex(EGlobalRootParam::BindlessTable), pHeap->GetGpuHandle(0));
-    }
-}
-
-void Renderer::OnResize(uint32_t Width, uint32_t Height)
-{
-    if (mpD3D12Backend)
-    {
-        mpD3D12Backend->FlushAllQueues();
-        mRenderGraph.ClearImportedResources();
-        mpD3D12Backend->ResizeSwapChain(Width, Height);
-    }
-}
-
-void Renderer::InitializeBindlessRootSignature()
-{
-    if (!FGlobalRootSignature::Initialize(mpD3D12Backend->GetDevice()))
-    {
-        LUMINA_LOG_ERROR(RHI, "Global RootSignature initialization failed.");
     }
 }

@@ -26,7 +26,7 @@ public:
     // LifeCycle
     bool Create(const wchar_t* DebugName = L"UniformBuffer")
     {
-        auto* Allocator = RENDERER_ALLOCATOR();
+        auto* Allocator = FRendererCore::GetAllocator();
         if (!Allocator) return false;
 
         for (uint32_t i = 0; i < NUM_FRAMES_IN_FLIGHT; i++)
@@ -72,7 +72,7 @@ public:
 
     void UpdateCurrent(const TData& Data)
     {
-        Update(Data, RENDERER_FRAME());
+        Update(Data, FRendererCore::GetFrameIndex());
     }
 
     // Access
@@ -87,7 +87,7 @@ public:
 
     [[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetCurrentGPUAddress() const
     {
-        return GetGPUAddress(RENDERER_FRAME());
+        return GetGPUAddress(FRendererCore::GetFrameIndex());
     }
 
     [[nodiscard]] FD3D12ConstantBuffer* GetBuffer(uint32_t FrameIndex)

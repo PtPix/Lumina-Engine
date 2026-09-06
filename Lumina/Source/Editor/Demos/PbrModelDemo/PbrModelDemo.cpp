@@ -4,6 +4,8 @@
 #include "ImGUI/imgui.h"
 #include "Platform/InputState.h"
 #include "Renderer.h"
+#include "RenderCore.h"
+#include "D3D12Backend.h"
 #include "TextureManager.h"
 #include "Passes/BasePass/BasePass.h"
 #include "Passes/DebugPasses/DebugVisualizePass.h"
@@ -53,7 +55,7 @@ void PbrModelDemo::OnAttach()
 
 void PbrModelDemo::OnDetach()
 {
-    Renderer::GetD3D12Backend()->FlushAllQueues();
+    FRendererCore::GetBackend()->FlushAllQueues();
 
     for (auto& LoadedMesh : mLoadedMeshes)
     {

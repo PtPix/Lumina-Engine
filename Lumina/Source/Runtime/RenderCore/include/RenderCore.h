@@ -10,16 +10,23 @@
 
 #include "RenderTypes.h"
 #include <cstdint>
+#include <memory>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 
+// Forward declarations
 class FD3D12Backend;
 class FD3D12Device;
 class FD3D12CommandContext;
+class FD3D12ResourceUploader;
 class FGPUScene;
+class FRenderGraph;
+class FMesh;
+struct FMeshData;
+struct FRGTextureHandle;
 namespace D3D12MA { class Allocator; }
 
 struct FRendererInitParams
@@ -55,10 +62,22 @@ public:
     // ------------------------------------------------------------------------
     // Core Subsystem Access
     // ------------------------------------------------------------------------
-    [[nodiscard]] static FD3D12Backend* GetBackend() { return mpBackend; }
+    [[nodiscard]] static FD3D12Backend* GetBackend() { return mpBackend.get(); }
     [[nodiscard]] static FD3D12Device* GetDevice();
     [[nodiscard]] static D3D12MA::Allocator* GetAllocator();
+    [[nodiscard]] static FD3D12ResourceUploader* GetUploader() { return mpUploader.get(); }
     [[nodiscard]] static FGPUScene* GetGPUScene() { return mpGPUScene; }
+
+    // ------------------------------------------------------------------------
+    // RenderGraph Access
+    // ------------------------------------------------------------------------
+    [[nodiscard]] static FRenderGraph* GetRenderGraph();
+    [[nodiscard]] static FRGTextureHandle GetBackBufferHandle();
+
+    // ------------------------------------------------------------------------
+    // Window Management
+    // ------------------------------------------------------------------------
+    static void OnResize(uint32_t Width, uint32_t Height);
 
     // ------------------------------------------------------------------------
     // Viewport & Resolution
@@ -75,12 +94,26 @@ public:
     static void ResetStats() { mStats.Reset(); }
 
 private:
+    static void InitializeBackend(const FRendererInitParams& Params);
+    static void InitializeBindlessRootSignature();
+
     static bool mbInitialized;
 
-    static FD3D12Backend* mpBackend;
+    // Backend
+    static std::unique_ptr<FD3D12Backend> mpBackend;
+    static std::unique_ptr<FD3D12ResourceUploader> mpUploader;
 
+    // RenderGraph
+    static std::unique_ptr<FRenderGraph> mpRenderGraph;
+    static FRGTextureHandle mBackBufferHandle;
+
+    // GPU Scene
     static FGPUScene* mpGPUScene;
 
+    // Frame Context
+    static FD3D12CommandContext* mpCurrentFrameContext;
+
+    // Frame State
     static uint32_t mCurrentFrameIndex;
     static uint64_t mFrameNumber;
 
@@ -90,8 +123,11 @@ private:
     static FRenderStats mStats;
 };
 
-#define RENDERER_DEVICE()    FRendererCore::GetDevice()
-#define RENDERER_BACKEND()   FRendererCore::GetBackend()
-#define RENDERER_ALLOCATOR() FRendererCore::GetAllocator()
-#define RENDERER_FRAME()     FRendererCore::GetFrameIndex()
-#define RENDERER_GPU_SCENE() FRendererCore::GetGPUScene()
+// Convenience macros
+#define GRendererCore       FRendererCore
+#define GRenderGraph()      FRendererCore::GetRenderGraph()
+#define GDevice()           FRendererCore::GetDevice()
+#define GBackend()          FRendererCore::GetBackend()
+#define GAllocator()        FRendererCore::GetAllocator()
+#define GUploader()         FRendererCore::GetUploader()
+#define GGPUScene()         FRendererCore::GetGPUScene()

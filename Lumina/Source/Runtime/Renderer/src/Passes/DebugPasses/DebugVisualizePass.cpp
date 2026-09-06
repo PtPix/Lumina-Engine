@@ -17,7 +17,7 @@ void FDebugVisualizePass::Setup(FRenderGraphPassBuilder &Builder)
         FPassContext Context = {};
         Context.RGContext = &RGContext;
         Context.ViewInfo = nullptr;
-        Context.GPUScene = RENDERER_GPU_SCENE();
+        Context.GPUScene = FRendererCore::GetGPUScene();
 
         Execute(Context);
     });

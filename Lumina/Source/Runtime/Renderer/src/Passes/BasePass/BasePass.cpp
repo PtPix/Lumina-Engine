@@ -31,7 +31,7 @@ void FBasePass::Setup(FRenderGraphPassBuilder &Builder)
         FPassContext Context = {};
         Context.RGContext = &RGContext;
         Context.ViewInfo = nullptr;  // TODO: Get from SceneRenderer
-        Context.GPUScene = RENDERER_GPU_SCENE();
+        Context.GPUScene = FRendererCore::GetGPUScene();
 
         Execute(Context);
     });

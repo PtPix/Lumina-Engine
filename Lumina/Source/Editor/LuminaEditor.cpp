@@ -2,11 +2,13 @@
 #include "ImGUI/imgui.h"
 #include "PbrModelDemo/PbrModelDemo.h"
 #include "Renderer.h"
+#include "RenderCore.h"
 #include "UIRenderer.h"
+#include "D3D12Backend.h"
 
 bool LuminaEditor::OnInit()
 {
-    UIRenderer::Initialize(mHwnd, Renderer::GetD3D12Backend()->GetDevice());
+    UIRenderer::Initialize(mHwnd, FRendererCore::GetDevice());
 
     RegisterTestLayer<PbrModelDemo>();
 
@@ -38,7 +40,7 @@ void LuminaEditor::OnRender(FRenderGraph& RenderGraph)
     FRGTextureDesc ColorDesc = {};
     ColorDesc.Width = 1280;
     ColorDesc.Height = 720;
-    ColorDesc.Format = Renderer::GetD3D12Backend()->GetBackBufferFormat();
+    ColorDesc.Format = FRendererCore::GetBackend()->GetBackBufferFormat();
     ColorDesc.Usage = ERGTextureUsage::RenderTarget | ERGTextureUsage::ShaderResource;
     ColorDesc.bUseClearValue = true;
     ColorDesc.ClearValue.Format = ColorDesc.Format;
@@ -77,7 +79,7 @@ void LuminaEditor::OnRenderUI(FRenderGraph& RenderGraph)
             if (SceneColor.IsValid())
             {
                 UIRenderer::CopySRVToSlot(
-                    Renderer::GetD3D12Backend()->GetDevice(),
+                    FRendererCore::GetDevice(),
                     Context.GetSRV(SceneColor),
                     UIRenderer::ViewportTextureSlot
                 );
