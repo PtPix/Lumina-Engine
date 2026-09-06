@@ -20,13 +20,19 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Core")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Platform")
 
 # Compile Renderer
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Renderer")
+# add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Renderer")
 
-# Compile Engine Files
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Engine")
+# Compile Runtime Modules
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Runtime/RHI")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Runtime/RenderCore")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Runtime/Renderer")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Runtime/Engine")
+
+# Compile Engine Files (removed, now in Runtime)
+# add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Engine")
 
 # Compile Editor
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Editor")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/Lumina/Source/Editor")
 set_target_properties(Lumina PROPERTIES
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
