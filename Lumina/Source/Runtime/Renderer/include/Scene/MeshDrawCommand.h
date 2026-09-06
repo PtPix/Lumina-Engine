@@ -8,13 +8,21 @@
 #pragma once
 
 #include <cstdint>
+#include <DirectXMath.h>
 #include <d3d12.h>
 
 class FD3D12PipelineState;
+class FMesh;
 
 // A single mesh draw command
 struct FMeshDrawCommand
 {
+    // High-level data (from Engine layer)
+    FMesh* Mesh = nullptr;
+    uint32_t MaterialIndex = 0;
+    DirectX::XMFLOAT4X4 WorldMatrix;
+
+    // Low-level rendering data (filled by Renderer)
     FD3D12PipelineState* PipelineState = nullptr;
 
     D3D12_VERTEX_BUFFER_VIEW VertexBufferView = {};

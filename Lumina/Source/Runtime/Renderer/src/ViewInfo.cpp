@@ -1,30 +1,29 @@
 #include "Scene/ViewInfo.h"
-#include "Scene/SceneView.h"
-#include "RenderCore.h"
-#include "ViewUniformBuffer.h"
+#include "Camera/Camera.h"
+#include <DirectXMath.h>
 
-using namespace DirectX;
-
-void FViewInfo::Initialize()
+void FViewInfo::SetupFromCamera(Camera* Camera, uint32_t RenderWidth, uint32_t RenderHeight)
 {
-    mViewUniformBuffer.Create(L"ViewUniformBuffer");
-}
+    if (!Camera)
+    {
+        return;
+    }
 
-void FViewInfo::SetupFromSceneView(const FSceneView &SceneView, uint32_t FrameIndex)
-{
-    mViewMatrix = SceneView.GetViewMatrix();
-    mProjectionMatrix = SceneView.GetProjectionMatrix();
-    mViewLocation = SceneView.GetViewLocation();
-    mViewportWidth = SceneView.GetViewportWidth();
-    mViewportHeight = SceneView.GetViewportHeight();
+    // Extract camera matrices
+    DirectX::XMMATRIX ViewMat = Camera->GetViewMatrix();
+    DirectX::XMMATRIX ProjMat = Camera->GetProjectionMatrix();
+    DirectX::XMMATRIX ViewProjMat = DirectX::XMMatrixMultiply(ViewMat, ProjMat);
 
-    mViewUniformData = FViewUniformBuilder::Build(
-        mViewMatrix, mProjectionMatrix, mViewLocation, mViewportWidth, mViewportHeight);
+    // Store transposed matrices for HLSL (column-major)
+    DirectX::XMStoreFloat4x4(&ViewMatrix, DirectX::XMMatrixTranspose(ViewMat));
+    DirectX::XMStoreFloat4x4(&ProjectionMatrix, DirectX::XMMatrixTranspose(ProjMat));
+    DirectX::XMStoreFloat4x4(&ViewProjectionMatrix, DirectX::XMMatrixTranspose(ViewProjMat));
 
-    mViewUniformBuffer.Update(mViewUniformData, FrameIndex);
-}
+    // Store camera position
+    DirectX::XMFLOAT3 CameraPos = Camera->GetPosition();
+    CameraPosition = DirectX::XMFLOAT4(CameraPos.x, CameraPos.y, CameraPos.z, 1.0f);
 
-D3D12_GPU_VIRTUAL_ADDRESS FViewInfo::GetViewUniformGPUAddress(uint32_t FrameIndex) const
-{
-    return mViewUniformBuffer.GetGPUAddress(FrameIndex);
+    // Store render target dimensions
+    RenderTargetWidth = RenderWidth;
+    RenderTargetHeight = RenderHeight;
 }

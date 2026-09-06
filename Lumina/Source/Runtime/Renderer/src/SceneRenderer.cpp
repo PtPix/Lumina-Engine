@@ -1,66 +1,85 @@
 #include "Scene/SceneRenderer.h"
-#include "Scene/SceneView.h"
-#include "RenderGraph/RenderGraph.h"
+#include "Scene/Scene.h"
+#include "Camera/Camera.h"
+#include "Scene/ViewInfo.h"
+#include "Scene/MeshDrawCommand.h"
+#include "FMesh.h"
+#include "FMaterial.h"
+#include "Passes/BasePass/BasePass.h"
 #include "RenderCore.h"
 
-#include <algorithm>
-
-void FSceneRenderer::Initialize()
+void FSceneRenderer::RenderScene(FScene* Scene, Camera* Camera, FRenderGraph& RenderGraph)
 {
-    if (mbInitialized) return;
+    if (!Scene || !Camera)
+    {
+        return;
+    }
 
-    mViewInfo.Initialize();
+    // Step 1: Setup view from camera
+    SetupViewFromCamera(Camera);
 
-    mbInitialized = true;
+    // Step 2: Gather draw commands from scene
+    GatherDrawCommands(Scene);
+
+    // Step 3: Build and add render passes
+    BuildRenderPasses(RenderGraph);
 }
 
-void FSceneRenderer::Shutdown()
+void FSceneRenderer::SetupViewFromCamera(Camera* Camera)
 {
-    if (!mbInitialized) return;
-
-    mDrawCommands.clear();
-    mbInitialized = false;
+    // Setup view info from camera
+    mViewInfo.SetupFromCamera(Camera, FRendererCore::GetRenderWidth(), FRendererCore::GetRenderHeight());
 }
 
-void FSceneRenderer::Render(FRenderGraph &RenderGraph, const FSceneView &View)
-{
-    uint32_t FrameIndex = FRendererCore::GetFrameIndex();
-
-    mViewInfo.SetupFromSceneView(View, FrameIndex);
-
-    GatherDrawCommands(View);
-
-    SortDrawCommands();
-
-    RenderBasePass(RenderGraph);
-    RenderLighting(RenderGraph);
-    RenderPostProcess(RenderGraph);
-}
-
-void FSceneRenderer::GatherDrawCommands(const FSceneView &View)
+void FSceneRenderer::GatherDrawCommands(FScene* Scene)
 {
     mDrawCommands.clear();
 
-    // TODO : Query scene primitives and build draw commands
+    // Get all game objects from scene
+    auto& GameObjects = Scene->GetGameObjects();
+
+    for (const auto& GameObject : GameObjects)
+    {
+        if (!GameObject.pMesh)
+        {
+            continue;
+        }
+
+        FMeshDrawCommand DrawCmd;
+        DrawCmd.Mesh = GameObject.pMesh;
+        DrawCmd.MaterialIndex = GameObject.MaterialIndex;
+
+        // Store world transform
+        DirectX::XMStoreFloat4x4(&DrawCmd.WorldMatrix, DirectX::XMMatrixTranspose(GameObject.Transform));
+
+        mDrawCommands.push_back(DrawCmd);
+    }
 }
 
-void FSceneRenderer::SortDrawCommands()
+void FSceneRenderer::BuildRenderPasses(FRenderGraph& RenderGraph)
 {
-    std::sort(mDrawCommands.begin(), mDrawCommands.end(),
-        [](const FMeshDrawCommand& A, const FMeshDrawCommand& B) {return A.SortKey < B.SortKey;});
-}
+    // Create scene color render target
+    FRGTextureDesc ColorDesc = {};
+    ColorDesc.Width = mViewInfo.RenderTargetWidth;
+    ColorDesc.Height = mViewInfo.RenderTargetHeight;
+    ColorDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    ColorDesc.Usage = ERGTextureUsage::RenderTarget | ERGTextureUsage::ShaderResource;
+    ColorDesc.bUseClearValue = true;
+    ColorDesc.ClearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    ColorDesc.ClearValue.Color[0] = 0.1f;
+    ColorDesc.ClearValue.Color[1] = 0.1f;
+    ColorDesc.ClearValue.Color[2] = 0.1f;
+    ColorDesc.ClearValue.Color[3] = 1.0f;
 
-void FSceneRenderer::RenderBasePass(FRenderGraph &RG)
-{
-    // TODO: Future pass
-}
+    FRGTextureHandle SceneColor = RenderGraph.CreateTexture("SceneColor", ColorDesc);
 
-void FSceneRenderer::RenderLighting(FRenderGraph &RG)
-{
-    // TODO: Future pass
-}
+    // Add BasePass with our view and draw commands
+    FBasePassInputs BasePassInputs;
+    BasePassInputs.SceneColor = SceneColor;
+    // TODO: Pass ViewInfo and DrawCommands to BasePass when it's ready
 
-void FSceneRenderer::RenderPostProcess(FRenderGraph &RG)
-{
-    // TODO: Future pass
+    RenderGraph.AddPassObject<FBasePass>(BasePassInputs);
+
+    // TODO: Add lighting pass
+    // TODO: Add post-process passes
 }

@@ -79,6 +79,7 @@ target_include_directories(LuminaRenderer
 target_link_libraries(LuminaRenderer PUBLIC LuminaCore)
 target_link_libraries(LuminaRenderer PUBLIC LuminaRHI)
 target_link_libraries(LuminaRenderer PUBLIC LuminaRenderCore)
+target_link_libraries(LuminaRenderer PUBLIC LuminaEngine)  # Added: Access Engine types
 target_link_libraries(LuminaRenderer PRIVATE ImGUI)
 
 # PCH
