@@ -6,7 +6,7 @@
 #include "Renderer.h"
 #include "RenderCore.h"
 #include "D3D12Backend.h"
-#include "TextureManager.h"
+#include "Resources/TextureManager.h"
 #include "Passes/BasePass/BasePass.h"
 #include "Passes/DebugPasses/DebugVisualizePass.h"
 #include "FMesh.h"

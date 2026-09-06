@@ -1,4 +1,4 @@
-#include "GPUScene.h"
+#include "GPUScene/GPUScene.h"
 #include "D3D12Device.h"
 #include "RenderCore.h"
 #include "D3D12MemAlloc.h"

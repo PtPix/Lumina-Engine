@@ -1,6 +1,6 @@
-﻿#include "PipelineStateCache.h"
+﻿#include "Pipeline/PipelineStateCache.h"
 
-#include "ShaderManager.h"
+#include "Shaders/ShaderManager.h"
 #include "D3D12Device.h"
 #include "D3D12ShaderCompiler.h"
 #include "D3D12PipelineState.h"

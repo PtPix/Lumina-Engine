@@ -14,10 +14,10 @@
 #include "D3D12CommandContext.h"
 #include "D3D12ResourceUploader.h"
 #include "D3D12BindlessDescriptorHeap.h"
-#include "GlobalRootSignature.h"
-#include "TextureManager.h"
-#include "PipelineStateCache.h"
-#include "ShaderManager.h"
+#include "Shaders/GlobalRootSignature.h"
+#include "Resources/TextureManager.h"
+#include "Pipeline/PipelineStateCache.h"
+#include "Shaders/ShaderManager.h"
 #include "Logger/Logger.h"
 
 // Implementation of Initialize (initializes RenderCore + Renderer layer subsystems)

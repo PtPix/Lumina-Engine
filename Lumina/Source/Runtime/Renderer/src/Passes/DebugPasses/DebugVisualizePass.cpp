@@ -1,7 +1,7 @@
 #include "Passes/DebugPasses/DebugVisualizePass.h"
 #include "RenderCore.h"
 #include "D3D12CommandContext.h"
-#include "GlobalRootSignature.h"
+#include "Shaders/GlobalRootSignature.h"
 
 FDebugVisualizePass::FDebugVisualizePass(const FDebugVisualizeInputs &Inputs)
     : FFullscreenPassBase("DebugVisualizePass"), mInputs(Inputs) {}

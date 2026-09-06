@@ -16,15 +16,19 @@ set(RENDERCORE_PUBLIC_HEADERS
         # UniformBuffer
         "include/UniformBuffer.h"
 
-        # Resource Managers
-        "include/TextureManager.h"
-        "include/ShaderManager.h"
-        "include/PipelineStateCache.h"
-        "include/GlobalRootSignature.h"
+        # Resources Subsystem
+        "include/Resources/TextureManager.h"
 
-        # GPU Scene
-        "include/GPUScene.h"
-        "include/GPUSceneData.h"
+        # Shaders Subsystem
+        "include/Shaders/ShaderManager.h"
+        "include/Shaders/GlobalRootSignature.h"
+
+        # Pipeline Subsystem
+        "include/Pipeline/PipelineStateCache.h"
+
+        # GPUScene Subsystem
+        "include/GPUScene/GPUScene.h"
+        "include/GPUScene/GPUSceneData.h"
 )
 
 # ---- Private Sources ----
@@ -33,17 +37,21 @@ set(RENDERCORE_SOURCES
         "src/RenderCore.cpp"
         "src/RendererModule.cpp"
 
-        # RenderGraph
+        # RenderGraph Subsystem
         "src/RenderGraph/RenderGraph.cpp"
 
-        # Resource Managers
-        "src/TextureManager.cpp"
-        "src/ShaderManager.cpp"
-        "src/PipelineStateCache.cpp"
-        "src/GlobalRootSignature.cpp"
+        # Resources Subsystem
+        "src/Resources/TextureManager.cpp"
 
-        # GPU Scene
-        "src/GPUScene.cpp"
+        # Shaders Subsystem
+        "src/Shaders/ShaderManager.cpp"
+        "src/Shaders/GlobalRootSignature.cpp"
+
+        # Pipeline Subsystem
+        "src/Pipeline/PipelineStateCache.cpp"
+
+        # GPUScene Subsystem
+        "src/GPUScene/GPUScene.cpp"
 )
 
 # Build Library

@@ -1,4 +1,4 @@
-﻿#include "TextureManager.h"
+﻿#include "Resources/TextureManager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../../../ThirdParty/stb_image.h"

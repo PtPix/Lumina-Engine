@@ -1,4 +1,4 @@
-#include "GlobalRootSignature.h"
+#include "Shaders/GlobalRootSignature.h"
 #include "D3D12Device.h"
 #include "D3D12RootSignature.h"
 
