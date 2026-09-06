@@ -6,16 +6,10 @@ set(RENDERER_PUBLIC_HEADERS
         # Core
         "include/Renderer.h"
         "include/FFrameResource.h"
-        "include/GlobalRootSignature.h"
 
         # Resources
         "include/FMesh.h"
         "include/FMaterial.h"
-
-        # Pipeline
-        "include/PipelineStateCache.h"
-        "include/ShaderManager.h"
-        "include/TextureManager.h"
 
         # UniformBuffers
         "include/ViewUniformBuffer.h"
@@ -45,16 +39,10 @@ set(RENDERER_SOURCES
         # Core
         "src/Renderer.cpp"
         "src/FFrameResource.cpp"
-        "src/GlobalRootSignature.cpp"
 
         # Resources
         "src/FMesh.cpp"
         "src/FMaterial.cpp"
-
-        # Pipeline
-        "src/PipelineStateCache.cpp"
-        "src/ShaderManager.cpp"
-        "src/TextureManager.cpp"
 
         # UniformBuffers
         "src/ViewUniformBuffer.cpp"

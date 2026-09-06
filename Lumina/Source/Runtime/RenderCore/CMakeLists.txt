@@ -15,6 +15,12 @@ set(RENDERCORE_PUBLIC_HEADERS
 
         # UniformBuffer
         "include/UniformBuffer.h"
+
+        # Resource Managers
+        "include/TextureManager.h"
+        "include/ShaderManager.h"
+        "include/PipelineStateCache.h"
+        "include/GlobalRootSignature.h"
 )
 
 # ---- Private Sources ----
@@ -25,6 +31,12 @@ set(RENDERCORE_SOURCES
 
         # RenderGraph
         "src/RenderGraph/RenderGraph.cpp"
+
+        # Resource Managers
+        "src/TextureManager.cpp"
+        "src/ShaderManager.cpp"
+        "src/PipelineStateCache.cpp"
+        "src/GlobalRootSignature.cpp"
 )
 
 # Build Library
